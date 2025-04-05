@@ -31,7 +31,6 @@ import kotlinx.coroutines.withContext
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.updateCategoryColor
 import org.totschnig.myexpenses.model.Grouping
-import org.totschnig.myexpenses.provider.CTE_SEARCH
 import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.DatabaseConstants.DAY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET
@@ -43,7 +42,6 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_EXPENSES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_INCOME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
 import org.totschnig.myexpenses.provider.DatabaseConstants.TREE_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_WITH_ACCOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.YEAR
 import org.totschnig.myexpenses.provider.DatabaseConstants.getMonth
 import org.totschnig.myexpenses.provider.DatabaseConstants.getWeek
@@ -166,7 +164,7 @@ abstract class DistributionViewModelBase<T : DistributionAccountInfo>(
         idMapper: (Long) -> Long = { it }
     ): Flow<Category> =
         categoryTree(
-            selection = buildFilterClause(groupingInfo, whereFilter, VIEW_WITH_ACCOUNT),
+            selection = buildFilterClause(groupingInfo, whereFilter),
             projection = buildList {
                 add("$TREE_CATEGORIES.*")
                 add(KEY_SUM)
@@ -211,12 +209,11 @@ abstract class DistributionViewModelBase<T : DistributionAccountInfo>(
 
     private fun buildFilterClause(
         groupingInfo: GroupingInfo,
-        whereFilter: Criterion?,
-        table: String? = null
+        whereFilter: Criterion?
     ): String {
         return listOfNotNull(
             dateFilterClause(groupingInfo),
-            whereFilter?.getSelectionForParts(table)
+            whereFilter?.getSelectionForParts()
         ).joinToString(" AND ")
     }
 
@@ -284,7 +281,7 @@ abstract class DistributionViewModelBase<T : DistributionAccountInfo>(
                 contentResolver.observeQuery(
                     builder.build(),
                     sumProjection,
-                    buildFilterClause(grouping, whereFilter, VIEW_WITH_ACCOUNT),
+                    buildFilterClause(grouping, whereFilter),
                     whereFilter?.getSelectionArgs(true),
                     null, true
                 ).mapToOne {
