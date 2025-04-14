@@ -66,6 +66,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.CalendarContract.Events;
 
@@ -424,7 +425,9 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
   @Override
   public void onCorruption(@NonNull SupportSQLiteDatabase db) {
-    MoreDbUtilsKt.maybeRepairRequerySchema(db.getPath());
+    if (Build.VERSION.SDK_INT == 30) {
+        MoreDbUtilsKt.maybeRepairRequerySchema(db.getPath());
+    }
   }
 
   @Override
@@ -567,7 +570,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
         long catId = j % categories;
         long payeeId = db.insert(DatabaseConstants.TABLE_PAYEES, CONFLICT_NONE, new PayeeInfo("Payee " + i + "_" + j).getContentValues());
         date = date.minusDays(1);
-        TransactionInfo transactionInfo = new TransactionInfo(testAccountId, 0, date, "Transaction " + j, payeeId, null, catId, null, CrStatus.UNRECONCILED);
+        TransactionInfo transactionInfo = new TransactionInfo(testAccountId, 0, date, "Transaction " + j, payeeId, null, catId, null, null, CrStatus.UNRECONCILED);
         db.insert(
             DatabaseConstants.TABLE_TRANSACTIONS,
             CONFLICT_NONE,

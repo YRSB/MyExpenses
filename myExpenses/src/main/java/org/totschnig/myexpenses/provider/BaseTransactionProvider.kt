@@ -618,11 +618,12 @@ abstract class BaseTransactionProvider : ContentProvider() {
         mergeAggregate: String?,
         selection: String?,
         sortOrder: String?,
+        sumsForDate: String?
     ): String {
-
+        val date = sumsForDate ?: "now"
         val aggregateFunction = this.aggregateFunction
 
-        val futureStartsNow = runBlocking {
+        val endOfDay = if (sumsForDate == "now") runBlocking {
             enumValueOrDefault(
                 dataStore.data.first()[stringPreferencesKey(
                     prefHandler.getKey(
@@ -630,10 +631,10 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     )
                 )], FutureCriterion.EndOfDay
             )
-        } == FutureCriterion.Current
+        } != FutureCriterion.Current else true
 
         val cte = if (minimal) "" else
-            accountQueryCTE(homeCurrency, futureStartsNow, aggregateFunction, typeWithFallBack)
+            accountQueryCTE(homeCurrency, endOfDay, aggregateFunction, typeWithFallBack, date)
 
         val tableName = if (minimal) TABLE_ACCOUNTS else CTE_TABLE_NAME_FULL_ACCOUNTS
         val query = if (mergeAggregate == null) {
@@ -1960,15 +1961,21 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 }
             }
             val parentUUidTemplate = parentUuidExpression(TABLE_TRANSACTIONS, TABLE_TRANSACTIONS)
-            db.execSQL(
-                """INSERT INTO $TABLE_CHANGES($KEY_TYPE, $KEY_SYNC_SEQUENCE_LOCAL, $KEY_UUID, $KEY_PARENT_UUID, $KEY_COMMENT, $KEY_DATE, $KEY_AMOUNT, $KEY_ORIGINAL_AMOUNT, $KEY_ORIGINAL_CURRENCY, $KEY_EQUIVALENT_AMOUNT, $KEY_CATID, $KEY_ACCOUNTID,$KEY_PAYEEID, $KEY_TRANSFER_ACCOUNT, $KEY_METHODID, $KEY_CR_STATUS, $KEY_STATUS, $KEY_REFERENCE_NUMBER)
-                    SELECT '${TransactionChange.Type.created.name}',  1, $KEY_UUID, $parentUUidTemplate, $KEY_COMMENT, $KEY_DATE, $KEY_AMOUNT, $KEY_ORIGINAL_AMOUNT, $KEY_ORIGINAL_CURRENCY, $KEY_EQUIVALENT_AMOUNT, $KEY_CATID, $KEY_ACCOUNTID, $KEY_PAYEEID, $KEY_TRANSFER_ACCOUNT, $KEY_METHODID, $KEY_CR_STATUS, $KEY_STATUS, $KEY_REFERENCE_NUMBER FROM $TABLE_TRANSACTIONS ${
-                    equivalentAmountJoin(
-                        homeCurrency
-                    )
-                } WHERE $KEY_ACCOUNTID = ?""",
-                accountIdBindArgs
-            )
+            try {
+                db.execSQL(
+                    """INSERT INTO $TABLE_CHANGES($KEY_TYPE, $KEY_SYNC_SEQUENCE_LOCAL, $KEY_UUID, $KEY_PARENT_UUID, $KEY_COMMENT, $KEY_DATE, $KEY_AMOUNT, $KEY_ORIGINAL_AMOUNT, $KEY_ORIGINAL_CURRENCY, $KEY_EQUIVALENT_AMOUNT, $KEY_CATID, $KEY_ACCOUNTID, $KEY_PAYEEID, $KEY_TRANSFER_ACCOUNT, $KEY_METHODID, $KEY_CR_STATUS, $KEY_STATUS, $KEY_REFERENCE_NUMBER)
+                        SELECT '${TransactionChange.Type.created.name}', 1, $KEY_UUID, $parentUUidTemplate, $KEY_COMMENT, $KEY_DATE, $KEY_AMOUNT, $KEY_ORIGINAL_AMOUNT, $KEY_ORIGINAL_CURRENCY, $KEY_EQUIVALENT_AMOUNT, $KEY_CATID, $KEY_ACCOUNTID, $KEY_PAYEEID, $KEY_TRANSFER_ACCOUNT, $KEY_METHODID, $KEY_CR_STATUS, $KEY_STATUS, $KEY_REFERENCE_NUMBER 
+                        FROM $TABLE_TRANSACTIONS ${equivalentAmountJoin(homeCurrency)}
+                        WHERE $KEY_ACCOUNTID = ?""",
+                    accountIdBindArgs
+                )
+            } catch (e: SQLiteConstraintException) {
+                report(Throwable("Checking Foreign Keys"), mapOf(
+                    "fk_list" to db.getForeignKeyInfoAsString(TABLE_TRANSACTIONS),
+                    "fk_check" to db.getForeignKeyCheckInfoAsString(TABLE_TRANSACTIONS)
+                ))
+                throw e
+            }
             db.execSQL(
                 """INSERT INTO $TABLE_CHANGES($KEY_TYPE, $KEY_SYNC_SEQUENCE_LOCAL, $KEY_UUID, $KEY_PARENT_UUID, $KEY_ACCOUNTID)
                SELECT '${TransactionChange.Type.tags.name}', 1, $KEY_UUID, $parentUUidTemplate, $KEY_ACCOUNTID FROM $TABLE_TRANSACTIONS WHERE $KEY_ACCOUNTID = ? AND EXISTS (SELECT 1 FROM $TABLE_TRANSACTIONS_TAGS WHERE $KEY_TRANSACTIONID = $KEY_ROWID)""",

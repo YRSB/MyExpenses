@@ -1059,4 +1059,12 @@
     <string name="complex_search">Complex search</string>
     <!-- Message shown when user clicks on the floating action bar in an account that they have closed. -->
     <string name="account_closed">Account is closed</string>
+    <string name="balance_sheet">Balance Sheet</string>
+    <string name="balance_sheet_section_assets">Assets</string>
+    <string name="balance_sheet_section_liabilities">Liabilities</string>
+    <string name="balance_sheet_net_worth">Net Worth</string>
+    <!-- This is used for Talkback to describe the action of toggling the status of a transaction from unreconciled to cleared -->
+    <string name="mark_as_cleared">Mark as cleared</string>
+    <!-- This is used for Talkback to describe the action of toggling the status of a transaction from cleared to unreconciled -->
+    <string name="mark_as_unreconciled">Mark as unreconciled</string>
 </resources>

@@ -19,6 +19,7 @@ import org.totschnig.myexpenses.db2.deleteAccount
 import org.totschnig.myexpenses.db2.deleteParty
 import org.totschnig.myexpenses.model2.Party
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.testutils.BaseExpenseEditTest
 import org.totschnig.myexpenses.testutils.cleanup
 
 class ExpenseEditCachedDataTest: BaseExpenseEditTest() {
@@ -27,6 +28,7 @@ class ExpenseEditCachedDataTest: BaseExpenseEditTest() {
 
     //BUG: https://github.com/mtotschnig/MyExpenses/issues/1293
     //TODO: test all fields
+    //fails on Tablet portrait
     @Test
     fun shouldRestoreCachedData() {
         val accountLabel1 = "Test label 1"

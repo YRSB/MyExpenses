@@ -986,4 +986,8 @@
     <string name="budget_import_none_found">வரவு செலவுத் திட்டங்கள் எதுவும் கிடைக்கவில்லை.</string>
     <string name="quick_search">விரைவான தேடல்</string>
     <string name="complex_search">சிக்கலான தேடல்</string>
+    <string name="balance_sheet">இருப்புத் தாள்</string>
+    <string name="balance_sheet_section_assets">சொத்துகள்</string>
+    <string name="balance_sheet_section_liabilities">கடன்கள்</string>
+    <string name="balance_sheet_net_worth">நிகர மதிப்பு</string>
 </resources>

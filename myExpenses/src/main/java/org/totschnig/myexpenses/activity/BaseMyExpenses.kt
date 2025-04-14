@@ -10,6 +10,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.IdRes
@@ -62,6 +63,7 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
+import androidx.core.view.GravityCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LiveData
@@ -221,6 +223,7 @@ import timber.log.Timber
 import java.io.Serializable
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.sign
@@ -532,6 +535,8 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
     }
 
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initLocaleContext()
@@ -838,7 +843,8 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         if (resources.getInteger(R.integer.window_size_class) == 1) {
             toolbar.setNavigationIcon(R.drawable.ic_menu)
             binding.accountPanel.root.isVisible =
-                prefHandler.getBoolean(PrefKey.ACCOUNT_PANEL_VISIBLE, false)
+                prefHandler.getBoolean(PrefKey.ACCOUNT_PANEL_VISIBLE, false) ||
+                        viewModel.showBalanceSheet
             toolbar.setNavigationOnClickListener {
                 val newState = !binding.accountPanel.root.isVisible
                 prefHandler.putBoolean(PrefKey.ACCOUNT_PANEL_VISIBLE, newState)
@@ -854,19 +860,26 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                 toolbar, R.string.drawer_open, R.string.drawer_close
             ) {
                 //at the moment we finish action if drawer is opened;
-                // and do NOT open it again when drawer is closed
+                //and do NOT open it again when drawer is closed
                 override fun onDrawerOpened(drawerView: View) {
                     super.onDrawerOpened(drawerView)
+                    onBackPressedCallback.isEnabled = true
                     finishActionMode()
                 }
 
                 override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
                     super.onDrawerSlide(drawerView, 0f) // this disables the animation
                 }
+
+                override fun onDrawerClosed(drawerView: View) {
+                    super.onDrawerClosed(drawerView)
+                    onBackPressedCallback.isEnabled = false
+                }
             }.also {
                 drawer.addDrawerListener(it)
             }
         }
+
         supportFragmentManager.setFragmentResultListener(
             TRANSFORM_TO_TRANSFER_REQUEST,
             this
@@ -883,6 +896,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                 putAll(bundle)
             }
         }
+
         with(navigationView) {
             setNavigationItemSelectedListener(::handleNavigationClick)
             getChildAt(0)?.isVerticalScrollBarEnabled = false
@@ -896,6 +910,20 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     }
                 }
             }
+        }
+
+        onBackPressedCallback = object : OnBackPressedCallback(viewModel.showBalanceSheet) {
+            override fun handleOnBackPressed() {
+                if (!closeBalanceSheet() &&
+                    binding.drawer?.isDrawerOpen(GravityCompat.START) == true
+                ) {
+                    binding.drawer?.closeDrawer(GravityCompat.START)
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+        if (viewModel.showBalanceSheet) {
+            openBalanceSheet()
         }
     }
 
@@ -1600,9 +1628,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     private fun readAccountSortFromPref() =
         prefHandler.enumValueOrDefault(PrefKey.SORT_ORDER_ACCOUNTS, Sort.USAGES)
 
-    private fun closeDrawer() {
-        binding.drawer?.closeDrawers()
-    }
+    private fun closeDrawer() = binding.drawer?.closeDrawers() != null
 
     override fun injectDependencies() {
         injector.inject(this)
@@ -1965,10 +1991,58 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     setAction(Action.MANAGE.name)
                 })
 
+            R.id.BALANCE_SHEET_COMMAND -> {
+                openBalanceSheet()
+            }
+
             else -> return false
         }
         return true
     }
+
+    fun openBalanceSheet() {
+        viewModel.showBalanceSheet = true
+        onBackPressedCallback.isEnabled = true
+        val screenWidth = resources.displayMetrics.widthPixels
+        val preferredBalanceSheetWidth = resources.getDimensionPixelSize(R.dimen.drawerWidth) * 2
+        //we limit the width of the balance sheet, if it leaves enough room for the main screen
+        val veryLarge = screenWidth >= preferredBalanceSheetWidth * 2
+        binding.accountPanel.root.layoutParams.width =
+            if (veryLarge) preferredBalanceSheetWidth else screenWidth
+        binding.accountPanel.root.displayedChild = 1
+        binding.accountPanel.balanceSheet.setContent {
+            AppTheme {
+                val data =
+                    viewModel.accountsForBalanceSheet.collectAsState(LocalDate.now() to emptyList()).value
+                BalanceSheetView(
+                    data.second,
+                    data.first,
+                    onClose = { closeBalanceSheet() },
+                    onNavigate = {
+                        selectedAccountId = it
+                        if (!closeDrawer() && !veryLarge) {
+                            closeBalanceSheet()
+                        }
+                    },
+                    onSetDate = {
+                        viewModel.setBalanceDate(it)
+                    }
+                )
+            }
+        }
+    }
+
+    fun closeBalanceSheet() = if (binding.accountPanel.root.displayedChild == 1) {
+        viewModel.showBalanceSheet = false
+        binding.accountPanel.root.layoutParams.width =
+            resources.getDimensionPixelSize(R.dimen.drawerWidth)
+                .coerceAtMost(resources.displayMetrics.widthPixels)
+        binding.accountPanel.root.displayedChild = 0
+        if (binding.drawer == null) {
+            onBackPressedCallback.isEnabled = false
+        }
+        true
+    } else false
 
     fun setupFabSubMenu() {
         floatingActionButton.setOnLongClickListener { fab ->
@@ -2034,7 +2108,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val checkedColor =  currentAccount?.let {
+        val checkedColor = currentAccount?.let {
             if (it.isAggregate) 0 else it.color(resources)
         }
         menu.findItem(R.id.WEB_UI_COMMAND)?.let {
@@ -2207,6 +2281,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     dispatchCommand(R.id.TOGGLE_SEALED_COMMAND, null)
                 }
             )
+
             isScanMode() -> contribFeatureRequested(ContribFeature.OCR, true)
             else -> createRowDo(Transactions.TYPE_TRANSACTION, false)
         }

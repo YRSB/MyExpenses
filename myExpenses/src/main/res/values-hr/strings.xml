@@ -934,4 +934,8 @@
     <string name="content_description_equivalent_amount">Definiraj vrijednost ove transakcije u svojoj domaćoj valuti. Umjesto unosa iznosa, za izračunavanje vrijednosti možeš unijeti tečaj.</string>
     <string name="quick_search">Brza pretraga</string>
     <string name="complex_search">Složena pretraga</string>
+    <string name="balance_sheet">Bilanca</string>
+    <string name="balance_sheet_section_assets">Imovina</string>
+    <string name="balance_sheet_section_liabilities">Obveze</string>
+    <string name="balance_sheet_net_worth">Neto vrijednost</string>
 </resources>
