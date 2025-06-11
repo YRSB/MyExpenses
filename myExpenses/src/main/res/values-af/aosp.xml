@@ -87,4 +87,11 @@
     <string name="done_label">"Klaar"</string>
     <string name="action_move_top">"Skuif na bo"</string>
     <string name="action_move_bottom">"Skuif na onder"</string>
+    <string name="layout">"Uitleg"</string>
+    <string name="top">"Bokant"</string>
+    <string name="bottom">"Onderkant"</string>
+    <string name="left">"Links"</string>
+    <string name="right">"Regs"</string>
+    <string name="margins">"Kantlyne"</string>
+    <string name="menu_restore">"Stel terug na verstek"</string>
 </resources>

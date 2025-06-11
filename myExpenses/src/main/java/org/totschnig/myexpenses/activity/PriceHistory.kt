@@ -54,17 +54,18 @@ import org.totschnig.myexpenses.compose.AmountEdit
 import org.totschnig.myexpenses.compose.AppTheme
 import org.totschnig.myexpenses.compose.CharIcon
 import org.totschnig.myexpenses.compose.LocalDateFormatter
-import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbar
+import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbarAndBottomPadding
 import org.totschnig.myexpenses.databinding.ActivityComposeBinding
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.retrofit.ExchangeRateApi
 import org.totschnig.myexpenses.retrofit.ExchangeRateSource
+import org.totschnig.myexpenses.util.TextUtils
 import org.totschnig.myexpenses.util.checkMenuIcon
 import org.totschnig.myexpenses.util.safeMessage
-import org.totschnig.myexpenses.viewmodel.data.Price
+import org.totschnig.myexpenses.util.transformForUser
 import org.totschnig.myexpenses.viewmodel.PriceHistoryViewModel
-import org.totschnig.myexpenses.viewmodel.transformForUser
+import org.totschnig.myexpenses.viewmodel.data.Price
 import java.math.BigDecimal
 import java.math.MathContext
 import java.security.SecureRandom
@@ -90,10 +91,25 @@ class PriceHistory : ProtectedFragmentActivity() {
                     currencyContext.homeCurrencyUnit,
                     Modifier.padding(horizontal = 8.dp),
                     onDelete = {
-                        viewModel.deletePrice(it)
+                        viewModel.deletePrice(it).observe(this) {
+                            if (!it) {
+                                showDeleteFailureFeedback()
+                            }
+                        }
                     },
                     onSave = { date, value ->
-                        viewModel.savePrice(date, value)
+                        viewModel.savePrice(date, value).observe(this) {
+                            if (it > 0) {
+                                showSnackBar(
+                                TextUtils.concatResStrings(
+                                    this,
+                                    " : ",
+                                    R.string.progress_recalculating,
+                                    R.string.equivalent_amount_plural
+                                ) + " : " + it
+                                )
+                            }
+                        }
                     },
                     onDownload = { date ->
                         viewModel.effectiveSource?.also {
@@ -192,7 +208,7 @@ fun PriceListScreen(
     homeCurrency: CurrencyUnit,
     modifier: Modifier = Modifier,
     onDelete: (Price) -> Unit,
-    onSave: (LocalDate, Double) -> Unit,
+    onSave: (LocalDate, BigDecimal) -> Unit,
     onDownload: (LocalDate) -> Unit,
     inverseRate: Boolean = false,
 ) {
@@ -213,14 +229,16 @@ fun PriceListScreen(
             Spacer(Modifier.width(96.dp))
         }
         HorizontalDivider()
-        LazyColumnWithScrollbar(itemsAvailable = prices.size, fastScroll = true) {
+        LazyColumnWithScrollbarAndBottomPadding(
+            itemsAvailable = prices.size,
+            fastScroll = true,
+            withFab = false
+        ) {
             items(
                 items = prices.entries.toList(),
                 key = { it.key }
             ) { (date, price) ->
                 val rate = price?.value?.let {
-                    BigDecimal.valueOf(it)
-                }?.let {
                     if (inverseRate) it.reciprocal else it
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -249,7 +267,7 @@ fun PriceListScreen(
                             keyboardActions = KeyboardActions(onDone = {
                                 if (isValid.value == true) {
                                     valueForEdit?.let {
-                                        onSave(date, (if (inverseRate) it.reciprocal else it).toDouble())
+                                        onSave(date, (if (inverseRate) it.reciprocal else it))
                                     }
                                 }
                                 editedDate.value = null
@@ -359,7 +377,7 @@ fun HistoricPricesPreview() {
         buildMap {
             repeat(250) {
                 val date = LocalDate.now().minusDays(it.toLong())
-                put(date, Price(date, ExchangeRateApi.Frankfurter, random.nextDouble()))
+                put(date, Price(date, ExchangeRateApi.Frankfurter, BigDecimal.valueOf(random.nextDouble())))
             }
         },
         homeCurrency = CurrencyUnit.DebugInstance,

@@ -92,4 +92,13 @@
     <string name="done_label">"Valmis"</string>
     <string name="action_move_top">"Siirrä ylimmäksi"</string>
     <string name="action_move_bottom">"Siirrä viimeiseksi"</string>
+    <string name="layout">"Asettelu"</string>
+    <string name="top">"Yläreuna"</string>
+    <string name="bottom">"Alareuna"</string>
+    <string name="left">"Vasen"</string>
+    <string name="right">"Oikea"</string>
+    <string name="margins">"Marginaalit"</string>
+    <string name="menu_restore">"Palauta oletukset"</string>
+    <string name="at_start">Alkaa</string>
+    <string name="at_end">Päättyy</string>
 </resources>

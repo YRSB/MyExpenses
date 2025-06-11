@@ -91,4 +91,13 @@
     <string name="done_label">"Feito"</string>
     <string name="action_move_top">"Situar arriba"</string>
     <string name="action_move_bottom">"Situar abaixo"</string>
+    <string name="layout">"Deseño"</string>
+    <string name="top">"Superior"</string>
+    <string name="bottom">"Inferior"</string>
+    <string name="left">"Esquerda"</string>
+    <string name="right">"Dereita"</string>
+    <string name="margins">"Marxes"</string>
+    <string name="menu_restore">"Restablecer valores predeterminados"</string>
+    <string name="at_start">Inicio</string>
+    <string name="at_end">Fin</string>
 </resources>

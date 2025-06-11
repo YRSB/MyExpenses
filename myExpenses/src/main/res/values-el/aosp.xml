@@ -29,7 +29,6 @@
     <string name="permissions_label">"Άδειες"</string>
     <string name="time_format">"Μορφή ώρας"</string>
     <string name="setup">"Ρύθμιση"</string>
-    <string name="clear_cache">"Εκκαθάριση προσωρινής μνήμης"</string>
     <string name="customize">"Προσαρμογή"</string>
     <string name="compact">Συμπαγές</string>
     <string name="storage_description">"Τοπικός χώρος αποθήκευσης"</string>
@@ -159,4 +158,13 @@
     <string name="action_move_top">"Μετακίνηση επάνω"</string>
     <string name="action_move_bottom">"Μετακίνηση κάτω"</string>
     <string name="negation">"Άρνηση"</string>
+    <string name="layout">"Διάταξη"</string>
+    <string name="top">"Επάνω"</string>
+    <string name="bottom">"Κάτω"</string>
+    <string name="left">"Αριστερά"</string>
+    <string name="right">"Δεξιά"</string>
+    <string name="margins">"Περιθώρια"</string>
+    <string name="menu_restore">"Επαναφορά στις προεπιλογές"</string>
+    <string name="at_start">Έναρξη</string>
+    <string name="at_end">Λήξη</string>
 </resources>

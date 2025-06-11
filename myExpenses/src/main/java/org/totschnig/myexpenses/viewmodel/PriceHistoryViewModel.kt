@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.core.os.BundleCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import app.cash.copper.flow.observeQuery
 import kotlinx.coroutines.flow.Flow
@@ -13,8 +15,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import org.totschnig.myexpenses.db2.deletePrice
 import org.totschnig.myexpenses.db2.savePrice
-import org.totschnig.myexpenses.preference.PrefHandler.Companion.AUTOMATIC_EXCHANGE_RATE_DOWNLOAD_PREF_KEY_PREFIX
-import org.totschnig.myexpenses.preference.PrefHandler.Companion.SERVICE_DEACTIVATED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMODITY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAX_VALUE
@@ -25,11 +25,18 @@ import org.totschnig.myexpenses.provider.getLocalDate
 import org.totschnig.myexpenses.provider.mapToListWithExtra
 import org.totschnig.myexpenses.retrofit.ExchangeRateApi
 import org.totschnig.myexpenses.retrofit.ExchangeRateSource
+import org.totschnig.myexpenses.util.ExchangeRateHandler
+import org.totschnig.myexpenses.util.calculateRealExchangeRate
 import org.totschnig.myexpenses.viewmodel.data.Price
+import java.math.BigDecimal
 import java.time.LocalDate
+import javax.inject.Inject
 
 class PriceHistoryViewModel(application: Application, val savedStateHandle: SavedStateHandle) :
-    ExchangeRateViewModel(application) {
+    ContentResolvingAndroidViewModel(application) {
+
+    @Inject
+    lateinit var exchangeRateHandler: ExchangeRateHandler
 
     val commodity: String
         get() = savedStateHandle.get<String>(KEY_COMMODITY)!!
@@ -52,16 +59,11 @@ class PriceHistoryViewModel(application: Application, val savedStateHandle: Save
         get() = currencyContext.homeCurrencyString
 
     val relevantSources: List<ExchangeRateApi> by lazy {
-        prefHandler.getString("${AUTOMATIC_EXCHANGE_RATE_DOWNLOAD_PREF_KEY_PREFIX}${commodity}")
-            ?.takeIf { it != SERVICE_DEACTIVATED }
-            ?.let { listOf(ExchangeRateApi.getByName(it)) }
-            ?: ExchangeRateApi.configuredSources(prefHandler).filter {
-                it.isSupported(homeCurrency, commodity)
-            }.also {
-                if (it.size > 1) {
-                    userSelectedSource = it[0]
-                }
+        exchangeRateHandler.relevantSources(commodity).also {
+            if (it.size > 1) {
+                userSelectedSource = it[0]
             }
+        }
     }
 
     var userSelectedSource: ExchangeRateApi? = null
@@ -85,7 +87,11 @@ class PriceHistoryViewModel(application: Application, val savedStateHandle: Save
             Price(
                 date = it.getLocalDate(0),
                 source = ExchangeRateSource.getByName(it.getString(1)),
-                value = it.getDouble(2)
+                value = calculateRealExchangeRate(
+                    it.getDouble(2),
+                    currencyContext[commodity],
+                    currencyContext.homeCurrencyUnit
+                )
             )
         }
             .map {
@@ -117,17 +123,31 @@ class PriceHistoryViewModel(application: Application, val savedStateHandle: Save
         }
     }
 
-    fun deletePrice(price: Price) {
-        repository.deletePrice(price.date, price.source, homeCurrency, commodity)
-    }
+    fun deletePrice(price: Price): LiveData<Boolean> =
+        liveData(context = coroutineContext()) {
+            emit(
+                repository.deletePrice(price.date, price.source, homeCurrency, commodity) == 1
+            )
+        }
 
-    fun savePrice(date: LocalDate, value: Double) {
-        repository.savePrice(
-            homeCurrency,
-            commodity,
-            date,
-            ExchangeRateSource.User,
-            value
-        )
-    }
+
+    fun savePrice(date: LocalDate, value: BigDecimal): LiveData<Int> =
+        liveData(context = coroutineContext()) {
+            emit(
+                repository.savePrice(
+                    currencyContext.homeCurrencyUnit,
+                    currencyContext[commodity],
+                    date,
+                    ExchangeRateSource.User,
+                    value
+                )
+            )
+        }
+
+    suspend fun loadFromNetwork(
+        source: ExchangeRateApi,
+        date: LocalDate,
+        other: String,
+        base: String,
+    ) = exchangeRateHandler.loadFromNetwork(source, date, other, base)
 }

@@ -1008,7 +1008,6 @@
     <string name="progress_recalculating">Recalculation</string>
     <string name="equivalent_amount_plural">Montants équivalents</string>
     <string name="menu_recalculate">Recalculer</string>
-    <string name="recalculate_only_missing">Remplissez uniquement les valeurs manquantes</string>
     <string name="recalculate_equivalent_amounts_warning">Les montants équivalents seront (re)calculés si les taux de change stockés applicables sont disponibles.</string>
     <string name="dynamic_exchange_rate">Taux de change dynamique</string>
     <string name="current_value">Valeur actuelle</string>
@@ -1019,4 +1018,7 @@
     <string name="balance_sheet_section_assets">Actifs</string>
     <string name="balance_sheet_section_liabilities">Passifs</string>
     <string name="balance_sheet_net_worth">Valeur nette</string>
+    <string name="pref_equivalent_amounts_automatic_update_title">Mettre à jour automatiquement les montants équivalents lorsque les prix changent</string>
+    <string name="mark_as_cleared">Pointer</string>
+    <string name="mark_as_unreconciled">Marquer comme non rapproché</string>
 </resources>

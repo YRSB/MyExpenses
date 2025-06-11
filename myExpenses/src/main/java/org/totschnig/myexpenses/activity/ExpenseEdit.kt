@@ -129,7 +129,6 @@ import org.totschnig.myexpenses.util.formatMoney
 import org.totschnig.myexpenses.util.safeMessage
 import org.totschnig.myexpenses.util.setEnabledAndVisible
 import org.totschnig.myexpenses.util.tracking.Tracker
-import org.totschnig.myexpenses.util.ui.UiUtils
 import org.totschnig.myexpenses.util.ui.attachmentInfoMap
 import org.totschnig.myexpenses.util.ui.setAttachmentInfo
 import org.totschnig.myexpenses.viewmodel.CategoryViewModel.Companion.KEY_TYPE_FILTER
@@ -288,24 +287,12 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
         injector.inject(this)
     }
 
-    override fun onEnterAnimationComplete() {
-        super.onEnterAnimationComplete()
-        floatingActionButton.show()
-    }
-
     override val fabActionName = "SAVE_TRANSACTION"
 
     fun updateContentColor(color: Int) {
         this.color = color
-        if (canUseContentColor) {
-            tintSystemUi(
-                UiUtils.getColor(
-                    this,
-                    com.google.android.material.R.attr.colorPrimaryContainer
-                )
-            )
-        } else {
-            tintSystemUiAndFab(color)
+        if(!canUseContentColor) {
+            tintFab(color)
         }
     }
 
@@ -349,7 +336,12 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
                 methodRowBinding,
                 injector
             )
-            setupObservers(false)
+            setupObservers(
+                if(intent.getBooleanExtra("IS_MANUAL_RECREATE", false)) {
+                    intent.removeExtra("IS_MANUAL_RECREATE")
+                    true
+                } else false
+            )
             delegate.bind(
                 null,
                 withTypeSpinner,
@@ -429,7 +421,7 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
                 }
                 parentId = intent.getLongExtra(KEY_PARENTID, 0)
                 val currencyUnit = intent.getStringExtra(KEY_CURRENCY)
-                    ?.let { currencyContext.get(it) }
+                    ?.let { currencyContext[it] }
 
                 lifecycleScope.launch {
                     populateWithNewInstance(
@@ -779,7 +771,7 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
         pObserver?.let {
             try {
                 contentResolver.unregisterContentObserver(it)
-            } catch (ise: IllegalStateException) { // Do Nothing.  Observer has already been unregistered.
+            } catch (_: IllegalStateException) { // Do Nothing.  Observer has already been unregistered.
             }
         }
         if (::delegate.isInitialized) delegate.onDestroy()
@@ -951,6 +943,7 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
             }
             if (::delegate.isInitialized) {
                 delegate.configureLastDayButton()
+                (delegate as? MainDelegate)?.loadPrice()
             }
         }
     }
@@ -1078,7 +1071,7 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
                 loadTemplate(it.id)
             }
             true
-        } ?: false
+        } == true
     }
 
     private fun loadTemplate(id: Long) {
@@ -1453,9 +1446,7 @@ open class ExpenseEdit : AmountActivity<TransactionEditViewModel>(), ContribIFac
                     CriterionReachedDialogFragment
                         .newInstance(it,
                             if (criterionInfos.size == 2) with(criterionInfos.first { it.criterion > 0 }) {
-                                accountLabel + ": " + getString(
-                                    dialogTitle
-                                )
+                                "$accountLabel: ${getString(dialogTitle)}"
                             } else null
                         )
                         .show(supportFragmentManager, "CRITERION")

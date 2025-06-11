@@ -30,7 +30,6 @@
     <string name="permissions_label">"権限"</string>
     <string name="time_format">"時刻の表示形式"</string>
     <string name="setup">"設定"</string>
-    <string name="clear_cache">"キャッシュを削除"</string>
     <string name="customize">"カスタマイズ"</string>
     <string name="compact">コンパクト</string>
     <string name="storage_description">"ローカル ストレージ"</string>
@@ -157,4 +156,13 @@
     <string name="action_move_top">"一番上に移動します"</string>
     <string name="action_move_bottom">"一番下に移動します"</string>
     <string name="negation">"負の数"</string>
+    <string name="layout">"レイアウト"</string>
+    <string name="top">"上揃え"</string>
+    <string name="bottom">"下揃え"</string>
+    <string name="left">"左揃え"</string>
+    <string name="right">"右"</string>
+    <string name="margins">"余白"</string>
+    <string name="menu_restore">"初期設定にリセット"</string>
+    <string name="at_start">開始日時</string>
+    <string name="at_end">終了日時</string>
 </resources>

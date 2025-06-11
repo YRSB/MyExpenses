@@ -63,4 +63,6 @@
     <string name="done_label">"Gotovo"</string>
     <string name="action_move_top">"Premesti na vrh"</string>
     <string name="action_move_bottom">"Premesti na dno"</string>
+    <string name="layout">"Raspored"</string>
+    <string name="menu_restore">"Resetuj na podrazumevano"</string>
 </resources>

@@ -5,7 +5,6 @@ import android.content.ContextWrapper
 import android.content.res.ColorStateList
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
@@ -20,13 +19,13 @@ import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
-import androidx.activity.ComponentActivity
 import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.ColorUtils.calculateLuminance
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -56,6 +55,7 @@ import org.totschnig.myexpenses.util.readPrimaryTextColor
 import org.totschnig.myexpenses.util.ui.UiUtils.DateMode
 import org.totschnig.myexpenses.viewmodel.ContentResolvingAndroidViewModel.Companion.lazyMap
 import org.totschnig.myexpenses.viewmodel.data.AttachmentInfo
+import org.totschnig.myexpenses.viewmodel.data.BaseAccount
 import org.totschnig.myexpenses.viewmodel.data.PageAccount
 import java.text.SimpleDateFormat
 import java.time.format.DateTimeFormatter
@@ -163,7 +163,7 @@ fun dateTimeFormatter(account: PageAccount, prefHandler: PrefHandler, context: C
         else -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     }
 
-fun dateTimeFormatterLegacy(account: PageAccount, prefHandler: PrefHandler, context: Context) =
+fun dateTimeFormatterLegacy(account: BaseAccount, prefHandler: PrefHandler, context: Context) =
     when (account.grouping) {
         Grouping.DAY -> {
             timeFormatter(account.type, prefHandler, context)?.let {
@@ -213,7 +213,7 @@ fun View.configurePopupAnchor(
             isOutsideTouchable = true
             isFocusable = true
             //without setting background drawable, popup does not close on back button or touch outside, on older API levels
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
             width = ViewGroup.LayoutParams.WRAP_CONTENT
             height = ViewGroup.LayoutParams.WRAP_CONTENT
 

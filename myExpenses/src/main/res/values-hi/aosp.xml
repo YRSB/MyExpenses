@@ -76,4 +76,11 @@
     <string name="action_move_top">"शीर्ष पर ले जाएं"</string>
     <string name="action_move_bottom">"सबसे नीचे ले जाएं"</string>
     <string name="negation">"नेगेशन"</string>
+    <string name="layout">"लेआउट"</string>
+    <string name="top">"ऊपर"</string>
+    <string name="bottom">"नीचे"</string>
+    <string name="left">"बायाँ"</string>
+    <string name="right">"दायाँ"</string>
+    <string name="margins">"हाशिए"</string>
+    <string name="menu_restore">"डिफ़ॉल्ट पर रीसेट करें"</string>
 </resources>

@@ -29,7 +29,6 @@
     <string name="permissions_label">"Berechtigungen"</string>
     <string name="time_format">"Zeitformat"</string>
     <string name="setup">"Einrichtung"</string>
-    <string name="clear_cache">"Cache leeren"</string>
     <string name="customize">"Anpassen"</string>
     <string name="compact">kompakt</string>
     <string name="storage_description">"Lokaler Speicher"</string>
@@ -159,4 +158,13 @@
     <string name="action_move_top">"Ganz nach oben"</string>
     <string name="action_move_bottom">"Ganz nach unten"</string>
     <string name="negation">"Negation"</string>
+    <string name="layout">"Layout"</string>
+    <string name="top">"Oben"</string>
+    <string name="bottom">"Unten"</string>
+    <string name="left">"Links"</string>
+    <string name="right">"Rechts"</string>
+    <string name="margins">"Seitenränder"</string>
+    <string name="menu_restore">"Auf Standard zurücksetzen"</string>
+    <string name="at_start">Beginn</string>
+    <string name="at_end">Ende</string>
 </resources>

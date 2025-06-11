@@ -4,11 +4,13 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -60,11 +62,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.Insets
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
@@ -87,7 +93,6 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.adapter.SortableItem
 import org.totschnig.myexpenses.compose.AccountList
 import org.totschnig.myexpenses.compose.AppTheme
-import org.totschnig.myexpenses.compose.ColorSource
 import org.totschnig.myexpenses.compose.CompactTransactionRenderer
 import org.totschnig.myexpenses.compose.DateTimeFormatInfo
 import org.totschnig.myexpenses.compose.FutureCriterion
@@ -143,10 +148,10 @@ import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.PreDefinedPaymentMethod.Companion.translateIfPredefined
 import org.totschnig.myexpenses.model.Sort
 import org.totschnig.myexpenses.model.Sort.Companion.fromCommandId
+import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.enumValueOrDefault
 import org.totschnig.myexpenses.provider.CheckSealedHandler
-import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.isAggregate
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
@@ -852,7 +857,71 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                 toolbar.setNavigationContentDescription(
                     if (newState) R.string.drawer_close else R.string.drawer_open
                 )
+                ViewCompat.requestApplyInsets(binding.mainContent)
             }
+        }
+
+        floatingActionButton = binding.fab.CREATECOMMAND
+        updateFab()
+        setupFabSubMenu()
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.accountPanel.root) { v, insets ->
+            val isLtr = v.layoutDirection == View.LAYOUT_DIRECTION_LTR
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                val left =
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).left
+                val right =
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).right
+                leftMargin = when {
+                    isLtr -> left
+                    else -> 0
+                }
+                rightMargin = when {
+                    !isLtr  -> right
+                    else -> 0
+                }
+            }
+            //make account list and balance sheet aware of bottom inset
+            ViewCompat.dispatchApplyWindowInsets(v.findViewById(R.id.accountList), insets)
+            ViewCompat.dispatchApplyWindowInsets(v.findViewById(R.id.balanceSheet), insets)
+            WindowInsetsCompat.CONSUMED
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { v, insets ->
+            val accountPanelIsVisible = binding.accountPanel.root.isVisible
+            val isLtr = v.layoutDirection == View.LAYOUT_DIRECTION_LTR
+            val originalNavigationBarInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val originalDisplayCutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+
+            val systemBarsInsetsForChildren = Insets.of(
+                if (accountPanelIsVisible && isLtr) 0 else originalNavigationBarInsets.left,
+                originalNavigationBarInsets.top,
+                if (accountPanelIsVisible && !isLtr) 0 else originalNavigationBarInsets.right,
+                originalNavigationBarInsets.bottom
+            )
+
+            val displayCutoutInsetsForChildren: Insets = Insets.of(
+                if (accountPanelIsVisible && isLtr) 0 else originalDisplayCutoutInsets.left,
+                originalDisplayCutoutInsets.top,
+                if (accountPanelIsVisible && !isLtr) 0 else originalDisplayCutoutInsets.right,
+                originalDisplayCutoutInsets.bottom
+            )
+
+            val insetsForChildren = WindowInsetsCompat.Builder(insets)
+                .setInsets(WindowInsetsCompat.Type.systemBars(), systemBarsInsetsForChildren)
+                .setInsets(
+                    WindowInsetsCompat.Type.displayCutout(),
+                    displayCutoutInsetsForChildren
+                )
+                .build()
+
+            insetsForChildren
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar.root) { v, insets ->
+            v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                leftMargin = insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).left
+                rightMargin = insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).right
+            }
+            WindowInsetsCompat.CONSUMED
         }
         binding.drawer?.let { drawer ->
             drawerToggle = object : ActionBarDrawerToggle(
@@ -1815,7 +1884,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
             R.id.SHARE_PDF_COMMAND -> {
                 baseViewModel.share(
-                    this, listOf(ensureContentUri(Uri.parse(tag as String?), this)),
+                    this, listOf(ensureContentUri((tag as String).toUri(), this)),
                     shareTarget,
                     "application/pdf"
                 )
@@ -1950,7 +2019,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
             R.id.CANCEL_CALLBACK_COMMAND -> finishActionMode()
 
-            R.id.OPEN_PDF_COMMAND -> startActionView(Uri.parse(tag as String), "application/pdf")
+            R.id.OPEN_PDF_COMMAND -> startActionView((tag as String).toUri(), "application/pdf")
 
             R.id.SORT_COMMAND -> MenuDialog.build()
                 .menu(this, R.menu.accounts_sort)
@@ -2005,10 +2074,12 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         onBackPressedCallback.isEnabled = true
         val screenWidth = resources.displayMetrics.widthPixels
         val preferredBalanceSheetWidth = resources.getDimensionPixelSize(R.dimen.drawerWidth) * 2
-        //we limit the width of the balance sheet, if it leaves enough room for the main screen
         val veryLarge = screenWidth >= preferredBalanceSheetWidth * 2
-        binding.accountPanel.root.layoutParams.width =
-            if (veryLarge) preferredBalanceSheetWidth else screenWidth
+        binding.accountPanel.root.layoutParams.width = when {
+            binding.drawer != null -> screenWidth
+            veryLarge -> preferredBalanceSheetWidth
+            else -> ViewGroup.LayoutParams.MATCH_PARENT
+        }
         binding.accountPanel.root.displayedChild = 1
         binding.accountPanel.balanceSheet.setContent {
             AppTheme {
@@ -2016,6 +2087,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     viewModel.accountsForBalanceSheet.collectAsState(LocalDate.now() to emptyList()).value
                 BalanceSheetView(
                     data.second,
+                    viewModel.debtSum.collectAsState(0).value,
                     data.first,
                     onClose = { closeBalanceSheet() },
                     onNavigate = {
@@ -2294,7 +2366,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     private fun configureUiWithCurrentAccount(account: FullAccount?, animateProgress: Boolean) {
         if (account != null) {
             prefHandler.putLong(PrefKey.CURRENT_ACCOUNT, account.id)
-            tintSystemUiAndFab(account.color(resources))
+            tintFab(account.color(resources))
             setBalance(account, animateProgress)
         }
         updateFab()
@@ -2303,7 +2375,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
     private fun setBalance(account: FullAccount, animateProgress: Boolean) {
 
-        val isHome = account.id == HOME_AGGREGATE_ID
+        val isHome = account.isHomeAggregate
         currentBalance = (if (isHome) " ≈ " else "") +
                 currencyFormatter.formatMoney(
                     Money(
@@ -2317,9 +2389,55 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             text = currentBalance
             setTextColor(getAmountColor(account.currentBalance.sign))
         }
+
         val progress = account.progress
-        binding.toolbar.donutView.isVisible = progress != null
-        binding.toolbar.progressPercent.isVisible = progress != null
+
+        val accountVisual = when {
+            account.isAggregate -> ACCOUNT_VISUAL_NONE
+            progress != null -> ACCOUNT_VISUAL_PROGRESS
+            account.bankId != null -> ACCOUNT_VISUAL_ICON
+            else -> ACCOUNT_VISUAL_COLOR
+        }
+
+        binding.toolbar.donutView.isVisible = accountVisual == ACCOUNT_VISUAL_PROGRESS
+        binding.toolbar.progressPercent.isVisible = accountVisual == ACCOUNT_VISUAL_PROGRESS
+        binding.toolbar.accountColorIndicator.isVisible = accountVisual == ACCOUNT_VISUAL_COLOR
+        binding.toolbar.bankIcon.isVisible = accountVisual == ACCOUNT_VISUAL_ICON
+        when (accountVisual) {
+            ACCOUNT_VISUAL_ICON -> {
+                viewModel.banks.value.find { it.id == account.bankId }?.let {
+                    bankingFeature.bankIcon(it)
+                }?.let {
+                    binding.toolbar.bankIcon.setImageResource(it)
+                }
+            }
+            ACCOUNT_VISUAL_COLOR -> {
+                (binding.toolbar.accountColorIndicator.background as GradientDrawable).setColor(account._color)
+            }
+            ACCOUNT_VISUAL_PROGRESS -> {
+                val (sign, progress) = progress!!
+                with(binding.toolbar.donutView) {
+                    animateChanges = animateProgress
+                    submitData(
+                        sections = DisplayProgress.calcProgressVisualRepresentation(progress)
+                            .forViewSystem(
+                                account._color,
+                                getAmountColor(sign)
+                            ).also {
+                                Timber.d("Sections: %s", progress)
+                            }
+                    )
+                    contentDescription =
+                        getString(if (sign > 0) R.string.saving_goal else R.string.credit_limit) + ": " +
+                                DisplayProgress.contentDescription(this@BaseMyExpenses, progress)
+                }
+
+                with(binding.toolbar.progressPercent) {
+                    text = progress.displayProgress
+                    setTextColor(this@BaseMyExpenses.getAmountColor(sign))
+                }
+            }
+        }
         progress?.let { (sign, progress) ->
             with(binding.toolbar.donutView) {
                 animateChanges = animateProgress
@@ -2779,36 +2897,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             R.id.UNARCHIVE_COMMAND -> {
                 viewModel.unarchive(args.getLong(KEY_ROWID))
             }
-
-            R.id.RECALCULATE_COMMAND -> {
-                lifecycleScope.launch {
-                    supportFragmentManager.beginTransaction()
-                        .add(
-                            NewProgressDialogFragment.newInstance(
-                                getString(R.string.menu_recalculate)
-                            ),
-                            PROGRESS_TAG
-                        )
-                        .commitNow()
-                    progressViewModel.appendToMessage(
-                        TextUtils.concatResStrings(
-                            this@BaseMyExpenses,
-                            ": ",
-                            R.string.progress_recalculating,
-                            R.string.equivalent_amount_plural
-                        )
-                    )
-                    val updatedTransactions = pricesViewModel.reCalculateEquivalentAmounts(
-                        accountId = args.getLong(KEY_ROWID),
-                        onlyMissing = checked,
-                        withAccountExchangeRates = false
-                    )
-                    progressViewModel.appendToMessage(updatedTransactions.let { (it.first + it.second) }
-                        .toString())
-                    progressViewModel.appendToMessage(getString(R.string.done_label))
-                    progressViewModel.onTaskCompleted(emptyList())
-                }
-            }
         }
     }
 
@@ -2879,9 +2967,15 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }).show(supportFragmentManager, "CLEAR_FILTER")
     }
 
+    override val scrollsHorizontally: Boolean = true
+
     companion object {
         const val MANAGE_HIDDEN_FRAGMENT_TAG = "MANAGE_HIDDEN"
         const val DIALOG_TAG_GROUPING = "GROUPING"
         const val DIALOG_TAG_SORTING = "SORTING"
+        const val ACCOUNT_VISUAL_NONE = 0
+        const val ACCOUNT_VISUAL_PROGRESS = 1
+        const val ACCOUNT_VISUAL_ICON = 2
+        const val ACCOUNT_VISUAL_COLOR = 3
     }
 }

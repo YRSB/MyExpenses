@@ -124,7 +124,6 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TRANSACTIO
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAX_VALUE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONLY_MISSING
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_CURRENCY
@@ -168,7 +167,6 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VERSION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_WEEK_START
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_WITH_ACCOUNT_EXCHANGE_RATES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
 import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
 import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_ARCHIVED
@@ -235,6 +233,7 @@ import javax.inject.Named
 import javax.inject.Provider
 import kotlin.math.abs
 import kotlin.math.pow
+import androidx.core.net.toUri
 
 fun Uri.Builder.appendBooleanQueryParameter(key: String): Uri.Builder =
     appendQueryParameter(key, "1")
@@ -618,12 +617,12 @@ abstract class BaseTransactionProvider : ContentProvider() {
         mergeAggregate: String?,
         selection: String?,
         sortOrder: String?,
-        sumsForDate: String?
+        sumsForDate: String?,
     ): String {
         val date = sumsForDate ?: "now"
         val aggregateFunction = this.aggregateFunction
 
-        val endOfDay = if (sumsForDate == "now") runBlocking {
+        val endOfDay = if (date == "now") runBlocking {
             enumValueOrDefault(
                 dataStore.data.first()[stringPreferencesKey(
                     prefHandler.getKey(
@@ -650,7 +649,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     SupportSQLiteQueryBuilder
                         .builder(tableName)
                         .columns(
-                            if (minimal)  Account.PROJECTION_MINIMAL else arrayOf(
+                            if (minimal) Account.PROJECTION_MINIMAL else arrayOf(
                                 KEY_ROWID,
                                 KEY_LABEL,
                                 KEY_DESCRIPTION,
@@ -1247,7 +1246,18 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 "UPDATE $TABLE_DEBTS SET $KEY_AMOUNT=$KEY_AMOUNT$operation$factor WHERE $KEY_CURRENCY=?",
                 bindArgs
             )
-
+            db.execSQL(
+                "UPDATE $TABLE_PRICES SET $KEY_VALUE=$KEY_VALUE$inverseOperation$factor WHERE $KEY_COMMODITY=?",
+                bindArgs
+            )
+            db.execSQL(
+                "UPDATE $TABLE_PRICES SET $KEY_VALUE=$KEY_VALUE$operation$factor WHERE $KEY_CURRENCY=?",
+                bindArgs
+            )
+            db.execSQL(
+                "UPDATE $TABLE_EQUIVALENT_AMOUNTS SET $KEY_EQUIVALENT_AMOUNT=$KEY_EQUIVALENT_AMOUNT$operation$factor WHERE $KEY_CURRENCY=?",
+                bindArgs
+            )
             currencyContext.storeCustomFractionDigits(currency, newValue)
         }
         return count
@@ -1586,7 +1596,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 put(KEY_UUID, uuid ?: Model.generateUuid())
             }
         )
-        val uri = Uri.parse(uriString)
+        val uri = uriString.toUri()
         if (uri.scheme == "content" && uri.authority != AppDirHelper.getFileProviderAuthority(
                 context!!
             )
@@ -1970,10 +1980,12 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     accountIdBindArgs
                 )
             } catch (e: SQLiteConstraintException) {
-                report(Throwable("Checking Foreign Keys"), mapOf(
-                    "fk_list" to db.getForeignKeyInfoAsString(TABLE_TRANSACTIONS),
-                    "fk_check" to db.getForeignKeyCheckInfoAsString(TABLE_TRANSACTIONS)
-                ))
+                report(
+                    Throwable("Checking Foreign Keys"), mapOf(
+                        "fk_list" to db.getForeignKeyInfoAsString(TABLE_TRANSACTIONS),
+                        "fk_check" to db.getForeignKeyCheckInfoAsString(TABLE_TRANSACTIONS)
+                    )
+                )
                 throw e
             }
             db.execSQL(
@@ -2017,7 +2029,11 @@ abstract class BaseTransactionProvider : ContentProvider() {
             TransactionProvider.pauseChangeTrigger(this)
             //set equivalent amounts based on parents rate
             execSQL(
-                """WITH parent AS (SELECT 1.0 * $KEY_EQUIVALENT_AMOUNT / $KEY_AMOUNT AS rate FROM $TABLE_TRANSACTIONS ${equivalentAmountJoin(homeCurrency)} WHERE $KEY_ROWID = $transactionId)
+                """WITH parent AS (SELECT 1.0 * $KEY_EQUIVALENT_AMOUNT / $KEY_AMOUNT AS rate FROM $TABLE_TRANSACTIONS ${
+                    equivalentAmountJoin(
+                        homeCurrency
+                    )
+                } WHERE $KEY_ROWID = $transactionId)
                     | INSERT OR REPLACE INTO $TABLE_EQUIVALENT_AMOUNTS
                     | ($KEY_EQUIVALENT_AMOUNT, $KEY_TRANSACTIONID, $KEY_CURRENCY)
                     | SELECT (select rate from parent)*$KEY_AMOUNT, $KEY_ROWID, '$homeCurrency' FROM $TABLE_TRANSACTIONS WHERE $KEY_PARENTID = $transactionId AND (select rate from parent) IS NOT NULL
@@ -2086,14 +2102,13 @@ abstract class BaseTransactionProvider : ContentProvider() {
      */
     fun SupportSQLiteDatabase.recalculateEquivalentAmounts(extras: Bundle): Pair<Int, Int> {
         val currency = extras.getString(KEY_CURRENCY)!!
-        val conflictResolution =
-            if (extras.getBoolean(KEY_ONLY_MISSING, true)) "OR IGNORE" else "OR REPLACE"
+
         val accountId = extras.getLong(KEY_ACCOUNTID).takeIf { it != 0L }
         var accountIdClause = if (accountId != null) "AND $KEY_ACCOUNTID = ?" else ""
 
         val sql1 =
-            """INSERT $conflictResolution INTO $TABLE_EQUIVALENT_AMOUNTS ($KEY_TRANSACTIONID, $KEY_CURRENCY, $KEY_EQUIVALENT_AMOUNT)
-          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = $VIEW_WITH_ACCOUNT.$KEY_CURRENCY and $TABLE_PRICES.$KEY_DATE <=  strftime('%Y-%m-%d', $VIEW_WITH_ACCOUNT.$KEY_DATE, 'unixepoch', 'localtime') ORDER BY $KEY_DATE DESC LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $KEY_DYNAMIC AND $KEY_CURRENCY != ? AND $KEY_PARENTID IS NULL $accountIdClause AND new_equivalent_amount IS NOT NULL
+            """INSERT OR REPLACE INTO $TABLE_EQUIVALENT_AMOUNTS ($KEY_TRANSACTIONID, $KEY_CURRENCY, $KEY_EQUIVALENT_AMOUNT)
+          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = $VIEW_WITH_ACCOUNT.$KEY_CURRENCY and $TABLE_PRICES.$KEY_DATE <=  strftime('%Y-%m-%d', $VIEW_WITH_ACCOUNT.$KEY_DATE, 'unixepoch', 'localtime') ORDER BY $KEY_DATE DESC, ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $KEY_DYNAMIC AND $KEY_CURRENCY != ? AND $KEY_PARENTID IS NULL $accountIdClause AND new_equivalent_amount IS NOT NULL
         """
         val count1 = compileStatement(sql1).use {
             it.bindAllArgsAsStrings(listOf(currency, currency, currency))
@@ -2103,10 +2118,10 @@ abstract class BaseTransactionProvider : ContentProvider() {
             it.executeUpdateDelete()
         }
 
-        val count2 = if (extras.getBoolean(KEY_WITH_ACCOUNT_EXCHANGE_RATES, true)) {
+        val count2 = try {
             accountIdClause = if (accountId != null) "AND $KEY_ROWID = ?" else ""
             val sql2 =
-                """INSERT $conflictResolution INTO $TABLE_ACCOUNT_EXCHANGE_RATES ($KEY_ACCOUNTID, $KEY_CURRENCY_SELF, $KEY_CURRENCY_OTHER, $KEY_EXCHANGE_RATE)
+                """INSERT OR REPLACE INTO $TABLE_ACCOUNT_EXCHANGE_RATES ($KEY_ACCOUNTID, $KEY_CURRENCY_SELF, $KEY_CURRENCY_OTHER, $KEY_EXCHANGE_RATE)
             SELECT $KEY_ROWID, $KEY_CURRENCY, ?,
             (
                 SELECT $KEY_VALUE FROM $TABLE_PRICES
@@ -2119,8 +2134,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     )
             )
             FROM $TABLE_ACCOUNTS WHERE $KEY_CURRENCY != ? $accountIdClause
+            """
 
-        """
             compileStatement(sql2).use {
                 it.bindAllArgsAsStrings(
                     listOf(
@@ -2135,8 +2150,24 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 }
                 it.executeUpdateDelete()
             }
-        } else 0
+        } catch (_: SQLiteConstraintException) {
+            0
+        }
 
         return count1 to count2
+    }
+
+    fun SupportSQLiteDatabase.recalculateEquivalentAmountsForDate(extras: Bundle): Int {
+        val currency = extras.getString(KEY_CURRENCY)!!
+        val date = BundleCompat.getSerializable<LocalDate>(extras, KEY_DATE, LocalDate::class.java)
+        val dateString = date.toString()
+        val sql =
+            """INSERT OR REPLACE INTO $TABLE_EQUIVALENT_AMOUNTS ($KEY_TRANSACTIONID, $KEY_CURRENCY, $KEY_EQUIVALENT_AMOUNT)
+          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = ? and $TABLE_PRICES.$KEY_DATE = ? ORDER BY ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $KEY_DYNAMIC AND $KEY_CURRENCY = ? AND $KEY_PARENTID IS NULL AND strftime('%Y-%m-%d', $KEY_DATE, 'unixepoch', 'localtime') = ? AND new_equivalent_amount IS NOT NULL
+        """
+        return compileStatement(sql).use {
+            it.bindAllArgsAsStrings(listOf(homeCurrency, homeCurrency, currency, dateString, currency, dateString))
+            it.executeUpdateDelete()
+        }
     }
 }

@@ -392,9 +392,10 @@
             android:name="org.totschnig.myexpenses.activity.TemplateSaver"
             android:exported="true"
             android:taskAffinity=""
-            android:theme="@android:style/Theme.NoDisplay" />
+            android:theme="@style/Translucent" />
 
         <activity android:name="org.totschnig.myexpenses.activity.PriceHistory" />
+        <activity android:name="org.totschnig.myexpenses.activity.PrintLayoutConfiguration" android:label="Layout" />
 
         <service
             android:name=".sync.GenericAccountService"

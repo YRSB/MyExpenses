@@ -2088,7 +2088,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
       if (oldVersion < 162) {
         db.execSQL("alter table tags add column color integer default null");
-        createOrRefreshViews(db);
+        //createOrRefreshViews(db);
       }
 
       if (oldVersion < 163) {
@@ -2140,6 +2140,14 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
       if (oldVersion < 174) {
         db.execSQL(getPRIORITIZED_PRICES_CREATE());
+      }
+
+      if (oldVersion < 175) {
+       upgradeTo175(db);
+      }
+
+      if (oldVersion < 176) {
+        createOrRefreshTemplateViews(db);
       }
 
       TransactionProvider.resumeChangeTrigger(db);

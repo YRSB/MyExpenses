@@ -31,7 +31,6 @@
     <string name="permissions_label">"Dopuštenja"</string>
     <string name="time_format">"Format vremena"</string>
     <string name="setup">"Postavljanje"</string>
-    <string name="clear_cache">"Isprazni predmemoriju"</string>
     <string name="customize">"Prilagodi"</string>
     <string name="compact">kompaktna</string>
     <string name="storage_description">"Lokalna pohrana"</string>
@@ -152,4 +151,13 @@
     <string name="action_move_top">"Premještanje na vrh"</string>
     <string name="action_move_bottom">"Premještanje na dno"</string>
     <string name="negation">"Negacija"</string>
+    <string name="layout">"Izgled"</string>
+    <string name="top">"Gore"</string>
+    <string name="bottom">"Dolje"</string>
+    <string name="left">"Lijevo"</string>
+    <string name="right">"Desno"</string>
+    <string name="margins">"Margine"</string>
+    <string name="menu_restore">"Vrati na zadano"</string>
+    <string name="at_start">Počinje</string>
+    <string name="at_end">Završava</string>
 </resources>

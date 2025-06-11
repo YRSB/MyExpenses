@@ -29,7 +29,6 @@
     <string name="permissions_label">"权限"</string>
     <string name="time_format">"时间格式"</string>
     <string name="setup">"设置"</string>
-    <string name="clear_cache">"清除缓存"</string>
     <string name="customize">"自定义"</string>
     <string name="compact">紧凑型</string>
     <string name="storage_description">"本地存储空间"</string>
@@ -157,4 +156,13 @@
     <string name="action_move_top">"移至顶部"</string>
     <string name="action_move_bottom">"移至底部"</string>
     <string name="negation">"非"</string>
+    <string name="layout">"布局"</string>
+    <string name="top">"顶部"</string>
+    <string name="bottom">"底部"</string>
+    <string name="left">"左"</string>
+    <string name="right">"右"</string>
+    <string name="margins">"边距"</string>
+    <string name="menu_restore">"重置为默认设置"</string>
+    <string name="at_start">开始</string>
+    <string name="at_end">结束</string>
 </resources>

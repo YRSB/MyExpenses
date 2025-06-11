@@ -26,7 +26,6 @@
     <string name="permissions_label">"අවසර"</string>
     <string name="time_format">"වේලා ආකෘතිය:"</string>
     <string name="setup">"පිහිටුවීම"</string>
-    <string name="clear_cache">"හැඹිලිය හිස් කරන්න"</string>
     <string name="customize">"අභිරුචිකරණය"</string>
     <string name="compact">සංයුක්ත</string>
     <string name="storage_description">"පෙදෙසි ආචයනය"</string>
@@ -133,4 +132,11 @@
     <string name="done_label">"අවසන්"</string>
     <string name="action_move_top">"ඉහළට ගෙන යන්න"</string>
     <string name="action_move_bottom">"පහළට ගෙන යන්න"</string>
+    <string name="layout">"පිරිසැලසුම"</string>
+    <string name="top">"ඉහළ"</string>
+    <string name="bottom">"පහළ"</string>
+    <string name="left">"වම"</string>
+    <string name="right">"දකුණ"</string>
+    <string name="margins">"මායිම්"</string>
+    <string name="menu_restore">"සුපුරුදු වෙත යළි සකසන්න"</string>
 </resources>

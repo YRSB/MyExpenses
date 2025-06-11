@@ -70,4 +70,13 @@
     <string name="done_label">"Гатова"</string>
     <string name="action_move_top">"Перамясціць уверх"</string>
     <string name="action_move_bottom">"Перамясціць уніз"</string>
+    <string name="layout">"Раскладка"</string>
+    <string name="top">"Зверху"</string>
+    <string name="bottom">"Знізу"</string>
+    <string name="left">"Злева"</string>
+    <string name="right">"Справа"</string>
+    <string name="margins">"Палі"</string>
+    <string name="menu_restore">"Скінуць налады"</string>
+    <string name="at_start">Пачатак</string>
+    <string name="at_end">Канец</string>
 </resources>

@@ -4,12 +4,27 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.preference.PreferenceFragmentCompat
+import kotlinx.serialization.json.Json
 import org.totschnig.myexpenses.BuildConfig
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
+import org.totschnig.myexpenses.db2.FLAG_TRANSFER
 import org.totschnig.myexpenses.dialog.MenuItem
 import org.totschnig.myexpenses.dialog.valueOf
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.toDayOfWeek
+import org.totschnig.myexpenses.viewmodel.Account
+import org.totschnig.myexpenses.viewmodel.Amount
+import org.totschnig.myexpenses.viewmodel.Category
+import org.totschnig.myexpenses.viewmodel.ColumnFeed
+import org.totschnig.myexpenses.viewmodel.CombinedField
+import org.totschnig.myexpenses.viewmodel.Date
+import org.totschnig.myexpenses.viewmodel.Notes
+import org.totschnig.myexpenses.viewmodel.OriginalAmount
+import org.totschnig.myexpenses.viewmodel.Payee
+import org.totschnig.myexpenses.viewmodel.Position
+import org.totschnig.myexpenses.viewmodel.ReferenceNumber
+import org.totschnig.myexpenses.viewmodel.Tags
 import java.util.Calendar
 import java.util.Locale
 
@@ -19,7 +34,9 @@ interface PrefHandler {
 
     fun getString(key: String, defValue: String? = null): String?
     fun putString(key: String, value: String?)
-    fun getString(key: PrefKey, defValue: String? = null): String? = getString(getKey(key), defValue)
+    fun getString(key: PrefKey, defValue: String? = null): String? =
+        getString(getKey(key), defValue)
+
     fun putString(key: PrefKey, value: String?) {
         putString(getKey(key), value)
     }
@@ -50,7 +67,9 @@ interface PrefHandler {
 
 
     fun getOrderedStringSet(key: String, separator: Char = ':'): Set<String>?
-    fun getOrderedStringSet(key: PrefKey, separator: Char = ':') = getOrderedStringSet(getKey(key), separator)
+    fun getOrderedStringSet(key: PrefKey, separator: Char = ':') =
+        getOrderedStringSet(getKey(key), separator)
+
     /**
      * @param separator no item in value must contain separator
      */
@@ -150,7 +169,8 @@ interface PrefHandler {
             ?.takeIf { it != AccountPreference.SYNCHRONIZATION_NONE }
 
     companion object {
-        const val AUTOMATIC_EXCHANGE_RATE_DOWNLOAD_PREF_KEY_PREFIX = "automatic_exchange_rate_download_"
+        const val AUTOMATIC_EXCHANGE_RATE_DOWNLOAD_PREF_KEY_PREFIX =
+            "automatic_exchange_rate_download_"
         const val SERVICE_DEACTIVATED = "no"
     }
 }
@@ -171,4 +191,48 @@ fun PrefHandler.getStringSafe(prefKey: String, default: String) = try {
     getString(prefKey, default)
 } catch (_: ClassCastException) {
     default
+}
+
+fun PrefHandler.saveIntList(key: PrefKey, list: List<Int>) {
+    putString(key, list.joinToString(","))
+}
+
+fun PrefHandler.loadIntList(key: PrefKey) = getString(key, null)?.let {
+    it.split(",").mapNotNull { it.toIntOrNull() }
+}
+
+val printLayoutDefault = listOf(
+    Date,
+    ColumnFeed,
+    Account, Category, Tags,
+    ColumnFeed,
+    Payee, CombinedField(listOf(ReferenceNumber, Notes)),
+    ColumnFeed,
+    OriginalAmount, Amount
+)
+
+val printLayoutDefaultColumnsWidths = listOf(150, 350, 350, 200)
+
+var PrefHandler.printLayout: List<Position>
+    get() = getString(PrefKey.PRINT_LAYOUT, null)?.let { Json.decodeFromString(it) }
+        ?: printLayoutDefault
+    set(value) {
+        putString(PrefKey.PRINT_LAYOUT, Json.encodeToString(value))
+    }
+
+var PrefHandler.printLayoutColumnWidths: List<Int>
+    get() = loadIntList(PrefKey.PRINT_LAYOUT_COLUMN_WIDTH)
+        ?: printLayoutDefaultColumnsWidths
+    set(value) {
+        saveIntList(PrefKey.PRINT_LAYOUT_COLUMN_WIDTH, value)
+    }
+
+enum class ColorSource {
+    TYPE, SIGN, TYPE_WITH_SIGN;
+
+    fun transformType(type: Byte) = type.takeIf { it == FLAG_NEUTRAL } ?: when (this) {
+        TYPE -> type
+        TYPE_WITH_SIGN -> type.takeIf { it == FLAG_TRANSFER }
+        SIGN -> null
+    }
 }

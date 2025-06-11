@@ -10,9 +10,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +57,7 @@ import androidx.paging.compose.LazyPagingItems
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.BaseActivity
 import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbar
+import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbarAndBottomPadding
 import org.totschnig.myexpenses.compose.scrollbar.STICKY_HEADER_CONTENT_TYPE
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyUnit
@@ -217,6 +224,10 @@ fun TransactionList(
                 modifier = modifier.nestedScroll(nestedScrollInterop),
                 state = listState,
                 fastScroll = true,
+                contentPadding = WindowInsets.navigationBars
+                    .add(WindowInsets.displayCutout)
+                    .add(WindowInsets(bottom = dimensionResource(R.dimen.fab_related_bottom_padding)))
+                    .asPaddingValues(),
                 itemsAvailable = lazyPagingItems.itemCount,
                 groupCount = (headerData as? HeaderData)?.groups?.size ?: 0
             ) {
@@ -326,15 +337,7 @@ fun TransactionList(
                                     )
                                 }
                             }
-                            if (isLast) {
-                                GroupDivider(
-                                    modifier = Modifier.padding(
-                                        bottom = dimensionResource(
-                                            id = R.dimen.fab_related_bottom_padding
-                                        )
-                                    )
-                                )
-                            } else HorizontalDivider()
+                            if (isLast) GroupDivider() else HorizontalDivider()
                         }
                     }
 

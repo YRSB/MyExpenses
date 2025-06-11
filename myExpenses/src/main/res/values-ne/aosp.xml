@@ -76,4 +76,11 @@
     <string name="action_move_top">"माथिल्लो भागमा सार्नुहोस्"</string>
     <string name="action_move_bottom">"तल्लो भागमा सार्नुहोस्"</string>
     <string name="negation">"नेगेसन"</string>
+    <string name="layout">"लेआउट"</string>
+    <string name="top">"माथि"</string>
+    <string name="bottom">"तल"</string>
+    <string name="left">"बायाँ"</string>
+    <string name="right">"दायाँ"</string>
+    <string name="margins">"सीमान्तहरू"</string>
+    <string name="menu_restore">"रिसेट गरी डिफल्ट बनाउनुहोस्"</string>
 </resources>

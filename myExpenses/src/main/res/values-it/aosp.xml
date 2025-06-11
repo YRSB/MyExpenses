@@ -29,7 +29,6 @@
     <string name="permissions_label">"Autorizzazioni"</string>
     <string name="time_format">"Formato dell\'ora"</string>
     <string name="setup">"Configura"</string>
-    <string name="clear_cache">"Svuota cache"</string>
     <string name="customize">"Personalizza"</string>
     <string name="compact">compatto</string>
     <string name="storage_description">"Archiviazione locale"</string>
@@ -159,4 +158,13 @@
     <string name="action_move_top">"Sposta all'inizio"</string>
     <string name="action_move_bottom">"Sposta in fondo"</string>
     <string name="negation">"Negazione"</string>
+    <string name="layout">"Layout"</string>
+    <string name="top">"In alto"</string>
+    <string name="bottom">"In basso"</string>
+    <string name="left">"A sinistra"</string>
+    <string name="right">"A destra"</string>
+    <string name="margins">"Margini"</string>
+    <string name="menu_restore">"Ripristina impostazioni predefinite"</string>
+    <string name="at_start">Inizio</string>
+    <string name="at_end">Fine</string>
 </resources>

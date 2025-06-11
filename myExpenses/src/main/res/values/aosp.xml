@@ -23,13 +23,12 @@
     <string name="permissions_label">Permissions</string>
     <!-- name = time_format_category_title -->
     <string name="time_format">Time format</string>
-    <!-- name="clear_cache_btn_text" -->
-    <string name="clear_cache">Clear cache</string>
-    <!-- name = crypt_keeper_settings_title  -->
+    <!-- name = encryption_settings_title  -->
     <string name="encryption">Encryption</string>
     <!-- name = experimental_category_title -->
     <string name="experimental">Experimental</string>
     <string name="learn_more">Learn more</string>
+    <!-- name = lockpassword_confirm_label -->
     <string name="confirm">Confirm</string>
     <!-- name = search_settings -->
     <string name="menu_search">Search</string>
@@ -94,7 +93,7 @@
     <string name="settings_label">"Settings"</string>
     <!-- /opt/extra/AOSP/packages/apps/Settings grep -ri 6710768415432791970 res  |  sed 's/ msgid="[[:digit:]]*"//' | aosp_helper -->
     <string name="security_settings_title">Security</string>
-    <!-- /opt/extra/AOSP/packages/apps/Settings grep -ri 6710768415432791970 res  | sed 's/unlock_set_unlock_launch_picker_title/screen_lock/' |  sed 's/ msgid="[[:digit:]]*"//' | aosp_helper -->
+    <!-- /opt/extra/AOSP/packages/apps/Settings grep -ri 4981063601772605609 res  | sed 's/unlock_set_unlock_launch_picker_title/screen_lock/' |  sed 's/ msgid="[[:digit:]]*"//' | aosp_helper -->
     <string name="screen_lock">Screen lock</string>
     <!-- /opt/extra/AOSP/packages/apps/Gallery2 grep -ri folder_screenshot res/values*  | sed 's/folder_//' |  sed 's/ msgid="[[:digit:]]*"//' | aosp_helper  -->
     <string name="screenshot">Screenshot</string>
@@ -292,4 +291,21 @@
     <string name="done_label">"Done"</string>
     <!-- LibreOffice /helpcontent2/source/text/scalc/01.po Cy2wm -->
     <string name="negation">"Negation"</string>
+    <!-- /opt/extra/AOSP/packages/inputmethods/LatinIME/java$ grep -ri keyboard_layout_set |  sed 's/ msgid="[[:digit:]]*"//' | sed 's/keyboard_layout_set/layout/' | aosp_helper -->
+    <string name="layout">"Layout"</string>
+    <!-- LibreOffice cui/messages.po R7VbC -->
+    <string name="top">"Top"</string>
+    <!-- LibreOffice cui/messages.po WU9cc -->
+    <string name="bottom">"Bottom"</string>
+    <!-- LibreOffice cui/messages.po XAgVD -->
+    <string name="left">"Left"</string>
+    <!-- LibreOffice cui/messages.po NNBsv -->
+    <string name="right">"Right"</string>
+    <!-- LibreOffice cui/messages.po Tvwu6 -->
+    <string name="margins">"Margins"</string>
+    <!-- /opt/extra/AOSP/packages/apps/Settings$ grep -ri menu_restore  | sed 's/ msgid="[[:digit:]]*"//' | aosp_helper -->
+    <string name="menu_restore">"Reset to default"</string>
+    <!-- Thunderbird calendar-event-listing-column-start-date calendar-event-listing-column-end-date-->
+    <string name="at_start">Start</string>
+    <string name="at_end">End</string>
 </resources>

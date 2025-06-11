@@ -29,7 +29,6 @@
     <string name="permissions_label">"Quyền"</string>
     <string name="time_format">"Định dạng thời gian"</string>
     <string name="setup">"Thiết lập"</string>
-    <string name="clear_cache">"Xóa bộ nhớ đệm"</string>
     <string name="customize">"Tùy chỉnh"</string>
     <string name="compact">Viết tắt</string>
     <string name="storage_description">"Bộ nhớ cục bộ"</string>
@@ -154,4 +153,13 @@
     <string name="action_move_top">"Chuyển lên trên cùng"</string>
     <string name="action_move_bottom">"Chuyển xuống dưới cùng"</string>
     <string name="negation">"Phủ định"</string>
+    <string name="layout">"Bố cục"</string>
+    <string name="top">"Đỉnh"</string>
+    <string name="bottom">"Đáy"</string>
+    <string name="left">"Trái"</string>
+    <string name="right">"Phải"</string>
+    <string name="margins">"Lề"</string>
+    <string name="menu_restore">"Đặt lại về mặc định"</string>
+    <string name="at_start">Bắt đầu</string>
+    <string name="at_end">Kết thúc</string>
 </resources>

@@ -31,7 +31,6 @@
     <string name="permissions_label">"Разрешения"</string>
      <string name="time_format">"Формат за часа"</string>
     <string name="setup">"Настройване"</string>
-    <string name="clear_cache">"Изчистване на кеша"</string>
     <string name="customize">"Персонализиране"</string>
     <string name="compact">компактна</string>
     <string name="storage_description">"Локално хранилище"</string>
@@ -161,4 +160,13 @@
     <string name="action_move_top">"Преместване най-горе"</string>
     <string name="action_move_bottom">"Преместване най-долу"</string>
     <string name="negation">"Обръщане на знака"</string>
+    <string name="layout">"Подредба"</string>
+    <string name="top">"Отгоре"</string>
+    <string name="bottom">"Отдолу"</string>
+    <string name="left">"Отляво"</string>
+    <string name="right">"Отдясно"</string>
+    <string name="margins">"Бели полета"</string>
+    <string name="menu_restore">"Възстановяване на стандартни"</string>
+    <string name="at_start">Начало</string>
+    <string name="at_end">Край</string>
 </resources>

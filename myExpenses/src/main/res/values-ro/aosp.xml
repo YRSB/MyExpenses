@@ -30,7 +30,6 @@
     <string name="permissions_label">"Permisiuni"</string>
     <string name="time_format">"Formatul orei"</string>
     <string name="setup">"Configurați"</string>
-    <string name="clear_cache">"Goliți memoria cache"</string>
     <string name="customize">"Personalizați"</string>
     <string name="compact">Compact</string>
     <string name="storage_description">"Stocare locală"</string>
@@ -146,4 +145,13 @@
     <string name="done_label">"Terminat"</string>
     <string name="action_move_top">"Mută sus"</string>
     <string name="action_move_bottom">"Mută jos"</string>
+    <string name="layout">"Aspect"</string>
+    <string name="top">"Sus"</string>
+    <string name="bottom">"Jos"</string>
+    <string name="left">"Stânga"</string>
+    <string name="right">"Dreapta"</string>
+    <string name="margins">"Margini"</string>
+    <string name="menu_restore">"Resetează la valorile prestabilite"</string>
+    <string name="at_start">Început</string>
+    <string name="at_end">Sfârșit</string>
 </resources>

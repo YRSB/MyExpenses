@@ -94,4 +94,13 @@
     <string name="action_move_top">"Pindahkan ke atas"</string>
     <string name="action_move_bottom">"Pindahkan ke bawah"</string>
     <string name="negation">"Menegatifkan"</string>
+    <string name="layout">"Tata letak"</string>
+    <string name="top">"Teratas"</string>
+    <string name="bottom">"Terbawah"</string>
+    <string name="left">"Kiri"</string>
+    <string name="right">"Kanan"</string>
+    <string name="margins">"Pias"</string>
+    <string name="menu_restore">"Reset ke default"</string>
+    <string name="at_start">Mulai</string>
+    <string name="at_end">Selesai</string>
 </resources>

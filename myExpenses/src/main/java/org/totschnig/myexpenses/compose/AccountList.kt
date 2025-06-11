@@ -56,7 +56,7 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.compose.MenuEntry.Companion.delete
 import org.totschnig.myexpenses.compose.MenuEntry.Companion.edit
 import org.totschnig.myexpenses.compose.MenuEntry.Companion.toggle
-import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbar
+import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbarAndBottomPadding
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_COMMAND_POSITIVE
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_MESSAGE
@@ -66,6 +66,7 @@ import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.AGGREGATE_HOME_CURRENCY_CODE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
+import org.totschnig.myexpenses.util.calculateRealExchangeRate
 import org.totschnig.myexpenses.util.convAmount
 import org.totschnig.myexpenses.util.isolateText
 import org.totschnig.myexpenses.viewmodel.data.Currency
@@ -97,9 +98,10 @@ fun AccountList(
     if (collapsedGroupIds != null && collapsedAccountIds != null) {
         val grouped: Map<String, List<FullAccount>> =
             accountData.groupBy { getHeaderId(grouping, it) }
-        LazyColumnWithScrollbar(
+        LazyColumnWithScrollbarAndBottomPadding(
             state = listState,
             itemsAvailable = accountData.size + grouped.size,
+            withFab = false,
             testTag = TEST_TAG_ACCOUNTS,
         ) {
             grouped.forEach { group ->
@@ -345,35 +347,6 @@ fun AccountCard(
                         ) {
                             onToggleExcludeFromTotals(account)
                         })
-                        if (account.dynamic) {
-                            add(
-                                MenuEntry(
-                                    label = R.string.menu_recalculate,
-                                    icon = Icons.Default.Calculate,
-                                    command = "RECALCULATE",
-                                    action = {
-                                        if (context is FragmentActivity) {
-                                            ConfirmationDialogFragment.newInstance(Bundle().apply {
-                                                putCharSequence(
-                                                    KEY_MESSAGE,
-                                                    context.getString(R.string.recalculate_equivalent_amounts_warning)
-                                                )
-                                                putInt(KEY_COMMAND_POSITIVE, R.id.RECALCULATE_COMMAND)
-                                                putString(
-                                                    ConfirmationDialogFragment.KEY_CHECKBOX_LABEL,
-                                                    context.getString(R.string.recalculate_only_missing)
-                                                )
-                                                putBoolean(
-                                                    ConfirmationDialogFragment.KEY_CHECKBOX_INITIALLY_CHECKED,
-                                                    true
-                                                )
-                                                putLong(KEY_ROWID, account.id)
-                                            }).show(context.supportFragmentManager, "RECALCULATE")
-                                        }
-                                    }
-                                )
-                            )
-                        }
                     }
                 }
             )
@@ -411,7 +384,8 @@ fun AccountCard(
                     )
                 )
                 if (showEquivalent && isFx && account.equivalentOpeningBalance != 0L && account.initialExchangeRate != null) {
-                    Text("1 $accountCurrencyIsolated = ${fXFormat.format(account.initialExchangeRate)} $homeCurrencyIsolated")
+                    val realRate = calculateRealExchangeRate(account.initialExchangeRate, account.currencyUnit, homeCurrency)
+                    Text("1 $accountCurrencyIsolated = ${fXFormat.format(realRate)} $homeCurrencyIsolated")
                 }
                 val displayIncome =
                     if (showEquivalent) account.equivalentSumIncome else account.sumIncome
@@ -460,8 +434,9 @@ fun AccountCard(
 
                     account.latestExchangeRate?.let { (date, rate) ->
                         val dateFormatted = LocalDateFormatter.current.format(date)
+                        val realRate = calculateRealExchangeRate(rate, account.currencyUnit, homeCurrency)
                         Text(
-                            "1 $accountCurrencyIsolated = ${fXFormat.format(rate)} $homeCurrencyIsolated ($dateFormatted)"
+                            "1 $accountCurrencyIsolated = ${fXFormat.format(realRate)} $homeCurrencyIsolated ($dateFormatted)"
                         )
                     }
                 }

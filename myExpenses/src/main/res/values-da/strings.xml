@@ -931,7 +931,6 @@
     <string name="dynamic_exchange_rate">Dynamisk valutakurs</string>
     <string name="progress_recalculating">Genberegner</string>
     <string name="recalculate_equivalent_amounts_warning">Tilsvarende beløb (gen)beregnes, hvis de relevante lagrede valutakurser er tilgængelige.</string>
-    <string name="recalculate_only_missing">Udfyld kun manglende værdier</string>
     <string name="equivalent_amount_plural">Tilsvarende beløb</string>
     <string name="menu_recalculate">Genberegn</string>
     <string name="quick_search">Hurtig søgning</string>
@@ -941,4 +940,7 @@
     <string name="balance_sheet_section_assets">Aktiver</string>
     <string name="balance_sheet_section_liabilities">Passiver</string>
     <string name="balance_sheet_net_worth">Nettoformue</string>
+    <string name="mark_as_cleared">Markér som afklaret</string>
+    <string name="mark_as_unreconciled">Markér som ikke afstemt</string>
+    <string name="pref_equivalent_amounts_automatic_update_title">Opdater automatisk de tilsvarende beløb, når priserne ændres</string>
 </resources>

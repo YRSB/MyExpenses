@@ -30,7 +30,6 @@
     <string name="permissions_label">"Engedélyek"</string>
     <string name="time_format">"Időformátum"</string>
     <string name="setup">"Beállítás"</string>
-    <string name="clear_cache">"A gyorsítótár törlése"</string>
     <string name="customize">"Személyre szabás"</string>
     <string name="compact">kompakt</string>
     <string name="storage_description">"Helyi tárhely"</string>
@@ -161,4 +160,13 @@
     <string name="action_move_top">"Mozgatás az elejére"</string>
     <string name="action_move_bottom">"Mozgatás a végére"</string>
     <string name="negation">"Negáció"</string>
+    <string name="layout">"Elrendezés"</string>
+    <string name="top">"Fel"</string>
+    <string name="bottom">"Le"</string>
+    <string name="left">"Balra"</string>
+    <string name="right">"Jobbra"</string>
+    <string name="margins">"Margók"</string>
+    <string name="menu_restore">"Visszaállítás alaphelyzetbe"</string>
+    <string name="at_start">Kezdés</string>
+    <string name="at_end">Befejezés</string>
 </resources>

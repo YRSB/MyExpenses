@@ -29,7 +29,6 @@
     <string name="permissions_label">"權限"</string>
     <string name="time_format">"時間格式"</string>
     <string name="setup">"設定"</string>
-    <string name="clear_cache">"清除快取"</string>
     <string name="customize">"自訂"</string>
     <string name="compact">精簡</string>
     <string name="storage_description">"本機儲存空間"</string>
@@ -156,4 +155,13 @@
     <string name="action_move_top">"移至頂端"</string>
     <string name="action_move_bottom">"移到底端"</string>
     <string name="negation">"負"</string>
+    <string name="layout">"配置"</string>
+    <string name="top">"上"</string>
+    <string name="bottom">"下"</string>
+    <string name="left">"左"</string>
+    <string name="right">"右"</string>
+    <string name="margins">"頁面邊距"</string>
+    <string name="menu_restore">"還原為預設狀態"</string>
+    <string name="at_start">開始時間</string>
+    <string name="at_end">結束時間</string>
 </resources>

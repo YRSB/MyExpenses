@@ -26,7 +26,6 @@
     <string name="permissions_label">"అనుమతులు"</string>
     <string name="time_format">"సమయ ఫార్మాట్‌"</string>
     <string name="setup">"సెటప్"</string>
-    <string name="clear_cache">"కాష్‌ను క్లియర్ చేయి"</string>
     <string name="customize">"అనుకూలీకరించు"</string>
     <string name="compact">కాంపాక్ట్</string>
     <string name="storage_description">"స్థానిక నిల్వ"</string>
@@ -133,4 +132,11 @@
     <string name="done_label">"పూర్తయింది"</string>
     <string name="action_move_top">"ఎగువకు తరలించు"</string>
     <string name="action_move_bottom">"దిగువకు తరలించు"</string>
+    <string name="layout">"లేఅవుట్"</string>
+    <string name="top">"పైన"</string>
+    <string name="bottom">"కింద"</string>
+    <string name="left">"ఎడమ"</string>
+    <string name="right">"కుడి"</string>
+    <string name="margins">"అంచులు"</string>
+    <string name="menu_restore">"ఆటోమేటిక్‌కు రీసెట్ చేయి"</string>
 </resources>

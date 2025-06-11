@@ -83,4 +83,13 @@
     <string name="action_move_top">"თავში გადატანა"</string>
     <string name="action_move_bottom">"ბოლოში გადატანა"</string>
     <string name="negation">"უარყოფა"</string>
+    <string name="layout">"განლაგება"</string>
+    <string name="top">"ზემოთ"</string>
+    <string name="bottom">"ქვემოთ"</string>
+    <string name="left">"მარცხნივ"</string>
+    <string name="right">"მარჯვნივ"</string>
+    <string name="margins">"კიდეები"</string>
+    <string name="menu_restore">"საწყის პარამეტრებზე ჩამოყრა"</string>
+    <string name="at_start">დაწყება</string>
+    <string name="at_end">დასრულება</string>
 </resources>

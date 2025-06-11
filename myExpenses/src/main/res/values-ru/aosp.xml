@@ -30,7 +30,6 @@
     <string name="permissions_label">"Разрешения"</string>
     <string name="time_format">"Формат времени"</string>
     <string name="setup">"Настройка"</string>
-    <string name="clear_cache">"Очистить кеш"</string>
     <string name="customize">"Другой"</string>
     <string name="compact">компактная раскладка</string>
     <string name="storage_description">"Локальное хранилище"</string>
@@ -161,4 +160,13 @@
     <string name="action_move_top">"Переместить в начало"</string>
     <string name="action_move_bottom">"Переместить в конец"</string>
     <string name="negation">"Унарный минус"</string>
+    <string name="layout">"Раскладка"</string>
+    <string name="top">"По верху"</string>
+    <string name="bottom">"По низу"</string>
+    <string name="left">"По левому краю"</string>
+    <string name="right">"По правому краю"</string>
+    <string name="margins">"Поля"</string>
+    <string name="menu_restore">"Сбросить настройки"</string>
+    <string name="at_start">Начало</string>
+    <string name="at_end">Sfârșit</string>
 </resources>

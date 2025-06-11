@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
-import org.totschnig.myexpenses.compose.ColorSource
 import org.totschnig.myexpenses.compose.RenderType
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.countAccounts
@@ -41,6 +40,7 @@ import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.Template
 import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
+import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES
@@ -48,6 +48,7 @@ import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGAT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
@@ -83,8 +84,8 @@ import org.totschnig.myexpenses.viewmodel.ExportViewModel.Companion.EXPORT_HANDL
 import org.totschnig.myexpenses.viewmodel.data.AccountMinimal
 import org.totschnig.myexpenses.viewmodel.data.DateInfo
 import org.totschnig.myexpenses.viewmodel.data.DisplayDebt
+import java.time.LocalDate
 import javax.inject.Inject
-import kotlin.collections.set
 
 const val KEY_ROW_IDS = "rowIds"
 
@@ -280,6 +281,7 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
      */
     fun loadDebts(
         rowId: Long? = null,
+        date: LocalDate? = null,
         showSealed: Boolean = false,
         showZero: Boolean = true,
         sortOrder: String? = null
@@ -288,6 +290,9 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
             uri = with(DEBTS_URI.buildUpon()) {
                 rowId?.takeIf { it != 0L }?.let {
                     appendQueryParameter(KEY_TRANSACTIONID, rowId.toString())
+                }
+                date?.let {
+                    appendQueryParameter(KEY_DATE, date.toString())
                 }
                 build()
             },
@@ -391,24 +396,24 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
         return selection to joinArrays(filterSelectionArgs, accountSelectionArgs)
     }
 
-/*    fun loadDebugDebts(count: Int = 10) {
-        debts.postValue(List(
-            count
-        ) {
-            Debt(
-                it.toLong(),
-                "Debt $it",
-                "Description",
-                1,
-                5000,
-                "EUR",
-                System.currentTimeMillis() / 1000,
-                "John doe",
-                false,
-                4123
-            )
-        })
-    }*/
+    /*    fun loadDebugDebts(count: Int = 10) {
+            debts.postValue(List(
+                count
+            ) {
+                Debt(
+                    it.toLong(),
+                    "Debt $it",
+                    "Description",
+                    1,
+                    5000,
+                    "EUR",
+                    System.currentTimeMillis() / 1000,
+                    "John doe",
+                    false,
+                    4123
+                )
+            })
+        }*/
 
     companion object {
         fun <K, V> lazyMap(initializer: (K) -> V): Map<K, V> {

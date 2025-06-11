@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.totschnig.myexpenses.BuildConfig
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.BaseActivity
 import org.totschnig.myexpenses.databinding.ExchangeRateBinding
@@ -59,18 +60,34 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
         this.exchangeRateWatcher = exchangeRateWatcher
     }
 
-    val lifecycleScope: CoroutineScope?
-        get() = findViewTreeLifecycleOwner()?.lifecycleScope
+    val lifecycleScope: CoroutineScope
+        get() = findViewTreeLifecycleOwner()!!.lifecycleScope
 
 
     fun setBlockWatcher(blockWatcher: Boolean) {
         this.blockWatcher = blockWatcher
     }
 
+    fun loadExchangeRate() {
+        if (isInitialized) {
+            lifecycleScope.launch {
+                handleResult(
+                    host.loadExchangeRate(
+                        otherCurrency,
+                        baseCurrency,
+                    ), ignoreError = true
+                )
+            }
+        }
+    }
+
+    private val isInitialized: Boolean
+        get() = ::otherCurrency.isInitialized && ::baseCurrency.isInitialized
+
     init {
         downloadButton = binding.ivDownload.getRoot()
         downloadButton.setOnClickListener {
-            if (::otherCurrency.isInitialized && ::baseCurrency.isInitialized) {
+            if (isInitialized) {
                 val providers =
                     ExchangeRateApi.configuredSources(context.injector.prefHandler()).toList()
                 when (providers.size) {
@@ -80,11 +97,11 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
                         )
                     )
 
-                    1 -> lifecycleScope?.launch {
+                    1 -> lifecycleScope.launch {
                         handleResult(
                             host.loadExchangeRate(
-                                otherCurrency.code,
-                                baseCurrency.code,
+                                otherCurrency,
+                                baseCurrency,
                                 providers.first()
                             )
                         )
@@ -92,10 +109,11 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
 
                     else -> PopupMenu(context, downloadButton).apply {
                         setOnMenuItemClickListener { item ->
-                            lifecycleScope?.launch {
+                            lifecycleScope.launch {
                                 handleResult(
                                     host.loadExchangeRate(
-                                        otherCurrency.code, baseCurrency.code,
+                                        otherCurrency,
+                                        baseCurrency,
                                         providers[item.itemId]
                                     )
                                 )
@@ -173,7 +191,7 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
         second?.let {
             baseCurrency = it
         }
-        if (::otherCurrency.isInitialized && ::baseCurrency.isInitialized) {
+        if (isInitialized) {
             isVisible = if (otherCurrency.code == baseCurrency.code) false else {
                 setSymbols(binding.ExchangeRate1, otherCurrency.symbol, baseCurrency.symbol)
                 setSymbols(binding.ExchangeRate2, baseCurrency.symbol, otherCurrency.symbol)
@@ -239,13 +257,15 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
         ) else nullValue
     }
 
-    private fun handleResult(result: Result<Double>) {
+    private fun handleResult(result: Result<BigDecimal>, ignoreError: Boolean = false) {
         result.onSuccess {
             Timber.d("result: $it")
-            rate1Edit.setAmount(BigDecimal.valueOf(it))
+            rate1Edit.setAmount(it)
             source = Source.Download
         }.onFailure {
-            complain(it.safeMessage)
+            if (BuildConfig.DEBUG || !ignoreError) {
+                complain(it.safeMessage)
+            }
         }
     }
 
@@ -267,10 +287,10 @@ class ExchangeRateEdit(context: Context, attrs: AttributeSet?) : ConstraintLayou
 
     interface Host {
         suspend fun loadExchangeRate(
-            other: String,
-            base: String,
-            source: ExchangeRateApi,
-        ): Result<Double>
+            other: CurrencyUnit,
+            base: CurrencyUnit,
+            source: ExchangeRateApi? = null,
+        ): Result<BigDecimal>
     }
 
     companion object {

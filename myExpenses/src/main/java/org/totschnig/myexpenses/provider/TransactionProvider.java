@@ -407,6 +407,7 @@ public class TransactionProvider extends BaseTransactionProvider {
   public static final String METHOD_CAN_BE_ARCHIVED = "canBeArchived";
 
   public static final String METHOD_RECALCULATE_EQUIVALENT_AMOUNTS = "recalculateEquivalentAmounts";
+  public static final String METHOD_RECALCULATE_EQUIVALENT_AMOUNTS_FOR_DATE = "recalculateEquivalentAmountsForDate";
 
   private static final UriMatcher URI_MATCHER;
 
@@ -860,11 +861,16 @@ public class TransactionProvider extends BaseTransactionProvider {
         additionalWhere.append(KEY_ROWID + "=").append(uri.getPathSegments().get(1));
         break;
       case DEBTS: {
-        cte = amountCteForDebts(getHomeCurrency());
+        String date = uri.getQueryParameter(KEY_DATE);
+        String dateExpression = date != null ? "cast(strftime('%s', '" + date + "', 'localtime', 'start of day', '+1 day', '-1 second', 'utc') as integer)" : null;
+        cte = amountCteForDebts(getHomeCurrency(), dateExpression);
+        //for the moment only one of queryParameters KEY_TRANSACTIONID, KEY_DATE can be used
         String transactionId = uri.getQueryParameter(KEY_TRANSACTIONID);
         if (transactionId != null) {
           additionalWhere.append("not exists(SELECT 1 FROM " + TABLE_TRANSACTIONS + " WHERE " + KEY_DEBT_ID + " IS NOT NULL AND " + KEY_PARENTID + " = ")
                   .append(transactionId).append(")");
+        } else if (dateExpression != null) {
+          additionalWhere.append(KEY_DATE).append(" <= ").append(dateExpression);
         }
         if (projection == null) {
           projection = debtProjection(transactionId, true);
@@ -1646,6 +1652,13 @@ public class TransactionProvider extends BaseTransactionProvider {
       case METHOD_RECALCULATE_EQUIVALENT_AMOUNTS -> {
         Bundle result = new Bundle(1);
         result.putSerializable(KEY_RESULT, recalculateEquivalentAmounts(getHelper().getWritableDatabase(), Objects.requireNonNull(extras)));
+        notifyChange(TRANSACTIONS_URI, true);
+        notifyChange(ACCOUNTS_URI, false);
+        return result;
+      }
+      case METHOD_RECALCULATE_EQUIVALENT_AMOUNTS_FOR_DATE -> {
+        Bundle result = new Bundle(1);
+        result.putInt(KEY_RESULT, recalculateEquivalentAmountsForDate(getHelper().getWritableDatabase(), Objects.requireNonNull(extras)));
         notifyChange(TRANSACTIONS_URI, true);
         notifyChange(ACCOUNTS_URI, false);
         return result;

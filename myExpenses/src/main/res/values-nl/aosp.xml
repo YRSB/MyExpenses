@@ -26,7 +26,6 @@
     <string name="permissions_label">Rechten</string>
     <string name="time_format">Tijdnotatie</string>
     <string name="setup">"Instellen"</string>
-    <string name="clear_cache">Cache wissen</string>
     <string name="customize">Aanpassen</string>
     <string name="compact">Compact</string>
     <string name="storage_description">Lokale opslag</string>
@@ -156,4 +155,13 @@
     <string name="action_move_top">"Bovenaan zetten"</string>
     <string name="action_move_bottom">"Onderaan zetten"</string>
     <string name="negation">"Negatief maken"</string>
+    <string name="layout">"Indeling"</string>
+    <string name="top">"Boven"</string>
+    <string name="bottom">"Onder"</string>
+    <string name="left">"Links"</string>
+    <string name="right">"Rechts"</string>
+    <string name="margins">"Marges"</string>
+    <string name="menu_restore">"Standaardinstellingen herstellen"</string>
+    <string name="at_start">Begin</string>
+    <string name="at_end">Einde</string>
 </resources>

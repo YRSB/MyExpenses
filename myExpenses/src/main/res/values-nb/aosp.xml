@@ -93,4 +93,13 @@
     <string name="action_move_top">"Flytt til toppen"</string>
     <string name="action_move_bottom">"Flytt nederst"</string>
     <string name="negation">"Negasjon"</string>
+    <string name="layout">"Oppsett"</string>
+    <string name="top">"Øverst"</string>
+    <string name="bottom">"Nederst"</string>
+    <string name="left">"Venstre"</string>
+    <string name="right">"Høyre"</string>
+    <string name="margins">"Marger"</string>
+    <string name="menu_restore">"Tilbakestill til standardvalg"</string>
+    <string name="at_start">Start</string>
+    <string name="at_end">Slutt</string>
 </resources>

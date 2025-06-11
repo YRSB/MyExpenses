@@ -540,7 +540,7 @@ fun accountQueryCTE(
     date: String = "now",
 ): String {
     val dateCriterion =
-        if (endOfDay) "'$date', 'localtime', 'start of day', '+1 day', 'utc'" else "'$date'"
+        if (endOfDay) "'$date', 'localtime', 'start of day', '+1 day', '-1 second', 'utc'" else "'$date'"
     val dateCriterionForPricesTable = if (date == "now") "date()" else "'$date'"
     val isExpense =
         "$KEY_TYPE = $FLAG_EXPENSE OR ($KEY_TYPE = $FLAG_NEUTRAL AND $KEY_AMOUNT < 0)"
@@ -549,8 +549,8 @@ fun accountQueryCTE(
     val isTransfer = "$KEY_TYPE = $FLAG_TRANSFER"
 
     val fullAccountProjection = arrayOf(
-        "CASE WHEN $KEY_DYNAMIC THEN latest_rates.$KEY_VALUE END AS $KEY_LATEST_EXCHANGE_RATE ",
-        "CASE WHEN $KEY_DYNAMIC THEN latest_rates.$KEY_DATE END AS $KEY_LATEST_EXCHANGE_RATE_DATE",
+        "CASE WHEN $KEY_DYNAMIC THEN $CTE_LATEST_RATES.$KEY_VALUE END AS $KEY_LATEST_EXCHANGE_RATE ",
+        "CASE WHEN $KEY_DYNAMIC THEN $CTE_LATEST_RATES.$KEY_DATE END AS $KEY_LATEST_EXCHANGE_RATE_DATE",
         KEY_EXCHANGE_RATE,
         "$TABLE_ACCOUNTS.$KEY_ROWID AS $KEY_ROWID",
         KEY_LABEL,
@@ -570,7 +570,7 @@ fun accountQueryCTE(
         KEY_CRITERION,
         KEY_SEALED,
         "$KEY_OPENING_BALANCE + coalesce($KEY_CURRENT,0) AS $KEY_CURRENT_BALANCE",
-        "($KEY_OPENING_BALANCE + coalesce($KEY_CURRENT,0)) * CASE WHEN $KEY_CURRENCY = '$homeCurrency' THEN 1 WHEN $KEY_DYNAMIC THEN coalesce(latest_rates.$KEY_VALUE,$KEY_EXCHANGE_RATE) ELSE $KEY_EXCHANGE_RATE END AS $KEY_EQUIVALENT_CURRENT_BALANCE",
+        "($KEY_OPENING_BALANCE + coalesce($KEY_CURRENT,0)) * CASE WHEN $KEY_CURRENCY = '$homeCurrency' THEN 1 WHEN $KEY_DYNAMIC THEN coalesce($CTE_LATEST_RATES.$KEY_VALUE,$KEY_EXCHANGE_RATE) ELSE $KEY_EXCHANGE_RATE END AS $KEY_EQUIVALENT_CURRENT_BALANCE",
         KEY_SUM_INCOME,
         KEY_SUM_EXPENSES,
         KEY_SUM_TRANSFERS,
@@ -578,7 +578,7 @@ fun accountQueryCTE(
         KEY_EQUIVALENT_EXPENSES,
         KEY_EQUIVALENT_TRANSFERS,
         "$KEY_OPENING_BALANCE + coalesce($KEY_TOTAL,0) AS $KEY_TOTAL",
-        "($KEY_OPENING_BALANCE + coalesce($KEY_TOTAL,0)) * CASE WHEN $KEY_CURRENCY = '$homeCurrency' THEN 1 WHEN $KEY_DYNAMIC THEN coalesce(latest_rates.$KEY_VALUE,$KEY_EXCHANGE_RATE) ELSE $KEY_EXCHANGE_RATE END AS $KEY_EQUIVALENT_TOTAL",
+        "($KEY_OPENING_BALANCE + coalesce($KEY_TOTAL,0)) * CASE WHEN $KEY_CURRENCY = '$homeCurrency' THEN 1 WHEN $KEY_DYNAMIC THEN coalesce($CTE_LATEST_RATES.$KEY_VALUE,$KEY_EXCHANGE_RATE) ELSE $KEY_EXCHANGE_RATE END AS $KEY_EQUIVALENT_TOTAL",
         "$KEY_OPENING_BALANCE + coalesce($KEY_CLEARED_TOTAL,0) AS $KEY_CLEARED_TOTAL",
         "$KEY_OPENING_BALANCE + coalesce($KEY_RECONCILED_TOTAL,0) AS $KEY_RECONCILED_TOTAL",
         KEY_USAGES,
@@ -594,7 +594,7 @@ fun accountQueryCTE(
 WITH now as (
     SELECT
         cast(strftime('%s', $dateCriterion) as integer) AS now
-), latest_rates as (
+), $CTE_LATEST_RATES as (
   SELECT p.$KEY_COMMODITY, p.$KEY_VALUE, p.$KEY_DATE
   FROM $VIEW_PRIORITIZED_PRICES p
   WHERE p.$KEY_CURRENCY = '$homeCurrency'
@@ -637,15 +637,15 @@ WITH now as (
         $aggregateFunction(CASE WHEN ($isExpense) AND $KEY_TRANSFER_PEER IS NULL THEN $KEY_EQUIVALENT_AMOUNT ELSE 0 END) as $KEY_EQUIVALENT_EXPENSES,
         $aggregateFunction(CASE WHEN $isTransfer THEN $KEY_AMOUNT ELSE 0  END) as $KEY_SUM_TRANSFERS,
         $aggregateFunction(CASE WHEN ($isTransfer) AND $KEY_TRANSFER_PEER IS NULL THEN $KEY_EQUIVALENT_AMOUNT ELSE 0  END) as $KEY_EQUIVALENT_TRANSFERS,
-        $aggregateFunction(CASE WHEN $KEY_DATE < (select now from now) THEN $KEY_AMOUNT ELSE 0 END) as $KEY_CURRENT,
+        $aggregateFunction(CASE WHEN $KEY_DATE <= (select now from now) THEN $KEY_AMOUNT ELSE 0 END) as $KEY_CURRENT,
         $aggregateFunction(CASE WHEN $KEY_CR_STATUS IN ( 'RECONCILED', 'CLEARED' ) THEN $KEY_AMOUNT ELSE 0 END) as $KEY_CLEARED_TOTAL,
         $aggregateFunction(CASE WHEN $KEY_CR_STATUS = 'RECONCILED' THEN $KEY_AMOUNT ELSE 0 END) as $KEY_RECONCILED_TOTAL,
         max(CASE WHEN $KEY_CR_STATUS = 'CLEARED' THEN 1 ELSE 0 END) as $KEY_HAS_CLEARED,
-        max($KEY_DATE) >= (select now from now) as $KEY_HAS_FUTURE
+        max($KEY_DATE) > (select now from now) as $KEY_HAS_FUTURE
    from amounts group by $KEY_ACCOUNTID
 ), $CTE_TABLE_NAME_FULL_ACCOUNTS AS (
     SELECT ${fullAccountProjection.joinToString()}
-    FROM accounts LEFT JOIN aggregates ON $TABLE_ACCOUNTS.$KEY_ROWID = aggregates.$KEY_ACCOUNTID LEFT JOIN latest_rates ON $TABLE_ACCOUNTS.$KEY_CURRENCY = latest_rates.$KEY_COMMODITY  ${
+    FROM accounts LEFT JOIN aggregates ON $TABLE_ACCOUNTS.$KEY_ROWID = aggregates.$KEY_ACCOUNTID LEFT JOIN $CTE_LATEST_RATES ON $TABLE_ACCOUNTS.$KEY_CURRENCY = $CTE_LATEST_RATES.$KEY_COMMODITY  ${
         exchangeRateJoin(
             "",
             KEY_ROWID,
@@ -767,6 +767,7 @@ private fun transactionsJoin(
 const val CTE_TRANSACTION_GROUPS = "cte_transaction_groups"
 const val CTE_TRANSACTION_AMOUNTS = "cte_amounts"
 const val CTE_SEARCH = "cte_search"
+const val CTE_LATEST_RATES = "cte_latest_rates"
 
 fun buildSearchCte(
     forTable: String,
@@ -907,7 +908,7 @@ fun getExchangeRate(forTable: String, accountIdColumn: String, homeCurrency: Str
 fun getAmountCalculation(homeCurrency: String?, forTable: String, currencyTable: String = forTable) =
     if (homeCurrency != null) getAmountHomeEquivalent(forTable, homeCurrency, currencyTable) else KEY_AMOUNT
 
-fun amountCteForDebts(homeCurrency: String) =
+fun amountCteForDebts(homeCurrency: String, dateExpression: String?) =
     """$CTE_TRANSACTION_AMOUNTS AS (
     SELECT
     $KEY_ROWID,
@@ -918,5 +919,6 @@ fun amountCteForDebts(homeCurrency: String) =
     FROM
     ${exchangeRateJoin(VIEW_WITH_ACCOUNT, KEY_ACCOUNTID, homeCurrency)}
     ${equivalentAmountJoin(homeCurrency)}
+    ${dateExpression?.let { "WHERE $KEY_DATE <= $it" } ?: ""}
     )
     """.trimIndent()

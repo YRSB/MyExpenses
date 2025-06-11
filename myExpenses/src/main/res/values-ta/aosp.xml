@@ -30,7 +30,6 @@
     <string name="permissions_label">"அனுமதிகள்"</string>
     <string name="time_format">"நேர வடிவமைப்பு"</string>
     <string name="setup">"அமைவு"</string>
-    <string name="clear_cache">"தற்காலிகச் சேமிப்பை அழி"</string>
     <string name="customize">"பிரத்தியேகமாக்கு"</string>
     <string name="compact">வசதியான</string>
     <string name="storage_description">"சாதனச் சேமிப்பகம்"</string>
@@ -141,4 +140,11 @@
     <string name="done_label">"முடிந்தது"</string>
     <string name="action_move_top">"முதலாவதாக நகர்த்து"</string>
     <string name="action_move_bottom">"கடைசிக்கு நகர்த்து"</string>
+    <string name="layout">"தளவமைப்பு"</string>
+    <string name="top">"மேல்"</string>
+    <string name="bottom">"கீழ்"</string>
+    <string name="left">"இடது"</string>
+    <string name="right">"வலது"</string>
+    <string name="margins">"ஓரங்கள்"</string>
+    <string name="menu_restore">"இயல்புநிலைக்கு மீட்டமை"</string>
 </resources>

@@ -6,9 +6,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,6 +79,7 @@ import kotlin.math.roundToLong
 @Composable
 fun BalanceSheetView(
     accounts: List<BalanceAccount>,
+    debtSum: Long = 0L,
     date: LocalDate = LocalDate.now(),
     onClose: () -> Unit = {},
     onNavigate: (Long) -> Unit = {},
@@ -84,8 +94,17 @@ fun BalanceSheetView(
 
     val horizontalPadding = dimensionResource(R.dimen.padding_main_screen)
 
-    Column {
+    val paddingValues =
+        WindowInsets.navigationBars
+            .add(WindowInsets.displayCutout)
+            .only(WindowInsetsSides.End)
+            .asPaddingValues()
+    Column(
+        Modifier
+            .padding(paddingValues)
+    ) {
         TopAppBar(
+            windowInsets = WindowInsets(0, 0, 0, 0),
             title = {
                 Text(text = stringResource(R.string.balance_sheet))
             },
@@ -151,7 +170,10 @@ fun BalanceSheetView(
                     val isNarrow = maxWidth < 360.dp
                     if (isNarrow && datePickerState.displayMode == DisplayMode.Picker) {
                         Box(
-                            modifier = Modifier.requiredSizeIn(minWidth = 360.dp, minHeight = 568.dp)
+                            modifier = Modifier.requiredSizeIn(
+                                minWidth = 360.dp,
+                                minHeight = 568.dp
+                            )
                         ) {
                             DatePicker(
                                 modifier = Modifier.scale(maxWidth / 360.dp),
@@ -188,8 +210,12 @@ fun BalanceSheetView(
 
         LazyColumn(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = horizontalPadding)
+                .weight(1f),
+            contentPadding = PaddingValues(
+                start = horizontalPadding,
+                end = horizontalPadding,
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            )
         ) {
 
             accountTypeChapter(
@@ -207,10 +233,26 @@ fun BalanceSheetView(
                 onNavigate
             )
 
-            item {
-                NetWorthView(totalAssets + totalLiabilities)
+            if (debtSum != 0L) {
+                item {
+                    BalanceSheetSectionHeaderView(
+                        stringResource(R.string.debts),
+                        debtSum,
+                        false
+                    )
+                }
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                }
             }
 
+            item {
+                BalanceSheetSectionHeaderView(
+                    stringResource(R.string.balance_sheet_net_worth),
+                    totalAssets + totalLiabilities + debtSum,
+                    false
+                )
+            }
         }
     }
 }
@@ -235,7 +277,11 @@ fun LazyListScope.accountTypeChapter(
 }
 
 @Composable
-fun BalanceSheetSectionHeaderView(name: String, total: Long) {
+fun BalanceSheetSectionHeaderView(
+    name: String,
+    total: Long,
+    absolute: Boolean = true,
+) {
     val homeCurrency = LocalHomeCurrency.current
     Row(
         modifier = Modifier
@@ -248,7 +294,7 @@ fun BalanceSheetSectionHeaderView(name: String, total: Long) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f)
         )
-        ColoredAmountText(total, homeCurrency, absolute = true)
+        ColoredAmountText(total, homeCurrency, absolute = absolute)
     }
 }
 
@@ -312,24 +358,6 @@ fun BalanceAccountItemView(account: BalanceAccount, onNavigate: (Long) -> Unit) 
                 )
             }
         }
-    }
-}
-
-@Composable
-fun NetWorthView(netWorth: Long) {
-    val homeCurrency = LocalHomeCurrency.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.balance_sheet_net_worth),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        ColoredAmountText(netWorth, homeCurrency, fontWeight = FontWeight.Bold)
     }
 }
 

@@ -30,7 +30,6 @@
     <string name="permissions_label">"Uprawnienia"</string>
     <string name="time_format">"Format godziny"</string>
     <string name="setup">"Konfiguracja"</string>
-    <string name="clear_cache">"Wyczyść pamięć podręczną"</string>
     <string name="customize">"Dostosuj"</string>
     <string name="compact">kompaktowa</string>
     <string name="storage_description">"Pamięć lokalna"</string>
@@ -162,4 +161,13 @@
     <string name="action_move_top">"Przenieś na górę"</string>
     <string name="action_move_bottom">"Przenieś na koniec"</string>
     <string name="negation">"Negacja"</string>
+    <string name="layout">"Układ"</string>
+    <string name="top">"Góra"</string>
+    <string name="bottom">"Dół"</string>
+    <string name="left">"Z lewej"</string>
+    <string name="right">"Z prawej"</string>
+    <string name="margins">"Marginesy"</string>
+    <string name="menu_restore">"Resetuj ustawienia"</string>
+    <string name="at_start">Początek</string>
+    <string name="at_end">Koniec</string>
 </resources>

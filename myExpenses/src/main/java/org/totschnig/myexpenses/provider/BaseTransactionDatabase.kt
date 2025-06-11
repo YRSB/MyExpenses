@@ -115,8 +115,9 @@ import org.totschnig.myexpenses.retrofit.ExchangeRateSource
 import org.totschnig.myexpenses.sync.json.TransactionChange
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import timber.log.Timber
+import kotlin.math.pow
 
-const val DATABASE_VERSION = 174
+const val DATABASE_VERSION = 176
 
 private const val RAISE_UPDATE_SEALED_DEBT = "SELECT RAISE (FAIL, 'attempt to update sealed debt');"
 private const val RAISE_INCONSISTENT_CATEGORY_HIERARCHY =
@@ -327,16 +328,22 @@ FROM
         SELECT p2.$KEY_SOURCE
         FROM $TABLE_PRICES AS p2
         WHERE p2.$KEY_CURRENCY = p1.$KEY_CURRENCY AND p2.$KEY_COMMODITY = p1.$KEY_COMMODITY AND p2.$KEY_DATE = p1.$KEY_DATE
-        ORDER BY
-            CASE
-                WHEN p2.$KEY_SOURCE = '${ExchangeRateSource.User.name}' THEN 1
-                WHEN p2.$KEY_SOURCE = '${ExchangeRateSource.Calculation.name}' THEN 3
-                ELSE 2
-            END,
-            p2.$KEY_SOURCE DESC
+        ORDER BY ${priceSort("p2")}
         LIMIT 1
     );
 """
+
+fun priceSort(alias: String? = null): String {
+    val prefix = alias?.let { "$it." } ?: ""
+    return """
+    CASE
+                WHEN $prefix$KEY_SOURCE = '${ExchangeRateSource.User.name}' THEN 1
+                WHEN $prefix$KEY_SOURCE = '${ExchangeRateSource.Calculation.name}' THEN 3
+                ELSE 2
+            END,
+            $prefix$KEY_SOURCE DESC
+""".trimIndent()
+}
 
 const val TRANSACTIONS_ATTACHMENTS_CREATE = """
 CREATE TABLE $TABLE_TRANSACTION_ATTACHMENTS (
@@ -512,7 +519,7 @@ fun parentUuidExpression(reference: String, table: String = TABLE_TRANSACTIONS) 
         ELSE (
             SELECT $KEY_UUID
             FROM $TABLE_TRANSACTIONS parent
-            WHERE $KEY_ROWID = ${referenceForTable(reference, table,KEY_PARENTID)}
+            WHERE $KEY_ROWID = ${referenceForTable(reference, table, KEY_PARENTID)}
         )
        END"""
 
@@ -1024,7 +1031,12 @@ abstract class BaseTransactionDatabase(
             val newStatus = ContentValues(1).apply {
                 put("status", 5)
             }
-            query("transactions", arrayOf("_id"), "status = ? AND cat_id = ?", arrayOf(5, 0)).use { cursor ->
+            query(
+                "transactions",
+                arrayOf("_id"),
+                "status = ? AND cat_id = ?",
+                arrayOf(5, 0)
+            ).use { cursor ->
                 cursor.asSequence.forEach {
                     update("transactions", newStatus, "parent_id = ?", arrayOf(it.getLong(0)))
                 }
@@ -1092,6 +1104,22 @@ abstract class BaseTransactionDatabase(
             execSQL("DROP VIEW IF EXISTS $VIEW_CHANGES_EXTENDED")
             execSQL("DROP VIEW IF EXISTS $VIEW_WITH_ACCOUNT")
             execSQL("ALTER TABLE transactions DROP COLUMN equivalent_amount")
+        }
+    }
+
+    fun SupportSQLiteDatabase.upgradeTo175() {
+        val currencyContext = context.injector.currencyContext()
+        query("select distinct commodity, currency from prices").use { cursor ->
+            cursor.asSequence.forEach {
+                val commodity = it.getString(0)
+                val currency = it.getString(1)
+                val delta =
+                    currencyContext[currency].fractionDigits - currencyContext[commodity].fractionDigits
+                if (delta != 0) {
+                    val coefficient = 10.0.pow(delta)
+                    execSQL("update prices set value = value * $coefficient where commodity = '$commodity' and currency = '$currency'")
+                }
+            }
         }
     }
 
@@ -1240,7 +1268,7 @@ abstract class BaseTransactionDatabase(
         append("$TABLE_METHODS.$KEY_LABEL AS $KEY_METHOD_LABEL, ")
         append("$TABLE_METHODS.$KEY_ICON AS $KEY_METHOD_ICON")
         if (tableName != TABLE_CHANGES) {
-            append(", Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $KEY_COLOR, $KEY_CURRENCY, $KEY_SEALED, $KEY_EXCLUDE_FROM_TOTALS, ")
+            append(", Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $KEY_COLOR, $KEY_CURRENCY, $KEY_SEALED, $KEY_EXCLUDE_FROM_TOTALS, $KEY_DYNAMIC, ")
             append("$TABLE_ACCOUNTS.$KEY_TYPE AS $KEY_ACCOUNT_TYPE, ")
             append("$TABLE_ACCOUNTS.$KEY_LABEL AS $KEY_ACCOUNT_LABEL")
         }
@@ -1267,7 +1295,8 @@ abstract class BaseTransactionDatabase(
     fun insertDefaultTransferCategory(db: SupportSQLiteDatabase, label: String) {
         prefHandler.putLong(
             PrefKey.DEFAULT_TRANSFER_CATEGORY,
-            db.insert(TABLE_CATEGORIES, SQLiteDatabase.CONFLICT_NONE,
+            db.insert(
+                TABLE_CATEGORIES, SQLiteDatabase.CONFLICT_NONE,
                 ContentValues(3).apply {
                     put(KEY_LABEL, label)
                     put(KEY_TYPE, 0)

@@ -94,4 +94,13 @@
     <string name="action_move_top">"Flytta högst upp"</string>
     <string name="action_move_bottom">"Flytta längst ned"</string>
     <string name="negation">"Negation"</string>
+    <string name="layout">"Layout"</string>
+    <string name="top">"Överkant"</string>
+    <string name="bottom">"Nederkant"</string>
+    <string name="left">"Vänster"</string>
+    <string name="right">"Höger"</string>
+    <string name="margins">"Sidmarginaler"</string>
+    <string name="menu_restore">"Återställ standardinst."</string>
+    <string name="at_start">Start</string>
+    <string name="at_end">Slut</string>
 </resources>

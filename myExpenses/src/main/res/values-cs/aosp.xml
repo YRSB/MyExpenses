@@ -30,7 +30,6 @@
     <string name="permissions_label">"Oprávnění"</string>
     <string name="time_format">"Formát času"</string>
     <string name="setup">"Nastavit"</string>
-    <string name="clear_cache">"Vymazat mezipaměť"</string>
     <string name="customize">"Přizpůsobit"</string>
     <string name="compact">kompaktní</string>
     <string name="storage_description">"Místní úložiště"</string>
@@ -162,4 +161,13 @@
     <string name="action_move_top">"Přesunout na začátek"</string>
     <string name="action_move_bottom">"Přesunout na konec"</string>
     <string name="negation">"Negace"</string>
+    <string name="layout">"Rozložení"</string>
+    <string name="top">"Nahoře"</string>
+    <string name="bottom">"Dole"</string>
+    <string name="left">"Vlevo"</string>
+    <string name="right">"Vpravo"</string>
+    <string name="margins">"Okraje"</string>
+    <string name="menu_restore">"Obnovit výchozí"</string>
+    <string name="at_start">Začátek</string>
+    <string name="at_end">Konec</string>
 </resources>

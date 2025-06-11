@@ -29,7 +29,6 @@
     <string name="permissions_label">"İzinler"</string>
     <string name="time_format">"Saat biçimi"</string>
     <string name="setup">"Kur"</string>
-    <string name="clear_cache">"Önbelleği temizle"</string>
     <string name="customize">"Özelleştir"</string>
     <string name="compact">Kompakt</string>
     <string name="storage_description">"Yerel depolama"</string>
@@ -158,4 +157,13 @@
     <string name="action_move_top">"En üste taşı"</string>
     <string name="action_move_bottom">"En alta taşı"</string>
     <string name="negation">"Eksi"</string>
+    <string name="layout">"Düzen"</string>
+    <string name="top">"Üst"</string>
+    <string name="bottom">"Alt"</string>
+    <string name="left">"Sol"</string>
+    <string name="right">"Sağ"</string>
+    <string name="margins">"Kenar Boşlukları"</string>
+    <string name="menu_restore">"Varsayılana sıfırla"</string>
+    <string name="at_start">Başlangıç</string>
+    <string name="at_end">Bitiş</string>
 </resources>
