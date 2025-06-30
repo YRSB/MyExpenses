@@ -1,9 +1,11 @@
 package org.totschnig.myexpenses.activity
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MenuItem.SHOW_AS_ACTION_IF_ROOM
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +26,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ImportExport
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,7 +50,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.R
@@ -56,8 +63,12 @@ import org.totschnig.myexpenses.compose.CharIcon
 import org.totschnig.myexpenses.compose.LocalDateFormatter
 import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbarAndBottomPadding
 import org.totschnig.myexpenses.databinding.ActivityComposeBinding
+import org.totschnig.myexpenses.dialog.BatchPriceDownloadDialogFragment
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_TAG_POSITIVE
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.provider.fileName
 import org.totschnig.myexpenses.retrofit.ExchangeRateApi
 import org.totschnig.myexpenses.retrofit.ExchangeRateSource
 import org.totschnig.myexpenses.util.TextUtils
@@ -76,6 +87,13 @@ class PriceHistory : ProtectedFragmentActivity() {
 
     val viewModel: PriceHistoryViewModel by viewModels()
 
+    private val openCsvLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let {
+           showImportConfirmationDialog(it)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         injector.inject(viewModel)
@@ -84,6 +102,9 @@ class PriceHistory : ProtectedFragmentActivity() {
         val commodity = viewModel.commodity
         title = currencyContext[commodity].description
         setupToolbar()
+        observeBatchDownloadResult()
+        observeExportResult()
+        observeImportResult()
         binding.composeView.setContent {
             AppTheme {
                 PriceListScreen(
@@ -101,12 +122,12 @@ class PriceHistory : ProtectedFragmentActivity() {
                         viewModel.savePrice(date, value).observe(this) {
                             if (it > 0) {
                                 showSnackBar(
-                                TextUtils.concatResStrings(
-                                    this,
-                                    " : ",
-                                    R.string.progress_recalculating,
-                                    R.string.equivalent_amount_plural
-                                ) + " : " + it
+                                    TextUtils.concatResStrings(
+                                        this,
+                                        " : ",
+                                        R.string.progress_recalculating,
+                                        R.string.equivalent_amount_plural
+                                    ) + " : " + it
                                 )
                             }
                         }
@@ -117,12 +138,7 @@ class PriceHistory : ProtectedFragmentActivity() {
                                 val homeCurrencyString = currencyContext.homeCurrencyString
                                 try {
 
-                                    viewModel.loadFromNetwork(
-                                        it,
-                                        date,
-                                        commodity,
-                                        homeCurrencyString
-                                    ).also {
+                                    viewModel.loadFromNetwork(it, date).also {
                                         if (it.first != date) {
                                             showSnackBar(it.first.toString())
                                         }
@@ -160,6 +176,9 @@ class PriceHistory : ProtectedFragmentActivity() {
             setIcon(R.drawable.ic_menu_move)
             setShowAsAction(SHOW_AS_ACTION_IF_ROOM)
         }
+        menu.add(Menu.NONE, R.id.BATCH_DOWNLOAD_COMMAND, 2, R.string.batch_download)
+        menu.add(Menu.NONE, R.id.EXPORT_COMMAND, 3, R.string.menu_export)
+        menu.add(Menu.NONE, R.id.IMPORT_COMMAND, 3, R.string.menu_import)
         val relevantSources = viewModel.relevantSources
         if (relevantSources.size > 1) {
             menu.addSubMenu(Menu.NONE, R.id.SELECT_SOURCE_MENU_ID, 1, getString(R.string.source))
@@ -190,16 +209,119 @@ class PriceHistory : ProtectedFragmentActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = super.onOptionsItemSelected(item) ||
-            if (item.itemId == R.id.INVERT_COMMAND) {
-                lifecycleScope.launch {
-                    viewModel.persistInverseRate(!item.isChecked)
-                    invalidateOptionsMenu()
+            when (item.itemId) {
+                R.id.INVERT_COMMAND -> {
+                    lifecycleScope.launch {
+                        viewModel.persistInverseRate(!item.isChecked)
+                        invalidateOptionsMenu()
+                    }
+                    true
                 }
+
+                R.id.BATCH_DOWNLOAD_COMMAND -> {
+                    viewModel.effectiveSource?.let { source ->
+                        BatchPriceDownloadDialogFragment.newInstance(source.name)
+                            .show(supportFragmentManager, "BATCH_DOWNLOAD")
+                    }
+                    true
+                }
+
+                R.id.EXPORT_COMMAND -> {
+                    viewModel.export()
+                    true
+                }
+
+                R.id.IMPORT_COMMAND -> {
+                    openCsvLauncher.launch(
+                        arrayOf(
+                            "text/csv",
+                            "text/comma-separated-values",
+                            "application/csv",
+                            "text/plain"
+                        )
+                    )
+                    true
+                }
+
+                else -> ExchangeRateApi.getById(item.itemId)?.also {
+                    viewModel.userSelectedSource = it
+                    invalidateOptionsMenu()
+                } != null
+            }
+
+    private val dismissCallback = object : Snackbar.Callback() {
+        override fun onDismissed(
+            transientBottomBar: Snackbar,
+            event: Int,
+        ) {
+            if (event == DISMISS_EVENT_SWIPE || event == DISMISS_EVENT_ACTION || event == DISMISS_EVENT_TIMEOUT)
+                viewModel.messageShown()
+        }
+    }
+
+    private fun observeBatchDownloadResult() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.batchDownloadResult.collect {
+                    showSnackBar(it, callback = dismissCallback)
+                }
+            }
+        }
+    }
+
+    private fun observeExportResult() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.exportResult.collect {
+                    showDismissibleSnackBar(
+                        it.fold(onSuccess = {
+                            getString(
+                                R.string.export_sdcard_success,
+                                it.second
+                            )
+                        }, onFailure = { it.safeMessage }), dismissCallback
+                    )
+                }
+            }
+        }
+    }
+
+    private fun observeImportResult() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.importResult.collect {
+                    showDismissibleSnackBar(
+                        it.fold(onSuccess = { it }, onFailure = { it.safeMessage }),
+                        dismissCallback
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showImportConfirmationDialog(fileUri: Uri) {
+        val message = getString(R.string.confirm_process_file_message,
+            "${viewModel.commodity}:${viewModel.homeCurrency}",
+            fileUri.fileName(this))
+
+        ConfirmationDialogFragment.newInstance(Bundle().apply {
+            putString(ConfirmationDialogFragment.KEY_MESSAGE, message)
+            putInt(ConfirmationDialogFragment.KEY_POSITIVE_BUTTON_LABEL, R.string.menu_import)
+            putInt(ConfirmationDialogFragment.KEY_NEGATIVE_BUTTON_LABEL, android.R.string.cancel)
+            putInt(ConfirmationDialogFragment.KEY_COMMAND_POSITIVE, R.id.IMPORT_COMMAND_DO)
+            putParcelable(KEY_TAG_POSITIVE, fileUri)
+        }).show(supportFragmentManager, "ProcessFileConfirmationDialog")
+    }
+
+    override fun dispatchCommand(command: Int, tag: Any?): Boolean {
+        return super.dispatchCommand(command, tag) || when (command) {
+            R.id.IMPORT_COMMAND_DO -> {
+                viewModel.importPricesFromUri(tag as Uri)
                 true
-            } else ExchangeRateApi.getById(item.itemId)?.also {
-                viewModel.userSelectedSource = it
-                invalidateOptionsMenu()
-            } != null
+            }
+            else -> false
+        }
+    }
 }
 
 @Composable
@@ -309,6 +431,11 @@ fun PriceListScreen(
                                     imageVector = Icons.Default.Calculate,
                                     contentDescription = null
                                 )
+
+                                ExchangeRateSource.Import -> Icon(
+                                    imageVector = Icons.Default.ImportExport,
+                                    contentDescription = null
+                                )
                             }
                         }
                     }
@@ -369,6 +496,7 @@ fun RowScope.TableCell(
 val BigDecimal.reciprocal: BigDecimal
     get() = BigDecimal.ONE.divide(this, MathContext.DECIMAL64)
 
+
 @Preview
 @Composable
 fun HistoricPricesPreview() {
@@ -377,7 +505,14 @@ fun HistoricPricesPreview() {
         buildMap {
             repeat(250) {
                 val date = LocalDate.now().minusDays(it.toLong())
-                put(date, Price(date, ExchangeRateApi.Frankfurter, BigDecimal.valueOf(random.nextDouble())))
+                put(
+                    date,
+                    Price(
+                        date,
+                        ExchangeRateApi.Frankfurter,
+                        BigDecimal.valueOf(random.nextDouble())
+                    )
+                )
             }
         },
         homeCurrency = CurrencyUnit.DebugInstance,

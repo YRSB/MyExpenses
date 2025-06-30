@@ -1,12 +1,18 @@
 package org.totschnig.myexpenses.activity
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
+import android.view.ViewGroup.MarginLayoutParams
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.fragment.app.FragmentManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.evernote.android.state.State
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.databinding.OnboardingBinding
@@ -18,7 +24,6 @@ import org.totschnig.myexpenses.fragment.OnboardingUiFragment
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.sync.json.AccountMetaData
-import org.totschnig.myexpenses.ui.FragmentPagerAdapter
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.distrib.DistributionHelper.versionNumber
 import org.totschnig.myexpenses.util.safeMessage
@@ -29,16 +34,21 @@ import org.totschnig.myexpenses.viewmodel.SyncViewModel.SyncAccountData
 class OnboardingActivity : SyncBackendSetupActivity() {
     private lateinit var binding: OnboardingBinding
     private lateinit var pagerAdapter: MyPagerAdapter
+    private lateinit var onBackPressedCallback: OnBackPressedCallback
 
     private val startBanking =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
+            if (result.resultCode == RESULT_OK) {
                 start()
             }
         }
 
     @State
     var accountName: String? = null
+
+    override val drawToTopEdge = true
+
+    override val drawToBottomEdge = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         if (savedInstanceState == null) {
@@ -55,9 +65,37 @@ class OnboardingActivity : SyncBackendSetupActivity() {
         super.onCreate(savedInstanceState)
         binding = OnboardingBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        pagerAdapter = MyPagerAdapter(supportFragmentManager)
+        pagerAdapter = MyPagerAdapter(this)
         binding.viewPager.adapter = pagerAdapter
         binding.viewPager.offscreenPageLimit = 2
+        ViewCompat.setOnApplyWindowInsetsListener(binding.pageIndicatorView) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars()
+                        or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updateLayoutParams<MarginLayoutParams> {
+                topMargin = bars.top
+            }
+            insets
+        }
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                val currentItem = binding.viewPager.currentItem
+                if (currentItem > 0) {
+                    binding.viewPager.currentItem = currentItem - 1
+                } else {
+                    onBackPressedDispatcher.onBackPressed()
+
+                }
+            }
+        }
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+        binding.viewPager.registerOnPageChangeCallback(object :
+            ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                onBackPressedCallback.isEnabled = position > 0
+            }
+        })
     }
 
     override fun onCreateOptionsMenu(menu: Menu) = false //skip help
@@ -65,15 +103,6 @@ class OnboardingActivity : SyncBackendSetupActivity() {
     fun navigateNext() {
         val currentItem = binding.viewPager.currentItem
         binding.viewPager.setCurrentItem(currentItem + 1, true)
-    }
-
-    override fun onBackPressed() {
-        val currentItem = binding.viewPager.currentItem
-        if (currentItem > 0) {
-            binding.viewPager.currentItem = currentItem - 1
-            return
-        }
-        super.onBackPressed()
     }
 
     private val dataFragment: OnboardingDataFragment?
@@ -144,19 +173,21 @@ class OnboardingActivity : SyncBackendSetupActivity() {
         }
     }
 
-    private inner class MyPagerAdapter(fm: FragmentManager?) :
-        FragmentPagerAdapter(fm) {
+    private inner class MyPagerAdapter(activity: FragmentActivity) :
+        FragmentStateAdapter(activity) {
         fun getFragmentName(currentPosition: Int): String {
-            return makeFragmentName(binding.viewPager.id, getItemId(currentPosition))
+            //https://stackoverflow.com/a/61178226/1199911
+            return "f" + getItemId(currentPosition)
         }
 
-        override fun getItem(pos: Int) = when (pos) {
+
+        override fun createFragment(position: Int) = when (position) {
             0 -> OnboardingUiFragment.newInstance()
             1 -> OnBoardingPrivacyFragment.newInstance()
             else -> OnboardingDataFragment.newInstance()
         }
 
-        override fun getCount() = 3
+        override fun getItemCount() = 3
     }
 
     override fun onNegative(args: Bundle) {

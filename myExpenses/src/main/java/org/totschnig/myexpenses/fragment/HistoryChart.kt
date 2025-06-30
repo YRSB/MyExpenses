@@ -72,6 +72,9 @@ import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 import androidx.core.content.withStyledAttributes
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 
 class HistoryChart : Fragment(), LoaderManager.LoaderCallbacks<Cursor> {
     private var _binding: HistoryChartBinding? = null

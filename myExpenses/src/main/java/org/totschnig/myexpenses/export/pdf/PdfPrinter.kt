@@ -280,6 +280,24 @@ object PdfPrinter {
                     filter?.prettyPrint(context)
                 )
                 val itemDateFormat = dateTimeFormatterLegacy(account, prefHandler, context)?.first
+                val columnsPreference = prefHandler.printLayout.asColumns()
+                val columnWidthsPreference = prefHandler.printLayoutColumnWidths
+                val (columns, columnWidths) = if (itemDateFormat == null) {
+                    val finalColumns = mutableListOf<List<Field>>()
+                    val finalColumnWidths = mutableListOf<Int>()
+                    columnsPreference.map { column ->
+                        column.mapNotNull { field -> if (field == Date) null else field }
+                    }.forEachIndexed { index, list ->
+                        if (list.isNotEmpty()) {
+                            finalColumns.add(list)
+                            finalColumnWidths.add(columnWidthsPreference[index])
+                        }
+                    }
+                    finalColumns to finalColumnWidths
+                } else columnsPreference to columnWidthsPreference
+                if (columns.count { it.isNotEmpty() } == 0) {
+                    throw Exception(context.getString(R.string.print_configuration_empty))
+                }
                 addTransactionList(
                     document,
                     cursor,
@@ -290,8 +308,8 @@ object PdfPrinter {
                     currencyUnit,
                     currencyFormatter,
                     currencyContext,
-                    prefHandler.printLayout.asColumns(),
-                    prefHandler.printLayoutColumnWidths.toIntArray(),
+                    columns,
+                    columnWidths.toIntArray(),
                     colorSource,
                     itemDateFormat
                 ) {
@@ -676,7 +694,9 @@ object PdfPrinter {
                     Category -> listOf(categoryPath)
                     Date -> listOf(
                         if (isSplitPart) null else
-                            Utils.convDateTime(_date, itemDateFormat!!)
+                            itemDateFormat?.let {
+                                Utils.convDateTime(_date, it)
+                            }
                     )
 
                     Notes -> listOf(comment)
@@ -742,8 +762,11 @@ object PdfPrinter {
                         }
 
                     table!!.addCell(cell)
-                    if (isVoid && index == 0) {
-                        cell.phrase.chunks[0].setGenericTag(this@PdfPrinter.VOID_MARKER)
+                    if (isVoid) {
+                        cell.phrase
+                            ?.chunks
+                            ?.firstOrNull()
+                            ?.setGenericTag(this@PdfPrinter.VOID_MARKER)
                     }
                 }
             }

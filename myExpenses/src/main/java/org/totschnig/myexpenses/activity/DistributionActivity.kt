@@ -14,9 +14,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Palette
@@ -43,20 +48,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.charts.PieRadarChartBase
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.formatter.IValueFormatter
-import com.github.mikephil.charting.highlight.Highlight
-import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import eltos.simpledialogfragment.SimpleDialog.OnDialogResultListener
 import eltos.simpledialogfragment.color.SimpleColorDialog
 import kotlinx.coroutines.flow.filterNotNull
@@ -67,10 +64,14 @@ import org.totschnig.myexpenses.compose.AppTheme
 import org.totschnig.myexpenses.compose.Category
 import org.totschnig.myexpenses.compose.ChoiceMode
 import org.totschnig.myexpenses.compose.ExpansionMode
-import org.totschnig.myexpenses.compose.filter.FilterCard
 import org.totschnig.myexpenses.compose.LocalCurrencyFormatter
 import org.totschnig.myexpenses.compose.MenuEntry
+import org.totschnig.myexpenses.compose.PieChartCompose
+import org.totschnig.myexpenses.compose.TEXT_SIZE_MEDIUM_SP
+import org.totschnig.myexpenses.compose.filter.FilterCard
+import org.totschnig.myexpenses.compose.localizedPercentFormat
 import org.totschnig.myexpenses.compose.rememberMutableStateListOf
+import org.totschnig.myexpenses.compose.scrollToPositionIfNotVisible
 import org.totschnig.myexpenses.dialog.buildColorDialog
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.Grouping
@@ -81,18 +82,14 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.filter.KEY_FILTER
-import org.totschnig.myexpenses.ui.SelectivePieChartRenderer
 import org.totschnig.myexpenses.util.ColorUtils
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.formatMoney
-import org.totschnig.myexpenses.util.getLocale
-import org.totschnig.myexpenses.util.ui.UiUtils
 import org.totschnig.myexpenses.viewmodel.DistributionViewModel
 import org.totschnig.myexpenses.viewmodel.data.Category
 import org.totschnig.myexpenses.viewmodel.data.DistributionAccountInfo
 import timber.log.Timber
 import java.text.DecimalFormat
-import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.sign
@@ -115,16 +112,6 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
             ?: (if (isDark) ColorUtils.getTints(color) else ColorUtils.getShades(color)).also {
                 subColorMap.put(color, it)
             }
-    }
-
-    private val localizedPercentFormat: NumberFormat by lazy {
-        NumberFormat.getPercentInstance().also {
-            it.setMinimumFractionDigits(1)
-        }
-    }
-
-    private val percentFormatter = IValueFormatter { value, _, _, _ ->
-        localizedPercentFormat.format(value / 100)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -178,28 +165,6 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
             return true
         }
         return false
-    }
-
-    private fun setChartData(chart: PieChart, categories: List<Category>) {
-        with(chart) {
-            data = PieData(PieDataSet(categories.map { category ->
-                PieEntry(
-                    abs(category.aggregateSum.toFloat()),
-                    category.label
-                )
-            }, "").apply {
-                colors = categories.map { it.color ?: 0 }
-                sliceSpace = 2f
-                setDrawValues(false)
-                xValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
-                valueLinePart2Length = 0.1f
-                valueLineColor = textColorSecondary.defaultColor
-            }).apply {
-                setValueFormatter(percentFormatter)
-            }
-            invalidate()
-        }
-        selectionState.value = categories.firstOrNull()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -265,6 +230,7 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
 
     @Composable
     private fun RenderCombined(whereFilter: Criterion?, clearFilter: () -> Unit) {
+        val listState = rememberLazyListState()
         val isDark = isSystemInDarkTheme()
         val categoryState =
             viewModel.combinedCategoryTree.collectAsState(initial = Category.LOADING)
@@ -280,7 +246,10 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                 )
             }
         }
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(WindowInsets.navigationBars.asPaddingValues())
+        ) {
             val accountInfo = viewModel.accountInfo.collectAsState(null).value
             if (categoryState.value === Category.LOADING || accountInfo == null) {
                 CircularProgressIndicator(
@@ -299,20 +268,13 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                         categoryTree.value.children[1].filterChildren(false)
                     }
                 }.value
-                LaunchedEffect(categoryTree.value) {
-                    if (::chart.isInitialized) {
-                        setChartData(chart, incomeTree.children)
-                    }
-                    if (::innerChart.isInitialized) {
-                        setChartData(innerChart, expenseTree.children)
-                    }
-                }
+
                 LaunchedEffect(categoryTree.value, selectionState.value?.id) {
                     if (::chart.isInitialized) {
-                        onSelectionChanged(chart, incomeTree)
+                        onSelectionChanged(chart, incomeTree, listState)
                     }
                     if (::innerChart.isInitialized) {
-                        onSelectionChanged(innerChart, expenseTree)
+                        onSelectionChanged(innerChart, expenseTree, listState)
                     }
                 }
                 val choiceMode =
@@ -336,13 +298,14 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                             FilterCard(whereFilter, clearFilter = clearFilter)
                         }
                         LayoutHelper(
-                            data = {
+                            data = { modifier, _ ->
                                 RenderTree(
-                                    modifier = it,
+                                    modifier = modifier,
                                     tree = categoryTree.value,
                                     choiceMode = choiceMode,
                                     expansionMode = expansionMode,
-                                    accountInfo = accountInfo
+                                    accountInfo = accountInfo,
+                                    listState = listState
                                 )
                             }, chart = {
                                 val ratio = if (sums.first > 0L && sums.second < 0L)
@@ -357,18 +320,16 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                                             .fillMaxSize(0.95f)
                                             .align(Alignment.Center),
                                         false,
-                                        categories = incomeTree,
-                                        angle = angles.first,
-                                        isCombined = true
+                                        categories = incomeTree.children,
+                                        angle = angles.first
                                     )
                                     RenderChart(
                                         modifier = Modifier
                                             .fillMaxSize(0.75f)
                                             .align(Alignment.Center),
                                         true,
-                                        categories = expenseTree,
-                                        angle = angles.second,
-                                        isCombined = true
+                                        categories = expenseTree.children,
+                                        angle = angles.second
                                     )
                                 }
                             }
@@ -380,12 +341,18 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
         }
     }
 
-    private fun onSelectionChanged(chart: PieChart, tree: Category) {
+    private suspend fun onSelectionChanged(
+        chart: PieChart,
+        tree: Category,
+        listState: LazyListState
+    ) {
         val position = tree.children.indexOf(selectionState.value)
         if (position > -1) {
             chart.highlightValue(position.toFloat(), 0)
+            listState.scrollToPositionIfNotVisible(position)
         } else {
             chart.highlightValue(null)
+            chart.centerText = null
         }
     }
 
@@ -403,6 +370,7 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
         whereFilter: Criterion?,
         clearFilter: () -> Unit,
     ) {
+        val listState = rememberLazyListState()
         val isDark = isSystemInDarkTheme()
         val categoryState =
             (if (showIncome) viewModel.categoryTreeForIncome else viewModel.categoryTreeForExpenses)
@@ -426,15 +394,10 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
 
             }
         }
-        LaunchedEffect(chartCategoryTree.value) {
-            if (::chart.isInitialized) {
-                setChartData(chart, chartCategoryTree.value.children)
-            }
-        }
 
         LaunchedEffect(chartCategoryTree.value, selectionState.value?.id) {
             if (::chart.isInitialized) {
-                onSelectionChanged(chart, chartCategoryTree.value)
+                onSelectionChanged(chart, chartCategoryTree.value, listState)
             }
         }
         val choiceMode = ChoiceMode.SingleChoiceMode(selectionState)
@@ -451,7 +414,10 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
             }
         }
         val accountInfo = viewModel.accountInfo.collectAsState(null).value
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(WindowInsets.navigationBars.asPaddingValues())
+        ) {
             when {
                 categoryTree.value === Category.LOADING || accountInfo == null -> {
                     CircularProgressIndicator(
@@ -479,13 +445,14 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                             FilterCard(whereFilter, clearFilter = clearFilter)
                         }
                         LayoutHelper(
-                            data = {
+                            data = { modifier, _ ->
                                 RenderTree(
-                                    modifier = it,
+                                    modifier = modifier,
                                     tree = categoryTree.value,
                                     choiceMode = choiceMode,
                                     expansionMode = expansionMode,
-                                    accountInfo = accountInfo
+                                    accountInfo = accountInfo,
+                                    listState = listState
                                 )
                             }, chart = {
                                 Box(modifier = it) {
@@ -494,7 +461,7 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
                                             .fillMaxSize(0.85f)
                                             .align(Alignment.Center),
                                         false,
-                                        categories = chartCategoryTree.value
+                                        categories = chartCategoryTree.value.children
                                     )
                                 }
                             }
@@ -556,6 +523,7 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
         choiceMode: ChoiceMode,
         expansionMode: ExpansionMode,
         accountInfo: DistributionAccountInfo,
+        listState: LazyListState
     ) {
         val nestedScrollInterop = rememberNestedScrollInteropConnection()
         Category(
@@ -564,6 +532,7 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
             choiceMode = choiceMode,
             expansionMode = expansionMode,
             sumCurrency = currencyContext[accountInfo.currency],
+            listState = listState,
             menuGenerator = remember {
                 { category ->
                     org.totschnig.myexpenses.compose.Menu(
@@ -716,75 +685,29 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
     fun RenderChart(
         modifier: Modifier,
         inner: Boolean,
-        categories: Category,
+        categories: List<Category>,
         angle: Float = 360f,
-        isCombined: Boolean = false,
     ) {
-        AndroidView(
+        PieChartCompose(
             modifier = modifier,
-            factory = { ctx ->
-                requireChart(ctx, inner).apply {
-                    isRotationEnabled = PieRadarChartBase.ROTATION_INSIDE_ONLY
-                    description.isEnabled = false
-                    renderer = SelectivePieChartRenderer(
-                        this,
-                        object : SelectivePieChartRenderer.Selector {
-                            var lastValueGreaterThanOne = true
-                            override fun shouldDrawEntry(
-                                index: Int,
-                                pieEntry: PieEntry,
-                                value: Float,
-                            ): Boolean {
-                                val greaterThanOne = value > 1f
-                                val shouldDraw = greaterThanOne || lastValueGreaterThanOne
-                                lastValueGreaterThanOne = greaterThanOne
-                                return shouldDraw
-                            }
-                        }).apply {
-                        paintEntryLabels.color = textColorSecondary.defaultColor
-                        paintEntryLabels.textSize =
-                            UiUtils.sp2Px(TEXT_SIZE_SMALL_SP, resources).toFloat()
-                    }
-                    setCenterTextSizePixels(
-                        UiUtils.sp2Px(TEXT_SIZE_MEDIUM_SP, resources).toFloat()
-                    )
-                    setCenterTextColor(textColorSecondary.defaultColor)
-                    setUsePercentValues(true)
-                    holeRadius = if (inner) 75f else 85f
-                    setHoleColor(android.graphics.Color.TRANSPARENT)
-                    legend.isEnabled = false
-                    description.isEnabled = false
+            factory = { ctx -> requireChart(ctx, inner) },
+            angle = angle,
+            holeRadius = if (inner) 75f else 85f,
+            data = categories.map { category ->
+                PieEntry(
+                    abs(category.aggregateSum.toFloat()),
+                    category.label
+                )
+            },
+            colors = categories.map { it.color ?: 0 },
+            onValueSelected = { index ->
+                selectionState.value = index?.let {
+                    categories.getOrNull(it)
                 }
-            }) {
-            it.maxAngle = angle
-            it.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
-                override fun onValueSelected(e: Entry, highlight: Highlight) {
-                    val index = highlight.x.toInt()
-                    selectionState.value = categories.children.getOrNull(index)
-                    it.setCenterText(index, if (isCombined) innerChart else chart)
-                }
-
-                override fun onNothingSelected() {
-                    selectionState.value = null
-                }
-            })
-            it.notifyDataSetChanged()
-            it.invalidate()
+            }
+        ) {
+            selectionState.value = categories.firstOrNull()
         }
-    }
-
-    private fun PieChart.setCenterText(position: Int, target: PieChart) {
-        val entry = data.dataSet.getEntryForIndex(position)
-        val description = entry.label
-        val value = data.dataSet.valueFormatter.getFormattedValue(
-            entry.value / data.yValueSum * 100f,
-            entry, position, null
-        )
-
-        target.centerText = """
-            $description
-            $value
-            """.trimIndent()
     }
 
     private fun editCategoryColor(id: Long, color: Int?) {
@@ -799,8 +722,6 @@ class DistributionActivity : DistributionBaseActivity<DistributionViewModel>(),
         private const val SWIPE_MIN_DISTANCE = 120
         private const val SWIPE_MAX_OFF_PATH = 250
         private const val SWIPE_THRESHOLD_VELOCITY = 100
-        private const val TEXT_SIZE_SMALL_SP = 14F
-        private const val TEXT_SIZE_MEDIUM_SP = 18F
     }
 
     override fun onResult(dialogTag: String, which: Int, extras: Bundle) =

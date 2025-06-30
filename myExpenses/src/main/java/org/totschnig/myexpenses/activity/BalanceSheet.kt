@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -39,8 +40,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.data.PieEntry
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.compose.AmountText
 import org.totschnig.myexpenses.compose.CheckableMenuEntry
@@ -64,14 +70,18 @@ import org.totschnig.myexpenses.compose.HierarchicalMenu
 import org.totschnig.myexpenses.compose.LocalDateFormatter
 import org.totschnig.myexpenses.compose.LocalHomeCurrency
 import org.totschnig.myexpenses.compose.Menu
+import org.totschnig.myexpenses.compose.PieChartCompose
+import org.totschnig.myexpenses.compose.conditional
 import org.totschnig.myexpenses.compose.filter.ActionButton
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.util.epochMillis2LocalDate
 import org.totschnig.myexpenses.util.toEpoch
 import org.totschnig.myexpenses.viewmodel.data.BalanceAccount
+import timber.log.Timber
 import java.time.LocalDate
 import java.util.Currency
+import kotlin.math.abs
 import kotlin.math.absoluteValue
 import kotlin.math.roundToLong
 
@@ -86,6 +96,8 @@ fun BalanceSheetView(
     onSetDate: (LocalDate) -> Unit = {},
 ) {
     var showAll by rememberSaveable { mutableStateOf(true) }
+    var showChart by rememberSaveable { mutableStateOf(false) }
+
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
@@ -103,6 +115,9 @@ fun BalanceSheetView(
         Modifier
             .padding(paddingValues)
     ) {
+
+        //Triple of asset or liability, position in section, index of account or null for Debts
+        val highlight = remember { mutableStateOf<Triple<Boolean, Int, Long?>?>(null) }
         TopAppBar(
             windowInsets = WindowInsets(0, 0, 0, 0),
             title = {
@@ -133,6 +148,14 @@ fun BalanceSheetView(
                                 showAll
                             ) {
                                 showAll = !showAll
+                            },
+                            CheckableMenuEntry(
+                                label = R.string.menu_chart,
+                                command = "TOGGLE_SHOW_ALL",
+                                showChart
+                            ) {
+                                showChart = !showChart
+                                highlight.value = null
                             }
                         )))
             },
@@ -205,55 +228,132 @@ fun BalanceSheetView(
             .mapValues { it.value.sumOf { it.equivalentCurrentBalance } to it.value }
             .entries
             .partition { it.key.isAsset }
+
         val totalAssets = assets.sumOf { it.value.first }
         val totalLiabilities = liabilities.sumOf { it.value.first }
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f),
-            contentPadding = PaddingValues(
-                start = horizontalPadding,
-                end = horizontalPadding,
-                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            )
-        ) {
-
-            accountTypeChapter(
-                R.string.balance_sheet_section_assets,
-                totalAssets,
-                assets,
-                showAll,
-                onNavigate
-            )
-            accountTypeChapter(
-                R.string.balance_sheet_section_liabilities,
-                totalLiabilities,
-                liabilities,
-                showAll,
-                onNavigate
-            )
-
-            if (debtSum != 0L) {
-                item {
-                    BalanceSheetSectionHeaderView(
-                        stringResource(R.string.debts),
-                        debtSum,
-                        false
+        val assetsWithDebts = totalAssets + (debtSum.takeIf { it > 0L } ?: 0L)
+        val liabilitiesWithDebts = totalLiabilities + (debtSum.takeIf { it < 0L } ?: 0L)
+        val ratio = if (assetsWithDebts > 0L && liabilitiesWithDebts < 0L)
+            assetsWithDebts.toFloat() / -liabilitiesWithDebts else 1f
+        val angles = if (ratio > 1f) 360f to 360f / ratio else
+            360f * ratio to 360f
+        LayoutHelper(
+            showChart = showChart,
+            chart = {
+                Box(
+                    modifier = it
+                        .fillMaxWidth()
+                ) {
+                    RenderChart(
+                        modifier = Modifier
+                            .fillMaxSize(0.95f)
+                            .align(Alignment.Center),
+                        inner = false,
+                        accounts = assets.flatMap { it.value.second },
+                        debts = debtSum.takeIf { it > 0 },
+                        highlight = highlight,
+                        angle = angles.first,
+                    )
+                    RenderChart(
+                        modifier = Modifier
+                            .fillMaxSize(0.75f)
+                            .align(Alignment.Center),
+                        inner = true,
+                        accounts = liabilities.flatMap { it.value.second },
+                        debts = debtSum.takeIf { it < 0 },
+                        highlight = highlight,
+                        angle = angles.second,
                     )
                 }
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            },
+            data = {
+
+                val listState = rememberLazyListState()
+                fun lookup(id: Long?): Int {
+                    var totalIndex = 0// Assets
+                    assets.forEach { (_,list) ->
+                        totalIndex++ // section header
+                        list.second.forEach {
+                            totalIndex++ //item
+                            if (it.id == id) {
+                                return totalIndex
+                            }
+                        }
+                    }
+                    totalIndex+= 2 //Divider / Liabilities
+                    liabilities.forEach { (_,list) ->
+                        totalIndex++ // section header
+                        list.second.forEach {
+                            totalIndex++ //item
+                            if (it.id == id) {
+                                return totalIndex
+                            }
+                        }
+                    }
+                    totalIndex+= 2 //Divider / Debts
+                    return totalIndex
+                }
+                LazyColumn(
+                    modifier = it,
+                    contentPadding = PaddingValues(
+                        start = horizontalPadding,
+                        end = horizontalPadding,
+                        bottom = WindowInsets.navigationBars.asPaddingValues()
+                            .calculateBottomPadding()
+                    ),
+                    state = listState
+                ) {
+
+                    accountTypeChapter(
+                        title = R.string.balance_sheet_section_assets,
+                        total = totalAssets,
+                        sections = assets,
+                        showAll = showAll,
+                        highlight = highlight.value?.third,
+                        onNavigate = onNavigate
+                    )
+                    accountTypeChapter(
+                        title = R.string.balance_sheet_section_liabilities,
+                        total = totalLiabilities,
+                        sections = liabilities,
+                        showAll = showAll,
+                        highlight = highlight.value?.third,
+                        onNavigate = onNavigate
+                    )
+
+                    if (debtSum != 0L) {
+                        item {
+                            BalanceSheetSectionHeaderView(
+                                name = stringResource(R.string.debts),
+                                total = debtSum,
+                                highlight = highlight.value != null && highlight.value?.third == null,
+                                absolute = false
+                            )
+                        }
+                        item {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        }
+                    }
+
+                    item {
+                        BalanceSheetSectionHeaderView(
+                            name = stringResource(R.string.balance_sheet_net_worth),
+                            total = totalAssets + totalLiabilities + debtSum,
+                            absolute = false
+                        )
+                    }
+                }
+                LaunchedEffect(highlight.value) {
+                    highlight.value?.let {
+                        lookup(it.third)
+                    }?.let {
+                        Timber.d("Scrolling to $it")
+                        listState.animateScrollToItem(it)
+                    }
                 }
             }
-
-            item {
-                BalanceSheetSectionHeaderView(
-                    stringResource(R.string.balance_sheet_net_worth),
-                    totalAssets + totalLiabilities + debtSum,
-                    false
-                )
-            }
-        }
+        )
     }
 }
 
@@ -262,6 +362,7 @@ fun LazyListScope.accountTypeChapter(
     total: Long,
     sections: List<Map.Entry<AccountType, Pair<Long, List<BalanceAccount>>>>,
     showAll: Boolean,
+    highlight: Long?,
     onNavigate: (Long) -> Unit,
 ) {
     item {
@@ -272,19 +373,30 @@ fun LazyListScope.accountTypeChapter(
     }
 
     sections.forEach { (type, group) ->
-        accountTypeSection(type = type, group, showAll, onNavigate)
+        accountTypeSection(
+            type = type,
+            group = group,
+            showAll = showAll,
+            highlight = highlight,
+            onNavigate = onNavigate
+        )
     }
 }
 
 @Composable
 fun BalanceSheetSectionHeaderView(
+    modifier: Modifier = Modifier,
     name: String,
     total: Long,
+    highlight: Boolean = false,
     absolute: Boolean = true,
 ) {
     val homeCurrency = LocalHomeCurrency.current
     Row(
-        modifier = Modifier
+        modifier = modifier
+            .conditional(highlight) {
+                background(MaterialTheme.colorScheme.primaryContainer)
+            }
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
@@ -302,6 +414,7 @@ fun LazyListScope.accountTypeSection(
     type: AccountType,
     group: Pair<Long, List<BalanceAccount>>,
     showAll: Boolean,
+    highlight: Long?,
     onNavigate: (Long) -> Unit,
 ) {
     val (total, accounts) = group
@@ -325,7 +438,7 @@ fun LazyListScope.accountTypeSection(
         .filter { showAll || (!it.isHidden && it.currentBalance != 0L) }
         .forEach { account ->
             item {
-                BalanceAccountItemView(account = account, onNavigate)
+                BalanceAccountItemView(account = account, highlight == account.id, onNavigate)
             }
         }
     item {
@@ -334,10 +447,17 @@ fun LazyListScope.accountTypeSection(
 }
 
 @Composable
-fun BalanceAccountItemView(account: BalanceAccount, onNavigate: (Long) -> Unit) {
+fun BalanceAccountItemView(
+    account: BalanceAccount,
+    highlight: Boolean,
+    onNavigate: (Long) -> Unit,
+) {
     val homeCurrency = LocalHomeCurrency.current
     Row(
         modifier = Modifier
+            .conditional(highlight) {
+                background(MaterialTheme.colorScheme.primaryContainer)
+            }
             .clickable {
                 onNavigate(account.id)
             }
@@ -358,6 +478,74 @@ fun BalanceAccountItemView(account: BalanceAccount, onNavigate: (Long) -> Unit) 
                 )
             }
         }
+    }
+}
+
+
+@Composable
+fun RenderChart(
+    modifier: Modifier,
+    inner: Boolean,
+    accounts: List<BalanceAccount>,
+    debts: Long?,
+    highlight: MutableState<Triple<Boolean, Int, Long?>?>,
+    angle: Float = 360f,
+) {
+    val accounts = accounts.filter { it.equivalentCurrentBalance != 0L }
+    val pieEntries = accounts.map { account ->
+        PieEntry(
+            abs(account.equivalentCurrentBalance.toFloat()),
+            account.label
+        )
+    }
+    val colors = accounts.map { it.color }
+    PieChartCompose(
+        modifier = modifier,
+        factory = { ctx ->
+            PieChart(ctx)
+        },
+        holeRadius = if (inner) 75f else 85f,
+        angle = angle,
+        onValueSelected = { index ->
+            highlight.value = index?.let { Triple(inner, index, accounts.getOrNull(index)?.id)  }
+        },
+        data = if (debts == null)
+            pieEntries else
+            pieEntries + PieEntry(
+                debts.toFloat().absoluteValue,
+                stringResource(R.string.debts)
+            ),
+        colors = colors
+    ) {
+        if (highlight.value?.first == !inner) {
+            it.highlightValue(null)
+            it.centerText = ""
+        }
+    }
+}
+
+@Composable
+fun LayoutHelper(
+    showChart: Boolean,
+    chart: @Composable (Modifier) -> Unit,
+    data: @Composable (Modifier) -> Unit,
+) {
+    if (showChart) {
+        BoxWithConstraints {
+            if (this.maxHeight > 600.dp || this.maxWidth < 600.dp) {
+                Column {
+                    chart(Modifier.weight(1f))
+                    data(Modifier.weight(1f))
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    chart(Modifier.weight(1f))
+                    data(Modifier.weight(1f))
+                }
+            }
+        }
+    } else {
+        data(Modifier)
     }
 }
 
