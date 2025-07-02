@@ -44,10 +44,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -61,7 +63,7 @@ import org.totschnig.myexpenses.compose.filter.TYPE_COMPLEX
 import org.totschnig.myexpenses.compose.toggle
 import org.totschnig.myexpenses.compose.unselect
 import org.totschnig.myexpenses.db2.addAttachments
-import org.totschnig.myexpenses.db2.calculateNearestCommonAncestor
+import org.totschnig.myexpenses.db2.calculateSplitSummary
 import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.db2.loadAttachments
 import org.totschnig.myexpenses.db2.loadBanks
@@ -70,6 +72,8 @@ import org.totschnig.myexpenses.db2.saveTagsForTransaction
 import org.totschnig.myexpenses.db2.setGrouping
 import org.totschnig.myexpenses.db2.tagMapFlow
 import org.totschnig.myexpenses.db2.unarchive
+import org.totschnig.myexpenses.export.pdf.BalanceSheetPdfGenerator
+import org.totschnig.myexpenses.export.pdf.PdfPrinter
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
@@ -79,6 +83,7 @@ import org.totschnig.myexpenses.model.SortDirection
 import org.totschnig.myexpenses.model.SplitTransaction
 import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Bank
+import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.enumValueOrDefault
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
@@ -136,6 +141,7 @@ import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_UNSPLIT
 import org.totschnig.myexpenses.provider.appendBooleanQueryParameter
 import org.totschnig.myexpenses.provider.asSequence
 import org.totschnig.myexpenses.provider.filter.CrStatusCriterion
+import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.filter.FilterPersistence
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.provider.getLong
@@ -143,12 +149,14 @@ import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.provider.mapToListCatchingWithExtra
 import org.totschnig.myexpenses.provider.mapToListWithExtra
+import org.totschnig.myexpenses.util.AppDirHelper
 import org.totschnig.myexpenses.util.ResultUnit
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.enumValueOrDefault
 import org.totschnig.myexpenses.util.toggle
 import org.totschnig.myexpenses.viewmodel.ExportViewModel.Companion.EXPORT_HANDLE_DELETED_UPDATE_BALANCE
 import org.totschnig.myexpenses.viewmodel.data.BalanceAccount
+import org.totschnig.myexpenses.viewmodel.data.BalanceAccount.Companion.partitionByAccountType
 import org.totschnig.myexpenses.viewmodel.data.BudgetData
 import org.totschnig.myexpenses.viewmodel.data.BudgetRow
 import org.totschnig.myexpenses.viewmodel.data.FullAccount
@@ -169,7 +177,7 @@ private const val KEY_BALANCE_DATE = "balanceDate"
 open class MyExpensesViewModel(
     application: Application,
     val savedStateHandle: SavedStateHandle,
-) : ContentResolvingAndroidViewModel(application) {
+) : PrintViewModel(application) {
 
     private val hiddenAccountsInternal: MutableStateFlow<Int> = MutableStateFlow(0)
     val hasHiddenAccounts: StateFlow<Int> = hiddenAccountsInternal
@@ -459,7 +467,7 @@ open class MyExpensesViewModel(
             .map {
                 date to it
             }
-    }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, LocalDate.now() to emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val debtSum: Flow<Long> = balanceDate.flatMapLatest { date ->
@@ -471,7 +479,7 @@ open class MyExpensesViewModel(
         ).map {
             it.fold(0L) { sum, debt -> sum + debt.currentEquivalentBalance }
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
     val accountData: StateFlow<Result<List<FullAccount>>?> = contentResolver.observeQuery(
         uri = ACCOUNTS_URI.buildUpon()
@@ -942,9 +950,39 @@ open class MyExpensesViewModel(
         }
     }
 
-    suspend fun splitInfo(id: Long): Pair<String, String?>? {
+    suspend fun splitInfo(id: Long): List<Pair<String, String?>>? {
         return withContext(Dispatchers.IO) {
-            repository.calculateNearestCommonAncestor(id)
+            repository.calculateSplitSummary(id)
+        }
+    }
+
+    fun print(account: FullAccount, whereFilter: Criterion?) {
+        viewModelScope.launch(coroutineContext()) {
+            _pdfResult.update {
+                AppDirHelper.checkAppDir(getApplication()).mapCatching {
+                    val colorSource = enumValueOrDefault(
+                        dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.TRANSACTION_AMOUNT_COLOR_SOURCE)],
+                        ColorSource.TYPE
+                    )
+                    PdfPrinter.print(localizedContext, account, it, whereFilter, colorSource)
+                }
+            }
+        }
+    }
+
+    fun printBalanceSheet() {
+        viewModelScope.launch(coroutineContext()) {
+            _pdfResult.update {
+                AppDirHelper.checkAppDir(getApplication()).mapCatching {
+                    val (date, accounts) = accountsForBalanceSheet.first()
+                    BalanceSheetPdfGenerator(localizedContext).generatePdf(
+                        destDir = it,
+                        data = accounts.partitionByAccountType(),
+                        date = date,
+                        debts = debtSum.first()
+                    )
+                }
+            }
         }
     }
 
