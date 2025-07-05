@@ -3,6 +3,7 @@ package org.totschnig.myexpenses.export.pdf
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import android.os.Bundle
 import androidx.documentfile.provider.DocumentFile
 import com.itextpdf.text.BaseColor
 import com.itextpdf.text.Chunk
@@ -354,12 +355,13 @@ object PdfPrinter {
 
                     val groupHeader = helper.print(
                         account.grouping.getDisplayTitle(
-                            context,
-                            transaction.year,
-                            headerRow.second,
-                            DateInfo.load(context.contentResolver),
-                            headerRow.weekStart,
-                            false
+                            ctx = context,
+                            groupYear = transaction.year,
+                            groupSecond = headerRow.second,
+                            dateInfo = DateInfo.load(context.contentResolver),
+                            weekStart = headerRow.weekStart,
+                            weekRangeOnly = true,
+                            relativeDay = false
                         ),
                         FontType.HEADER
                     )
@@ -374,50 +376,46 @@ object PdfPrinter {
                 val (_, amountMinor) = headerRow.delta
                 val interimBalance = headerRow.interimBalance
                 val formattedDelta = String.format(
-                    "%s %s", if (java.lang.Long.signum(
-                            amountMinor
-                        ) > -1
-                    ) "+" else "-",
+                    "%s %s", if (amountMinor.sign > -1) "+" else "-",
                     currencyFormatter.convAmount(abs(amountMinor), currencyUnit)
                 )
-                var cell = helper.printToCell(
-                    if (filter == null) String.format(
-                        "%s %s = %s",
-                        currencyFormatter.formatMoney(headerRow.previousBalance), formattedDelta,
-                        currencyFormatter.formatMoney(interimBalance)
-                    ) else formattedDelta, FontType.HEADER
-                )
-                cell.horizontalAlignment = Element.ALIGN_RIGHT
-                groupSummary.addCell(
-                    helper.printToCell(
-                        buildString {
-                            append(context.getString(R.string.at_start))
-                            append(": ")
-                            append(
-                                currencyFormatter.formatMoney(
-                                    headerRow.previousBalance
+                if (filter == null) {
+                    groupSummary.addCell(
+                        helper.printToCell(
+                            buildString {
+                                append(context.getString(R.string.at_start))
+                                append(": ")
+                                append(
+                                    currencyFormatter.formatMoney(
+                                        headerRow.previousBalance
+                                    )
                                 )
-                            )
-                        }
+                            }
+                        )
                     )
-                )
-                groupSummary.addCell(helper.printToCell("Δ: $formattedDelta").apply {
-                    horizontalAlignment = Element.ALIGN_CENTER
-                })
-                groupSummary.addCell(
-                    helper.printToCell(
-                        buildString {
-                            append(context.getString(R.string.at_end))
-                            append(": ")
-                            append(
-                                currencyFormatter.formatMoney(
-                                    interimBalance
-                                )
-                            )
-                        }
-                    ).apply {
-                        horizontalAlignment = Element.ALIGN_RIGHT
+                    groupSummary.addCell(helper.printToCell("Δ: $formattedDelta").apply {
+                        horizontalAlignment = Element.ALIGN_CENTER
                     })
+                    groupSummary.addCell(
+                        helper.printToCell(
+                            buildString {
+                                append(context.getString(R.string.at_end))
+                                append(": ")
+                                append(
+                                    currencyFormatter.formatMoney(
+                                        interimBalance
+                                    )
+                                )
+                            }
+                        ).apply {
+                            horizontalAlignment = Element.ALIGN_RIGHT
+                        })
+                } else {
+                    groupSummary.addCell(helper.printToCell("Δ: $formattedDelta").apply {
+                        colspan = 3
+                        horizontalAlignment = Element.ALIGN_CENTER
+                    })
+                }
                 groupSummary.addCell(
                     PdfPCell(
                         Phrase().apply {
@@ -479,24 +477,28 @@ object PdfPrinter {
 
                 val header2Table = helper.newTable(3)
                 header2Table.widthPercentage = 100f
-                cell = helper.printToCell(
-                    "+ " + currencyFormatter.formatMoney(sumIncome),
-                    FontType.INCOME
-                )
-                cell.horizontalAlignment = Element.ALIGN_CENTER
-                header2Table.addCell(cell)
-                cell = helper.printToCell(
-                    "- " + currencyFormatter.formatMoney(sumExpense.negate()),
-                    FontType.EXPENSE
-                )
-                cell.horizontalAlignment = Element.ALIGN_CENTER
-                header2Table.addCell(cell)
-                cell = helper.printToCell(
-                    Transfer.BI_ARROW + " " + currencyFormatter.formatMoney(sumTransfer),
-                    FontType.TRANSFER
-                )
-                cell.horizontalAlignment = Element.ALIGN_CENTER
-                header2Table.addCell(cell)
+                header2Table.addCell(
+                    helper.printToCell(
+                        "+ " + currencyFormatter.formatMoney(sumIncome),
+                        FontType.INCOME
+                    ).apply {
+                        horizontalAlignment = Element.ALIGN_CENTER
+                    })
+
+                header2Table.addCell(
+                    helper.printToCell(
+                        "- " + currencyFormatter.formatMoney(sumExpense.negate()),
+                        FontType.EXPENSE
+                    ).apply {
+                        horizontalAlignment = Element.ALIGN_CENTER
+                    })
+                header2Table.addCell(
+                    helper.printToCell(
+                        Transfer.BI_ARROW + " " + currencyFormatter.formatMoney(sumTransfer),
+                        FontType.TRANSFER
+                    ).apply {
+                        horizontalAlignment = Element.ALIGN_CENTER
+                    })
                 header2Table.spacingAfter = 2f
 
                 val wrapper2 = PdfPTable(1)
@@ -528,10 +530,13 @@ object PdfPrinter {
                     val border =
                         if (index == columns.lastIndex) NO_BORDER else Rectangle.RIGHT
                     val alignment = columnAlignment(fields)
+                    val extra = Bundle(1).apply {
+                        putBoolean(Date.KEY_IS_TIME_FIELD, account.grouping == Grouping.DAY)
+                    }
                     if (fields.size == 1) {
                         table.addCell(
                             headerCell(
-                                fields[0].toString(context),
+                                fields[0].toString(context, extra),
                                 headerFont,
                                 alignment,
                                 border
@@ -543,7 +548,7 @@ object PdfPrinter {
                                 headerFont,
                                 alignment,
                                 border,
-                                *fields.map { it.toString(context) }.toTypedArray(),
+                                *fields.map { it.toString(context, extra) }.toTypedArray()
                             )
                         )
                     }

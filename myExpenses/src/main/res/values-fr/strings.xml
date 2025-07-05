@@ -170,7 +170,6 @@
     <!-- This command inverts the direction of a transfer -->
     <string name="menu_invert_transfer">Inverser</string>
     <string name="menu_manage_plans">Modèles et échéances</string>
-    <string name="menu_import">Import</string>
     <string name="menu_reset">Exporter et réinitialiser</string>
     <string name="menu_reset_all">Exporter et réinitialiser tous</string>
     <!-- Resetting a plan instance means deleting a transaction that has been created for this instances, or removing the cancel flag -->
@@ -1025,4 +1024,17 @@
     <string name="batch_download">Téléchargement par lots</string>
     <string name="warning_batch_download_quota">Le téléchargement par lots à partir de %s risque d’épuiser votre limite d’utilisation.</string>
     <string name="batch_download_result">%d prix ont été téléchargés et stockés dans la base de données.</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Afficher le nouveau solde après l\'enregistrement de l\'opération</string>
+    <string name="print_configuration_empty">Veuillez ajouter au moins un champ à imprimer.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">Données valides trouvées sur %d ligne.</item>
+        <item quantity="many">Données valides trouvées sur %d lignes.</item>
+        <item quantity="other">Données valides trouvées sur %d lignes.</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d ligne n’a pas pu être traitée.</item>
+        <item quantity="many">%d lignes n’ont pas pu être traitées.</item>
+        <item quantity="other">%d lignes n’ont pas pu être traitées.</item>
+    </plurals>
+    <string name="confirm_process_file_message">Voulez-vous vraiment importer les prix de « %1$s » depuis « %2$s » ? Les nouveaux prix peuvent affecter les montants équivalents existants.</string>
 </resources>

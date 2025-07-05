@@ -169,7 +169,6 @@
     <!-- This command inverts the direction of a transfer -->
     <string name="menu_invert_transfer">Inverz</string>
     <string name="menu_manage_plans">Sablonok és tervek</string>
-    <string name="menu_import">Import</string>
     <string name="menu_reset">Export és alap állapotra visszaállítás</string>
     <string name="menu_reset_all">Export és teljes reset</string>
     <!-- Resetting a plan instance means deleting a transaction that has been created for this instances, or removing the cancel flag -->
@@ -958,4 +957,5 @@
     <string name="balance_sheet_section_assets">Eszközök</string>
     <string name="balance_sheet_section_liabilities">Kötelezettségek</string>
     <string name="balance_sheet_net_worth">Nettó vagyon</string>
+    <string name="price_history">Ártörténet</string>
 </resources>

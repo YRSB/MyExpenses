@@ -168,7 +168,6 @@
     <!-- This command inverts the direction of a transfer -->
     <string name="menu_invert_transfer">Songsang</string>
     <string name="menu_manage_plans">Templat dan plan</string>
-    <string name="menu_import">Import</string>
     <string name="menu_reset">Eksport dan tetap semula</string>
     <string name="menu_reset_all">Eksport dan tetap semula semua</string>
     <!-- Resetting a plan instance means deleting a transaction that has been created for this instances, or removing the cancel flag -->
@@ -904,4 +903,5 @@
     <string name="balance_sheet_section_assets">Aset</string>
     <string name="balance_sheet_section_liabilities">Liabiliti</string>
     <string name="balance_sheet_net_worth">Nilai bersih</string>
+    <string name="price_history">Sejarah harga</string>
 </resources>
