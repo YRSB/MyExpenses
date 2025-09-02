@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Tipuri cont</string>
     <string name="account_type_asset">Cont activ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Conturi activ</string>
     <string name="account_type_bank">Cont bancar</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Conturi bancare</string>
     <string name="account_type_cash">Cont numerar</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Conturi numerar</string>
     <string name="account_type_ccard">Carte de credit</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Cărţi de credit</string>
     <string name="account_type_liability">Cont pasiv</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Conturi pasiv</string>
     <string name="already_defined">%1$s deja există</string>
     <string name="amount">Valoare</string>
     <string name="app_name">Cheltuielile Mele</string>
@@ -295,9 +285,9 @@
     <string name="save_transaction_and_new_success">Salvată</string>
     <string name="save_transaction_error">Noua tranzacţia din şablon nu afost salvată</string>
     <plurals name="save_transaction_from_template_success">
-        <item quantity="one">Tranzacţie nouă salvată din şablon</item>
-        <item quantity="few">%1$d tranzacţii noi au fost salvate din şabloane</item>
-        <item quantity="other">%1$d tranzacţii noi au fost salvate din şabloane</item>
+        <item quantity="one">Tranzacţie nouă salvată din şablon.</item>
+        <item quantity="few">%1$d tranzacţii noi au fost salvate din şabloane.</item>
+        <item quantity="other">%1$d tranzacţii noi au fost salvate din şabloane.</item>
     </plurals>
     <string name="save_transaction_template_deleted">Şablonul a fost şters</string>
     <string name="select">Selectează </string>
@@ -690,8 +680,6 @@
     <string name="content_description_dates_are_not_linked">Data rezervării și data valutei nu sunt actualizate împreună</string>
     <string name="warning_synced_account_cannot_be_closed">Un cont care este legat la un backend de sincronizare nu poate fi închis</string>
     <string name="menu_reopen">Redeschide</string>
-    <string name="warning_no_account">Cel puțin un cont trebuie să fie vizibil și deschis pentru a crea noi tranzacții.</string>
-    <string name="menu_hidden_accounts">Conturi ascunse</string>
     <string name="content_description_closed">Inchisa</string>
     <string name="content_description_dates_are_linked">Data rezervării și data valutei sunt actualizate împreună</string>
     <string name="button_relink_keep_date">Reconectați, dar păstrați data</string>
@@ -919,4 +907,5 @@
     <string name="balance_sheet_section_liabilities">Datorii</string>
     <string name="balance_sheet_net_worth">Valoare netă</string>
     <string name="price_history">Istoricul prețurilor</string>
+    <string name="pref_account_list_display_configuration_title">Listă de conturi</string>
 </resources>

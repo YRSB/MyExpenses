@@ -167,4 +167,8 @@
     <string name="at_end">结束</string>
     <string name="widgets">"微件"</string>
     <string name="menu_import">"导入"</string>
+    <string name="already_exists">"名称已经存在"</string>
+    <string name="flag_inactive">"未使用"</string>
+    <string name="count">"数值计数"</string>
+    <string name="empty">"空"</string>
 </resources>

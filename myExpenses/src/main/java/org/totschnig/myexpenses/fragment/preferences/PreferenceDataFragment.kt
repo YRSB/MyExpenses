@@ -22,10 +22,13 @@ import org.totschnig.myexpenses.dialog.MessageDialogFragment
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.preference.DYNAMIC_EXCHANGE_RATES_DEFAULT_KEY
 import org.totschnig.myexpenses.preference.PrefHandler.Companion.AUTOMATIC_EXCHANGE_RATE_DOWNLOAD_PREF_KEY_PREFIX
 import org.totschnig.myexpenses.preference.PrefHandler.Companion.SERVICE_DEACTIVATED
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMODITY
+import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.DYNAMIC_CURRENCIES_URI
 import org.totschnig.myexpenses.retrofit.ExchangeRateApi
 import org.totschnig.myexpenses.util.TextUtils
 import org.totschnig.myexpenses.viewmodel.CurrencyViewModel
@@ -120,6 +123,15 @@ class PreferenceDataFragment : BasePreferenceFragment() {
                 getString(R.string.pref_exchange_rates_api_key_summary, it.host)
         }
         configureExchangeRatesPreference(ExchangeRateApi.configuredSources(prefHandler))
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                preferenceDataStore.handleList(findPreference(DYNAMIC_EXCHANGE_RATES_DEFAULT_KEY)!!) {
+                    requireContext().contentResolver.notifyChange(DYNAMIC_CURRENCIES_URI, null, false)
+                    requireContext().contentResolver.notifyChange(ACCOUNTS_URI, null, false)
+                }
+            }
+        }
     }
 
     private fun configureCurrenciesForAutomaticFXDownload(
@@ -173,7 +185,7 @@ class PreferenceDataFragment : BasePreferenceFragment() {
     val automaticChangeRateCurrencyOnChangeListener =
         OnPreferenceChangeListener { preference, newValue ->
             if (newValue == SERVICE_DEACTIVATED) return@OnPreferenceChangeListener true
-            val source = ExchangeRateApi.getByName(newValue as String)!!
+            val source = ExchangeRateApi.getByName(newValue as String)
             if (source is ExchangeRateApi.SourceWithApiKey && source.getApiKey(prefHandler).isNullOrEmpty()) {
                 preferenceActivity.showSnackBar(getString(R.string.pref_exchange_rates_api_key_summary, source.host))
                 return@OnPreferenceChangeListener false

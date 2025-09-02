@@ -15,11 +15,11 @@
   along with My Expenses.  If not, see <http://www.gnu.org/licenses/>.
  --><resources xmlns:tools="http://schemas.android.com/tools">
     <string name="account">ගිණුම </string>
-    <string name="account_type_asset">වත්කම් ගිණුම </string>
-    <string name="account_type_bank">බැංකු ගිණුම </string>
-    <string name="account_type_cash">මුදල් ගිණුම   </string>
+    <string name="account_type_asset">වත්කම් ගිණුම</string>
+    <string name="account_type_bank">බැංකු ගිණුම</string>
+    <string name="account_type_cash">මුදල් ගිණුම</string>
     <string name="account_type_ccard">ණය පත</string>
-    <string name="account_type_liability">වගකීම් ගිණුම </string>
+    <string name="account_type_liability">වගකීම් ගිණුම</string>
     <string name="already_defined">%1$s දැනටමත් අර්ථ දක්වා ඇත</string>
     <string name="amount">ප්‍රමාණය</string>
     <string name="app_name">මාගේ වියදම්</string>
@@ -67,7 +67,7 @@
     <string name="grouping_week">සතිය </string>
     <string name="grouping_year">අවුරුද්ද </string>
     <string name="help_button_rate">තරාතිරම හෝ නැවත විචාරීම </string>
-    <string name="help_heading_credits"/>
+    <string name="help_heading_credits"></string>
     <string name="help_heading_whats_new">කුමක්ද අලුත් </string>
     <string name="import_select_transactions">ගනුදෙනු </string>
     <string name="income">ආදායම</string>
@@ -244,8 +244,8 @@
     <string name="save_transaction_and_new_success">සාර්ථකව සුරකින ලදී </string>
     <string name="save_transaction_error">අච්චුවෙන් අලුත් ගනුදෙනුව සුරැකීමට නොහැකි විය.</string>
     <plurals name="save_transaction_from_template_success">
-        <item quantity="one">නව ගනුදෙනුව  සාර්ථකව අච්චු තුලට සුරැකිය  </item>
-        <item quantity="other">%1$d නව ගනුදෙනු සාර්ථකව අච්චු තුලට සුරැකිය  </item>
+        <item quantity="one">නව ගනුදෙනුව සාර්ථකව අච්චු තුලට සුරැකිය.</item>
+        <item quantity="other">%1$d නව ගනුදෙනු සාර්ථකව අච්චු තුලට සුරැකිය.</item>
     </plurals>
     <string name="save_transaction_template_deleted">අච්චුව මකා දමන ලදී </string>
     <string name="select">තෝරන්න </string>
@@ -339,4 +339,5 @@
     <string name="balance_sheet_section_liabilities">වගකීම්</string>
     <string name="balance_sheet_net_worth">ශුද්ධ වටිනාකම</string>
     <string name="price_history">මිල ඉතිහාසය</string>
+    <string name="pref_account_list_display_configuration_title">ගිණුම් ලැයිස්තුව</string>
 </resources>

@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Tipos de cuentas</string>
     <string name="account_type_asset">Cuenta de activos</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Cuentas de activos</string>
     <string name="account_type_bank">Cuenta bancaria</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Cuentas bancarias</string>
     <string name="account_type_cash">Cuenta de efectivo</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Cuentas de efectivo</string>
     <string name="account_type_ccard">Tarjeta de crédito</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Tarjetas de crédito</string>
     <string name="account_type_liability">Cuenta de deudas</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Cuentas de deudas</string>
     <string name="already_defined">%1$s ya existe</string>
     <string name="amount">Importe</string>
     <string name="app_name">Mis Gastos</string>
@@ -672,13 +662,10 @@
     <string name="menu_close">Cerrar</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Reabrir</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Ocultar cuentas</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Cerrada</string>
     <string name="warning_synced_account_cannot_be_closed">No se pudo cerrar una cuenta ligada al servicio de sincronización</string>
     <string name="translated_by">Traducido por</string>
-    <string name="warning_no_account">Al menos una cuenta tiene que estar visible y abierta para poder crear nuevas transacciones.</string>
     <string name="content_description_dates_are_linked">Las fechas de reserva y su valor se actualizan de forma conjunta</string>
     <string name="content_description_dates_are_not_linked">Las fechas de reserva y su valor no se actualizan de forma conjunta</string>
     <string name="roadmap_vote">Votar hoja de ruta</string>
@@ -1004,7 +991,6 @@
     <string name="price_history">Historial de precios</string>
     <string name="dynamic_exchange_rate">Tipo de cambio dinámico</string>
     <string name="equivalent_amount_plural">Cantidades equivalentes</string>
-    <string name="menu_recalculate">Recalcular</string>
     <string name="filter_dialog_empty">Todavía no se han añadido criterios. Toque los botones de arriba para definir su consulta y refinar sus resultados.</string>
     <string name="pref_sync_frequency_summary_0">Establézcalo en 0 para desactivar la sincronización automática.</string>
     <string name="current_value">Valor actual</string>
@@ -1013,7 +999,7 @@
     <string name="total_value">Valor total</string>
     <string name="recalculate_equivalent_amounts_warning">Los importes equivalentes se (re)calcularán si se dispone de los tipos de cambio almacenados aplicables.</string>
     <string name="account_closed">La cuenta está cerrada</string>
-    <string name="balance_sheet">Hoja de Balance</string>
+    <string name="balance_sheet">Balance General</string>
     <string name="balance_sheet_section_assets">Activos</string>
     <string name="balance_sheet_section_liabilities">Pasivos</string>
     <string name="balance_sheet_net_worth">Patrimonio neto</string>
@@ -1024,4 +1010,43 @@
     <string name="mark_as_unreconciled">Marcar como no reconciliado</string>
     <string name="batch_download_result">%d precios se descargaron y almacenaron en la base de datos.</string>
     <string name="mark_as_cleared">Marcar como despejado</string>
+    <string name="category_type_main">Categoría principal</string>
+    <string name="category_type_sub">Subcategoría</string>
+    <string name="category_description_base">%1$s, nivel %2$d</string>
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, contiene una subcategoría de nivel %2$d</item>
+        <item quantity="other">, contiene %1$d subcategorías de nivel %2$d</item>
+    </plurals>
+    <string name="pref_account_list_display_configuration_title">Lista de cuentas</string>
+    <string name="account_type_investment">Inversiones</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Mostrar nuevo saldo después de guardar la transacción</string>
+    <string name="print_configuration_empty">Agregue al menos un campo para imprimir.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">El dato válido encontrado encima %d línea.</item>
+        <item quantity="many">Datos válidos encontrados en %d líneas.</item>
+        <item quantity="other">Datos válidos encontrados en %d líneas.</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d línea no podía ser procesada.</item>
+        <item quantity="many">%d líneas no se pudieron procesar.</item>
+        <item quantity="other">%d líneas no se pudieron procesar.</item>
+    </plurals>
+    <string name="confirm_process_file_message">¿Está seguro de que desea importar precios para \'%1$s\' desde \'%2$s\'? Los nuevos precios pueden afectar a los importes equivalentes existentes.</string>
+    <string name="warning_expense_category_credit">Estás asignando una categoría de gasto a una transacción de ingresos. Como consecuencia, la transacción reducirá la suma de tus gastos y, por defecto, se mostrará en rojo.</string>
+    <string name="warning_income_category_debit">Está asignando una categoría de ingresos a una transacción de gastos. Como consecuencia, la transacción reducirá la suma de sus ingresos y, por defecto, se mostrará en verde.</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Tarifas dinámicas para todas las cuentas</string>
+    <string name="pref_dynamic_exchange_rates_static">Tarifas estáticas para todas las cuentas</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Configurar cada cuenta individualmente</string>
+    <string name="edit_account_type">Editar tipo de cuenta</string>
+    <string name="new_account_type">Nuevo tipo de cuenta</string>
+    <string name="pref_print_layout_summary">Configurar el ancho y la composición de las columnas</string>
+    <string name="menu_account_flags">Indicadores</string>
+    <string name="menu_flag">Indicador</string>
+    <string name="edit_account_flag">Editar indicador</string>
+    <string name="new_account_flag">Nuevo indicador</string>
+    <string name="flag_unflagged">Sin indicador</string>
+    <string name="flag_favorite">Favorito</string>
+    <string name="aggregate_invisible">Incluir cuentas invisibles en las cuentas agregadas y el balance general</string>
+    <string name="select_accounts_for_flag">Seleccionar cuentas para el indicador %s</string>
+    <string name="supports_reconciliation">Apoya la reconciliación</string>
 </resources>

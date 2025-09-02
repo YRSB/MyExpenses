@@ -10,14 +10,15 @@ import org.totschnig.myexpenses.db2.FinTsAttribute
 import org.totschnig.myexpenses.model2.Bank
 
 interface BankingFeature {
-    companion object {
+    companion object: BankingFeature {
         const val TAG = "Banking"
+
     }
 
     val bankingActivityClass: Class<out Activity>
         get()  { throw NotImplementedError() }
 
-    fun startSyncFragment(bankId: Long, accountId: Long, fragmentManager: FragmentManager) {}
+    fun startSyncFragment(bankId: Long, accountId: Long, accountTypeId: Long, fragmentManager: FragmentManager) {}
 
     val bankIconRenderer: @Composable ((Modifier, Bank) -> Unit)?
         get() = null

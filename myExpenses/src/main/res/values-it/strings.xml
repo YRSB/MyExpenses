@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Tipi di conto</string>
     <string name="account_type_asset">Patrimonio</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Patrimonio</string>
     <string name="account_type_bank">Conto bancario</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Conti bancari</string>
     <string name="account_type_cash">Liquidità</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Liquidità</string>
     <string name="account_type_ccard">Carta di credito</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Carte di credito</string>
     <string name="account_type_liability">Passività</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Passività</string>
     <string name="already_defined">%1$s già definita</string>
     <string name="amount">Importo</string>
     <string name="app_name">Le mie spese</string>
@@ -647,7 +637,7 @@
     <string name="dialog_title_new_currency">Nuova valuta</string>
     <string name="currency_code_already_definded">Il codice della valuta è già definito.</string>
     <string name="currency_still_used">La valuta è utilizzata, non può essere eliminata.</string>
-    <string name="unmapped">Nessuna categoria</string>
+    <string name="unmapped">Non assegnato</string>
     <!-- In the filters for categories, payees and methods, there is a special "Unmapped" item allowing
     to search for transactions without category, payee or method. The UI allows selection of multiple items,
     but we warn the user if he includes this special item in the selection.   -->
@@ -669,13 +659,10 @@
     <string name="menu_close">Chiudi</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Riapri</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Conti nascosti</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Chiuso</string>
     <string name="warning_synced_account_cannot_be_closed">Un conto collegato al back-end di sincronizzazione non può essere chiuso</string>
     <string name="translated_by">Tradotto da</string>
-    <string name="warning_no_account">Almeno un conto deve essere visibile e aperto per poter creare nuove transazioni.</string>
     <string name="content_description_dates_are_linked">Data di prenotazione e data di valuta vengono aggiornate insieme</string>
     <string name="content_description_dates_are_not_linked">Data di prenotazione e data di valuta non vengono aggiornate insieme</string>
     <string name="roadmap_vote">Voto sulla Roadmap</string>
@@ -1002,13 +989,12 @@
     <string name="dynamic_exchange_rate">Tasso di cambio dinamico</string>
     <string name="progress_recalculating">Ricalcolo</string>
     <string name="equivalent_amount_plural">Importi equivalenti</string>
-    <string name="menu_recalculate">Ricalcolare</string>
     <string name="recalculate_equivalent_amounts_warning">Gli importi equivalenti saranno (ri)calcolati se sono disponibili i tassi di cambio memorizzati.</string>
     <string name="content_description_original_amount">Definire l\'importo originale di questa transazione selezionando una valuta e inserendo l\'importo. È inoltre possibile definire un tasso di cambio che verrà utilizzato per calcolare l\'importo effettivo.</string>
     <string name="content_description_exchange_rate">Tasso di cambio per 1 %1$s in %2$s</string>
     <string name="total_value">Valore totale</string>
     <string name="account_closed">Il conto è chiuso</string>
-    <string name="balance_sheet">Bilancio</string>
+    <string name="balance_sheet">Stato patrimoniale</string>
     <string name="balance_sheet_section_assets">Attività</string>
     <string name="balance_sheet_section_liabilities">Passività</string>
     <string name="balance_sheet_net_worth">Patrimonio netto</string>
@@ -1019,4 +1005,44 @@
     <string name="batch_download_result">%d prezzi sono stati scaricati e memorizzati nel database.</string>
     <string name="mark_as_cleared">Contrassegna come liquidato</string>
     <string name="mark_as_unreconciled">Contrassegna come non riconciliato</string>
+    <string name="pref_account_list_display_configuration_title">Elenco dei conti</string>
+    <string name="account_type_investment">Investimenti</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Mostra il nuovo saldo dopo che la transazione è stata salvata</string>
+    <string name="print_configuration_empty">Si prega di aggiungere almeno un campo da stampare.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">Dati validi trovati sulla %d linea.</item>
+        <item quantity="many">Dati validi trovati sulle righe %d .</item>
+        <item quantity="other">Dati validi trovati sulle righe %d .</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d riga non può essere elaborata.</item>
+        <item quantity="many">%d righe non possono essere elaborate.</item>
+        <item quantity="other">%d righe non possono essere elaborate.</item>
+    </plurals>
+    <string name="confirm_process_file_message">Vuoi davvero importare i prezzi per \'%1$s\' da \'%2$s\'? I nuovi prezzi potrebbero influire sugli importi equivalenti esistenti.</string>
+    <string name="warning_expense_category_credit">Si sta assegnando una categoria di spesa a una transazione di reddito. Di conseguenza, la transazione ridurrà la somma delle tue spese e per impostazione predefinita verrà mostrata in rosso.</string>
+    <string name="warning_income_category_debit">Si sta assegnando una categoria di reddito a una transazione di spesa. Di conseguenza, la transazione ridurrà la somma del tuo reddito e, per impostazione predefinita, verrà mostrata in verde.</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Tariffe dinamiche per tutti i conti</string>
+    <string name="pref_dynamic_exchange_rates_static">Tassi statici per tutti i conti</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Configura ogni conto individualmente</string>
+    <string name="category_type_main">Categoria principale</string>
+    <string name="category_type_sub">Sottocategoria</string>
+    <string name="category_description_base">%1$s, livello %2$d</string>
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, contiene una sottocategoria di livello %2$d.</item>
+        <item quantity="many">, contiene %1$d sottocategorie di livello %2$d.</item>
+        <item quantity="other">, contiene %1$d sottocategorie di livello %2$d.</item>
+    </plurals>
+    <string name="edit_account_type">Modifica tipo di conto</string>
+    <string name="new_account_type">Nuovo tipo di conto</string>
+    <string name="pref_print_layout_summary">Configurare la larghezza e la composizione delle colonne</string>
+    <string name="menu_account_flags">Indicatori</string>
+    <string name="menu_flag">Indicatore</string>
+    <string name="edit_account_flag">Modifica indicatore</string>
+    <string name="new_account_flag">Nuovo indicatore</string>
+    <string name="flag_unflagged">Nessuno indicatore</string>
+    <string name="flag_favorite">Preferito</string>
+    <string name="supports_reconciliation">Supporta la riconciliazione</string>
+    <string name="aggregate_invisible">Includere i conti invisibili nei conti aggregati e nello stato patrimoniale</string>
+    <string name="select_accounts_for_flag">Seleziona gli conti per il indicatore %s</string>
 </resources>

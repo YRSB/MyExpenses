@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">ಖಾತೆ ಪ್ರಕಾರಗಳು</string>
     <string name="account_type_asset">ಆಸ್ತಿ ಖಾತೆ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">ಆಸ್ತಿ ಖಾತೆಗಳು</string>
     <string name="account_type_bank">ಬ್ಯಾಂಕ್ ಖಾತೆ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">ಬ್ಯಾಂಕ್ ಖಾತೆಗಳು</string>
     <string name="account_type_cash">ನಗದು ಖಾತೆ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">ನಗದು ಖಾತೆಗಳು</string>
     <string name="account_type_ccard">ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">ಕ್ರೆಡಿಟ್ ಕಾರ್ಡ್‌ಗಳು</string>
     <string name="account_type_liability">ಹೊಣೆಗಾರಿಕೆಗಳ ಖಾತೆ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">ಹೊಣೆಗಾರಿಕೆಗಳ ಖಾತೆಗಳು</string>
     <string name="already_defined">%1$s ಅನ್ನು ಈಗಾಗಲೇ ವ್ಯಾಖ್ಯಾನಿಸಲಾಗಿದೆ</string>
     <string name="amount">ಮೊತ್ತ</string>
     <string name="app_name">ಮೈ ಎಕ್ಸಪೆನ್ಸಸ್</string>
@@ -662,13 +652,10 @@
     <string name="menu_close">ಮುಚ್ಚಿ</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">ಮತ್ತೆ ತೆರೆಯಿರಿ</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">ಗುಪ್ತ ಖಾತೆಗಳು</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">ಮುಚ್ಚಲಾಗಿದೆ</string>
     <string name="warning_synced_account_cannot_be_closed">ಸಿಂಕ್ರೊನೈಸೇಶನ್ ಬ್ಯಾಕೆಂಡ್‌ಗೆ ಲಿಂಕ್ ಮಾಡಲಾದ ಖಾತೆಯನ್ನು ಮುಚ್ಚಲಾಗುವುದಿಲ್ಲ</string>
     <string name="translated_by">ಅನುವಾದಿಸಿದ್ದಾರೆ</string>
-    <string name="warning_no_account">ಹೊಸ ವಹಿವಾಟುಗಳನ್ನು ರಚಿಸಲು ಕನಿಷ್ಠ ಒಂದು ಖಾತೆಯಾದರೂ ಗೋಚರಿಸಬೇಕು ಮತ್ತು ತೆರೆಯಬೇಕು.</string>
     <string name="content_description_dates_are_linked">ಬುಕಿಂಗ್ ದಿನಾಂಕ ಮತ್ತು ಮೌಲ್ಯದ ದಿನಾಂಕವನ್ನು ಒಟ್ಟಿಗೆ ನವೀಕರಿಸಲಾಗುತ್ತದೆ</string>
     <string name="content_description_dates_are_not_linked">ಬುಕಿಂಗ್ ದಿನಾಂಕ ಮತ್ತು ಮೌಲ್ಯದ ದಿನಾಂಕವನ್ನು ಒಟ್ಟಿಗೆ ನವೀಕರಿಸಲಾಗುವುದಿಲ್ಲ</string>
     <string name="roadmap_vote">ಮಾರ್ಗಸೂಚಿ ಮತ</string>
@@ -859,4 +846,5 @@
     <string name="balance_sheet_section_liabilities">ಬಾಧ್ಯತೆಗಳು</string>
     <string name="balance_sheet_net_worth">ನಿವ್ವಳ ಮೌಲ್ಯ</string>
     <string name="price_history">ಬೆಲೆ ಇತಿಹಾಸ</string>
+    <string name="pref_account_list_display_configuration_title">ಖಾತೆ ಪಟ್ಟಿ</string>
 </resources>

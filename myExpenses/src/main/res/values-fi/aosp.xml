@@ -103,4 +103,8 @@
     <string name="at_end">Päättyy</string>
     <string name="widgets">"Widgetit"</string>
     <string name="menu_import">"Tuo"</string>
+    <string name="already_exists">"Nimi on jo olemassa"</string>
+    <string name="flag_inactive">"Ei aktiivinen"</string>
+    <string name="count">"Laske"</string>
+    <string name="empty">"Tyhjä"</string>
 </resources>

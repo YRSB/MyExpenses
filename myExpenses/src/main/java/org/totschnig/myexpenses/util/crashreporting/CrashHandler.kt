@@ -19,6 +19,7 @@ interface CrashHandler {
     fun setUserEmail(email: String?) {}
     fun addBreadcrumb(breadcrumb: String) {}
     fun initProcess(context: Context, syncService: Boolean) {}
+    fun  getInfo(): Pair<String, String>? = null
 
     companion object {
         @JvmStatic
@@ -50,7 +51,7 @@ interface CrashHandler {
             throwOrReport(IllegalStateException(message), tag)
         }
 
-        private fun throwOrReport(e: RuntimeException, tag: String? = null) {
+        fun throwOrReport(e: Throwable, tag: String? = null) {
             if (BuildConfig.DEBUG) {
                 throw e
             } else {

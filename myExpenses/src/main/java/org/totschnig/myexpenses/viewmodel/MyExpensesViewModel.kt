@@ -14,11 +14,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.contentValuesOf
 import androidx.core.database.getLongOrNull
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
@@ -37,17 +37,13 @@ import app.cash.copper.flow.observeQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -55,7 +51,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.totschnig.myexpenses.adapter.ClearingLastPagingSourceFactory
 import org.totschnig.myexpenses.adapter.TransactionPagingSource
-import org.totschnig.myexpenses.compose.ExpansionHandler
+import org.totschnig.myexpenses.compose.DataStoreExpansionHandler
 import org.totschnig.myexpenses.compose.FutureCriterion
 import org.totschnig.myexpenses.compose.SelectionHandler
 import org.totschnig.myexpenses.compose.addToSelection
@@ -74,7 +70,7 @@ import org.totschnig.myexpenses.db2.tagMapFlow
 import org.totschnig.myexpenses.db2.unarchive
 import org.totschnig.myexpenses.export.pdf.BalanceSheetPdfGenerator
 import org.totschnig.myexpenses.export.pdf.PdfPrinter
-import org.totschnig.myexpenses.model.AccountType
+import org.totschnig.myexpenses.model.AccountGrouping
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.Grouping
@@ -97,24 +93,24 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGETID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_PREVIOUS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CR_STATUS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HIDDEN
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SECOND_GROUP
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
 import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_EXTENDED
 import org.totschnig.myexpenses.provider.TransactionProvider
@@ -124,13 +120,11 @@ import org.totschnig.myexpenses.provider.TransactionProvider.DUAL_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.EXTENDED_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.KEY_REPLACE
 import org.totschnig.myexpenses.provider.TransactionProvider.METHOD_SAVE_TRANSACTION_TAGS
-import org.totschnig.myexpenses.provider.TransactionProvider.METHOD_SORT_ACCOUNTS
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_DISTINCT
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_GROUP_BY
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_MAPPED_OBJECTS
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_MERGE_CURRENCY_AGGREGATES
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_TRANSACTION_ID_LIST
-import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_WITH_HIDDEN_ACCOUNT_COUNT
 import org.totschnig.myexpenses.provider.TransactionProvider.SORT_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_LINK_TRANSFER
@@ -147,13 +141,13 @@ import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.provider.getLong
 import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.provider.getString
-import org.totschnig.myexpenses.provider.mapToListCatchingWithExtra
+import org.totschnig.myexpenses.provider.mapToListCatching
 import org.totschnig.myexpenses.provider.mapToListWithExtra
+import org.totschnig.myexpenses.provider.triggerAccountListRefresh
 import org.totschnig.myexpenses.util.AppDirHelper
 import org.totschnig.myexpenses.util.ResultUnit
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.enumValueOrDefault
-import org.totschnig.myexpenses.util.toggle
 import org.totschnig.myexpenses.viewmodel.ExportViewModel.Companion.EXPORT_HANDLE_DELETED_UPDATE_BALANCE
 import org.totschnig.myexpenses.viewmodel.data.BalanceAccount
 import org.totschnig.myexpenses.viewmodel.data.BalanceAccount.Companion.partitionByAccountType
@@ -178,9 +172,6 @@ open class MyExpensesViewModel(
     application: Application,
     val savedStateHandle: SavedStateHandle,
 ) : PrintViewModel(application) {
-
-    private val hiddenAccountsInternal: MutableStateFlow<Int> = MutableStateFlow(0)
-    val hasHiddenAccounts: StateFlow<Int> = hiddenAccountsInternal
 
     private val showStatusHandlePrefKey = booleanPreferencesKey("showStatusHandle")
     private val showEquivalentWorthPrefKey = booleanPreferencesKey("showEquivalentWorth")
@@ -234,25 +225,11 @@ open class MyExpensesViewModel(
 
     fun expansionHandlerForTransactionGroups(account: PageAccount) =
         if (account.grouping == Grouping.NONE) null else
-            expansionHandler("collapsedHeaders_${account.id}_${account.grouping}")
+            expansionHandler(
+                "collapsedHeaders_${account.id}_${account.grouping}"
+            )
 
-    fun expansionHandler(key: String) = object : ExpansionHandler {
-        val collapsedIdsPrefKey = stringSetPreferencesKey(key)
-        override val collapsedIds: Flow<Set<String>> = dataStore.data.map { preferences ->
-            preferences[collapsedIdsPrefKey] ?: emptySet()
-        }
-
-        override fun toggle(id: String) {
-            viewModelScope.launch {
-                dataStore.edit { settings ->
-                    settings[collapsedIdsPrefKey] =
-                        settings[collapsedIdsPrefKey]?.toMutableSet()?.also {
-                            it.toggle(id)
-                        } ?: setOf(id)
-                }
-            }
-        }
-    }
+    fun expansionHandler(key: String) = DataStoreExpansionHandler(key, dataStore, viewModelScope)
 
     val selectedTransactionSum: Long
         get() = selectionState.value.sumOf { it.amount.amountMinor }
@@ -265,7 +242,7 @@ open class MyExpensesViewModel(
         val transferAccount: Long?,
         val isSplit: Boolean,
         val crStatus: CrStatus,
-        val accountType: AccountType?,
+        val accountType: Long?,
     ) : Parcelable {
         constructor(transaction: Transaction2) : this(
             transaction.id,
@@ -330,12 +307,15 @@ open class MyExpensesViewModel(
                 it[prefHandler.getStringPreferencesKey(PrefKey.CRITERION_FUTURE)],
                 FutureCriterion.EndOfDay
             )
-        }.distinctUntilChanged().also {
-            viewModelScope.launch {
-                it.drop(1).collect {
-                    triggerAccountListRefresh()
-                }
-            }
+        }
+    }
+
+    val accountGrouping: Flow<AccountGrouping> by lazy {
+        dataStore.data.map {
+            enumValueOrDefault(
+                it[prefHandler.getStringPreferencesKey(PrefKey.ACCOUNT_GROUPING)],
+                AccountGrouping.TYPE
+            )
         }
     }
 
@@ -481,23 +461,19 @@ open class MyExpensesViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
-    val accountData: StateFlow<Result<List<FullAccount>>?> = contentResolver.observeQuery(
-        uri = ACCOUNTS_URI.buildUpon()
-            .appendBooleanQueryParameter(QUERY_PARAMETER_MERGE_CURRENCY_AGGREGATES)
-            .appendBooleanQueryParameter(QUERY_PARAMETER_WITH_HIDDEN_ACCOUNT_COUNT)
-            .build(),
-        selection = "$KEY_HIDDEN = 0",
-        notifyForDescendants = true
-    )
-        .mapToListCatchingWithExtra {
-            FullAccount.fromCursor(it, currencyContext)
-        }.onEach { result ->
-            result.onSuccess { pair ->
-                hiddenAccountsInternal.value = pair.first.getInt(KEY_COUNT)
+    val accountData: StateFlow<Result<List<FullAccount>>?> by lazy {
+        contentResolver.observeQuery(
+            uri = ACCOUNTS_URI.buildUpon()
+                .appendBooleanQueryParameter(QUERY_PARAMETER_MERGE_CURRENCY_AGGREGATES)
+                .build(),
+            selection = "$KEY_VISIBLE = 1",
+            notifyForDescendants = true
+        )
+            .mapToListCatching {
+                FullAccount.fromCursor(it, currencyContext)
             }
-        }
-        .map { result -> result.map { it.second } }
-        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+            .stateIn(viewModelScope, SharingStarted.Lazily, null)
+    }
 
     fun headerData(account: PageAccount) = headerData.getValue(account)
 
@@ -567,7 +543,7 @@ open class MyExpensesViewModel(
     }
 
     fun triggerAccountListRefresh() {
-        contentResolver.notifyChange(ACCOUNTS_URI, null, false)
+        contentResolver.triggerAccountListRefresh()
     }
 
     fun linkTransfer(itemIds: LongArray) = liveData(context = coroutineContext()) {
@@ -620,32 +596,31 @@ open class MyExpensesViewModel(
         }
 
     fun setSealed(accountId: Long, isSealed: Boolean) {
-        if (DataBaseAccount.isAggregate(accountId)) {
-            CrashHandler.report(IllegalStateException("setSealed called on aggregate account"))
-        } else {
-            viewModelScope.launch(context = coroutineContext()) {
-                contentResolver.update(
-                    ContentUris.withAppendedId(ACCOUNTS_URI, accountId),
-                    ContentValues(1).apply {
-                        put(KEY_SEALED, isSealed)
-                    },
-                    null,
-                    null
-                )
-            }
-        }
+        setAccountProperty(accountId, KEY_SEALED, isSealed)
     }
 
     fun setExcludeFromTotals(accountId: Long, excludeFromTotals: Boolean) {
+        setAccountProperty(accountId, KEY_EXCLUDE_FROM_TOTALS, excludeFromTotals)
+    }
+
+    fun setDynamicExchangeRate(accountId: Long, dynamicExchangeRate: Boolean) {
+        setAccountProperty(accountId, KEY_DYNAMIC, dynamicExchangeRate)
+    }
+
+    fun setFlag(accountId: Long, flagId: Long?) {
+        setAccountProperty(accountId, KEY_FLAG, flagId)
+    }
+
+    private fun setAccountProperty(accountId: Long, column: String, value: Any?) {
         if (DataBaseAccount.isAggregate(accountId)) {
-            CrashHandler.report(IllegalStateException("setSealed called on aggregate account"))
+            CrashHandler.report(IllegalStateException("setBooleanProperty for $column called on aggregate account"))
         } else {
             viewModelScope.launch(context = coroutineContext()) {
                 contentResolver.update(
                     ContentUris.withAppendedId(ACCOUNTS_URI, accountId),
-                    ContentValues(1).apply {
-                        put(KEY_EXCLUDE_FROM_TOTALS, excludeFromTotals)
-                    },
+                    contentValuesOf(
+                        column to value
+                    ),
                     null,
                     null
                 )
@@ -675,30 +650,6 @@ open class MyExpensesViewModel(
                 Unit
             })
         }
-
-    fun setAccountVisibility(hidden: Boolean, vararg itemIds: Long) {
-        viewModelScope.launch(context = coroutineContext()) {
-            contentResolver.update(
-                ACCOUNTS_URI,
-                ContentValues().apply { put(KEY_HIDDEN, hidden) },
-                "$KEY_ROWID ${Operation.IN.getOp(itemIds.size)}",
-                itemIds.map { it.toString() }.toTypedArray()
-            )
-        }
-    }
-
-    fun sortAccounts(sortedIds: LongArray) {
-        viewModelScope.launch(context = coroutineContext()) {
-            contentResolver.call(
-                DUAL_URI,
-                METHOD_SORT_ACCOUNTS,
-                null,
-                Bundle(1).apply {
-                    putLongArray(KEY_SORT_KEY, sortedIds)
-                }
-            )
-        }
-    }
 
     fun undeleteTransactions(itemIds: List<Long>): LiveData<Int> =
         liveData(context = coroutineContext()) {

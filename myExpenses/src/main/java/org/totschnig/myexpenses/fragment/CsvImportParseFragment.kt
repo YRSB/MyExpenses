@@ -33,7 +33,6 @@ import org.totschnig.myexpenses.dialog.DialogUtils
 import org.totschnig.myexpenses.dialog.configureDateFormat
 import org.totschnig.myexpenses.dialog.getDisplayName
 import org.totschnig.myexpenses.export.qif.QifDateFormat
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants
@@ -48,8 +47,15 @@ import org.totschnig.myexpenses.viewmodel.data.Currency
 import org.totschnig.myexpenses.viewmodel.data.Currency.Companion.create
 import javax.inject.Inject
 import androidx.core.net.toUri
+import org.totschnig.myexpenses.adapter.GroupedSpinnerAdapter
+import org.totschnig.myexpenses.adapter.SpinnerItem
+import org.totschnig.myexpenses.dialog.addAllAccountTypes
+import org.totschnig.myexpenses.dialog.configureCurrencySpinner
+import org.totschnig.myexpenses.dialog.configureTypeSpinner
+import org.totschnig.myexpenses.model.AccountType
 
-class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnItemSelectedListener, FileNameHostFragment {
+class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnItemSelectedListener,
+    FileNameHostFragment {
 
     private var _binding: ImportCsvParseBinding? = null
     private var _fileNameBinding: FilenameBinding? = null
@@ -57,7 +63,7 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
         get() = _binding!!
     private val fileNameBinding
         get() = _fileNameBinding!!
-     override var uri: Uri? = null
+    override var uri: Uri? = null
         set(value) {
             field = value
             requireActivity().invalidateOptionsMenu()
@@ -79,30 +85,55 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
     private val currencyAdapter: CurrencyAdapter
         get() = binding.AccountTable.Currency.adapter as CurrencyAdapter
 
+    @Suppress("UNCHECKED_CAST")
+    private val typeAdapter: GroupedSpinnerAdapter<Boolean, AccountType>
+        get() = binding.AccountTable.AccountType.adapter as GroupedSpinnerAdapter<Boolean, AccountType>
+
     private var currency: String? = null
     private var type: AccountType? = null
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         if (savedInstanceState != null) {
             currency = savedInstanceState.getString(DatabaseConstants.KEY_CURRENCY)
-            type = savedInstanceState.getSerializable(DatabaseConstants.KEY_TYPE) as AccountType?
         }
         _binding = ImportCsvParseBinding.inflate(inflater, container, false)
         _fileNameBinding = FilenameBinding.bind(binding.root)
-        binding.DateFormatTable.DateFormat.configureDateFormat(requireContext(), prefHandler, PREF_KEY_IMPORT_CSV_DATE_FORMAT)
-        DialogUtils.configureEncoding(binding.EncodingTable.Encoding, activity, prefHandler, PREF_KEY_IMPORT_CSV_ENCODING)
-        DialogUtils.configureDelimiter(binding.Delimiter, activity, prefHandler, PREF_KEY_IMPORT_CSV_DELIMITER)
+        binding.DateFormatTable.DateFormat.configureDateFormat(
+            requireContext(),
+            prefHandler,
+            PREF_KEY_IMPORT_CSV_DATE_FORMAT
+        )
+        DialogUtils.configureEncoding(
+            binding.EncodingTable.Encoding,
+            activity,
+            prefHandler,
+            PREF_KEY_IMPORT_CSV_ENCODING
+        )
+        DialogUtils.configureDelimiter(
+            binding.Delimiter,
+            activity,
+            prefHandler,
+            PREF_KEY_IMPORT_CSV_DELIMITER
+        )
         with(binding.AccountTable.Account) {
             adapter = IdAdapter<AccountMinimal>(requireContext())
             onItemSelectedListener = this@CsvImportParseFragment
         }
-        DialogUtils.configureCurrencySpinner(binding.AccountTable.Currency, this)
+        binding.AccountTable.Currency.configureCurrencySpinner(this)
 
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 currencyViewModel.currencies.collect { currencies: List<Currency?> ->
                     currencyAdapter.addAll(currencies)
-                    binding.AccountTable.Currency.setSelection(currencyAdapter.getPosition(currencyViewModel.default))
+                    binding.AccountTable.Currency.setSelection(
+                        currencyAdapter.getPosition(
+                            currencyViewModel.default
+                        )
+                    )
                 }
             }
         }
@@ -118,7 +149,17 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
         }
 
         with(binding.AccountTable.AccountType) {
-            DialogUtils.configureTypeSpinner(this)
+            val accountTypeAdapter = configureTypeSpinner()
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.accountTypes.collect { accountTypes ->
+                        accountTypeAdapter.addAllAccountTypes(accountTypes)
+                        accountTypes.find { it.isCashAccount }?.let {
+                            binding.AccountTable.AccountType.setSelection(accountTypeAdapter.getPosition(it.id))
+                        }
+                    }
+                }
+            }
             onItemSelectedListener = this@CsvImportParseFragment
         }
 
@@ -223,7 +264,8 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
     override fun onOptionsItemSelected(item: MenuItem) = if (item.itemId == R.id.PARSE_COMMAND) {
         val format = binding.DateFormatTable.DateFormat.selectedItem as QifDateFormat
         val encoding = binding.EncodingTable.Encoding.selectedItem as String
-        val delimiter = resources.getStringArray(R.array.pref_csv_import_delimiter_values)[binding.Delimiter.selectedItemPosition]
+        val delimiter =
+            resources.getStringArray(R.array.pref_csv_import_delimiter_values)[binding.Delimiter.selectedItemPosition]
         with(prefHandler) {
             putString(PREF_KEY_IMPORT_CSV_DELIMITER, delimiter)
             putString(PREF_KEY_IMPORT_CSV_ENCODING, encoding)
@@ -251,12 +293,15 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
                 }
                 return
             }
+
             R.id.AccountType -> {
                 if (viewModel.accountId == 0L) {
-                    type = parent.selectedItem as AccountType
+                    @Suppress("UNCHECKED_CAST")
+                    type = (parent.selectedItem as SpinnerItem.Item<AccountType>).data
                 }
                 return
             }
+
             else -> {
                 requireActivity().invalidateOptionsMenu()
                 val selected = accountsAdapter.getItem(position)!!
@@ -278,9 +323,9 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
                     isEnabled = position == 0
                 }
                 with(binding.AccountTable.AccountType) {
-                    setSelection(
-                        (if (selected.id == 0L && type != null) type else selected.type)!!.ordinal
-                    )
+                    if (selected.id != 0L && selected.type != null) {
+                        setSelection(typeAdapter.getPosition(selected.type.id))
+                    }
                     isEnabled = position == 0
                 }
             }
@@ -300,8 +345,9 @@ class CsvImportParseFragment : Fragment(), View.OnClickListener, AdapterView.OnI
     val dateFormat: QifDateFormat
         get() = binding.DateFormatTable.DateFormat.selectedItem as QifDateFormat
 
+    @Suppress("UNCHECKED_CAST")
     val accountType: AccountType
-        get() = binding.AccountTable.AccountType.selectedItem as AccountType
+        get() = (binding.AccountTable.AccountType.selectedItem as SpinnerItem.Item<AccountType>).data
 
     val autoFillCategories: Boolean
         get() = binding.AutoFillTable.autofillCategories.isChecked

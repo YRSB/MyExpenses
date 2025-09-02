@@ -3,6 +3,7 @@ package org.totschnig.myexpenses.util.ui
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.ColorStateList
+import android.content.res.Resources
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.os.Build
 import android.text.format.DateFormat
 import android.text.method.LinkMovementMethod
 import android.util.Size
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -141,7 +143,7 @@ fun <T : View> findParentWithTypeRecursively(view: View, type: Class<T>): T? {
 }
 
 fun getDateMode(accountType: AccountType?, prefHandler: PrefHandler) = when {
-    (accountType == null || accountType != AccountType.CASH) &&
+    (accountType?.isCashAccount != true) &&
             prefHandler.getBoolean(PrefKey.TRANSACTION_WITH_VALUE_DATE, false)
         -> DateMode.BOOKING_VALUE
 
@@ -308,7 +310,7 @@ fun attachmentInfoMap(context: Context, withFile: Boolean = false): Map<Uri, Att
     }
 }
 
-tailrec fun Context.getActivity(): BaseActivity? = this as? BaseActivity
+fun Context.getActivity(): BaseActivity? = this as? BaseActivity
     ?: (this as? ContextWrapper)?.baseContext?.getActivity()
 
 
@@ -352,10 +354,28 @@ fun EditText.setHintForA11yOnly(hint: CharSequence) {
     })
 }
 
-fun ImageView.setEnabledWithColor(enabled: Boolean) {
-    imageAlpha = if (enabled) 0xFF else 0x3F
-    this.isEnabled = isEnabled
-}
-
 val Float.displayProgress
     get() = takeIf { it < 1000f }?.let { "%d".format(it.fastRoundToInt()) } ?: ">1k"
+
+fun resolveThemeColor(context: Context, attr: Int): Int {
+    val typedValue = TypedValue()
+    val theme = context.theme
+    if (theme.resolveAttribute(attr, typedValue, true)) {
+        // Check if it's a direct color integer
+        if (typedValue.type >= TypedValue.TYPE_FIRST_INT && typedValue.type <= TypedValue.TYPE_LAST_INT) {
+            return typedValue.data // It's a direct color int
+        } else if (typedValue.type == TypedValue.TYPE_STRING) {
+            // It might be a ColorStateList resource
+            // typedValue.resourceId will hold the ID of the ColorStateList
+            try {
+                val colorStateList = ContextCompat.getColorStateList(context, typedValue.resourceId)
+                if (colorStateList != null) {
+                    return colorStateList.defaultColor
+                }
+            } catch (e: Resources.NotFoundException) {
+                CrashHandler.report(e)
+            }
+        }
+    }
+    return 0
+}

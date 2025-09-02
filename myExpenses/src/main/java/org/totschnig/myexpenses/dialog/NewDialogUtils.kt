@@ -4,13 +4,19 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import eltos.simpledialogfragment.color.SimpleColorDialog
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.adapter.CurrencyAdapter
+import org.totschnig.myexpenses.adapter.GroupedSpinnerAdapter
 import org.totschnig.myexpenses.export.qif.QifDateFormat
+import org.totschnig.myexpenses.model.AccountFlag
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.enumValueOrDefault
+import org.totschnig.myexpenses.viewmodel.data.Account
 
 fun Spinner.configureDateFormat(
     context: Context,
@@ -63,4 +69,34 @@ fun ContentResolver.getDisplayName(
         }
     }
     return uri.lastPathSegment ?: "UNKNOWN"
+}
+
+fun Spinner.configureCurrencySpinner(listener: AdapterView.OnItemSelectedListener? = null): CurrencyAdapter {
+    val curAdapter = CurrencyAdapter(context, android.R.layout.simple_spinner_item)
+    setAdapter(curAdapter)
+    onItemSelectedListener = listener
+    return curAdapter
+}
+
+fun Spinner.configureTypeSpinner() = GroupedSpinnerAdapter<Boolean, AccountType>(
+    context,
+    itemToString = { it.localizedName(context) },
+    headerToString = { context.getString(if(it) R.string.balance_sheet_section_assets else R.string.balance_sheet_section_liabilities) }
+).also {
+    setAdapter(it)
+}
+
+fun GroupedSpinnerAdapter<Boolean, AccountType>.addAllAccountTypes(data: List<AccountType>) {
+    clear()
+    addAll(data.groupBy { it.isAsset }.let { map ->
+        listOfNotNull(
+            map[true]?.let { assets -> true to assets.sortedBy { it.localizedName(context) } },
+            map[false]?.let { liabilities -> false to liabilities.sortedBy { it.localizedName(context) } }
+        )
+    })
+}
+
+fun GroupedSpinnerAdapter<AccountFlag, Account>.addAllAccounts(data: List<Account>) {
+    clear()
+    addAll(data.groupBy { it.flag }.toList().sortedByDescending { it.first.sortKey })
 }

@@ -94,4 +94,8 @@
     <string name="at_end">Аяқтау</string>
     <string name="widgets">"Виджеттер"</string>
     <string name="menu_import">"Импорттау"</string>
+    <string name="already_exists">"Аты бар болып тұр"</string>
+    <string name="flag_inactive">"Өшірулі"</string>
+    <string name="count">"Саны"</string>
+    <string name="empty">"Бос"</string>
 </resources>

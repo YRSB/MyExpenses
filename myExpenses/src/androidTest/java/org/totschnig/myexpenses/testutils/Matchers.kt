@@ -19,9 +19,13 @@ import org.hamcrest.Matchers.`is`
 import org.hamcrest.TypeSafeMatcher
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.adapter.IdHolder
+import org.totschnig.myexpenses.adapter.SpinnerItem
 import org.totschnig.myexpenses.delegate.TransactionDelegate.OperationType
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.ui.DateButton
+import org.totschnig.myexpenses.viewmodel.data.Account
+import org.totschnig.myexpenses.viewmodel.data.Currency
 import org.totschnig.myexpenses.viewmodel.data.PaymentMethod
 import java.time.LocalDate
 
@@ -47,6 +51,39 @@ fun withStatus(status: CrStatus): Matcher<Any> =
         }
     }
 
+fun withOperationType(type: Int): Matcher<Any> =
+    object : BoundedMatcher<Any, OperationType>(OperationType::class.java) {
+        override fun matchesSafely(myObj: OperationType): Boolean {
+            return myObj.type == type
+        }
+
+        override fun describeTo(description: Description) {
+            description.appendText("with operation type '$type'")
+        }
+    }
+
+fun withCurrency(currency: String): Matcher<Any> =
+    object : BoundedMatcher<Any, Currency>(Currency::class.java) {
+        override fun matchesSafely(myObj: Currency): Boolean {
+            return myObj.code == currency
+        }
+
+        override fun describeTo(description: Description) {
+            description.appendText("with currency '$currency'")
+        }
+    }
+
+fun withAccountType(expectedTypeName: String) =
+    object : TypeSafeMatcher<SpinnerItem.Item<AccountType>>() {
+        override fun describeTo(description: Description) {
+            description.appendText("SpinnerItem.Item<AccountType>: '$expectedTypeName'")
+        }
+
+        override fun matchesSafely(item: SpinnerItem.Item<AccountType>): Boolean {
+            return item.data.name == expectedTypeName
+        }
+    }
+
 fun withAccount(content: String): Matcher<Any> =
     object : BoundedMatcher<Any, IdHolder>(IdHolder::class.java) {
         override fun matchesSafely(myObj: IdHolder): Boolean {
@@ -58,14 +95,15 @@ fun withAccount(content: String): Matcher<Any> =
         }
     }
 
-fun withOperationType(type: Int): Matcher<Any> =
-    object : BoundedMatcher<Any, OperationType>(OperationType::class.java) {
-        override fun matchesSafely(myObj: OperationType): Boolean {
-            return myObj.type == type
+
+fun withAccountGrouped(expectedAccount: String): Matcher<SpinnerItem.Item<Account>> =
+    object : TypeSafeMatcher<SpinnerItem.Item<Account>>() {
+        override fun describeTo(description: Description) {
+            description.appendText("SpinnerItem.Item<Account>: '$expectedAccount'")
         }
 
-        override fun describeTo(description: Description) {
-            description.appendText("with operation type '$type'")
+        override fun matchesSafely(item: SpinnerItem.Item<Account>): Boolean {
+            return item.data.label == expectedAccount
         }
     }
 
@@ -101,7 +139,6 @@ fun childAtPosition(parentMatcher: Matcher<View>, position: Int) =
                     && view == parent.getChildAt(position)
         }
     }
-
 
 
 //https://google.github.io/android-testing-support-library/docs/espresso/advanced/#asserting-that-a-data-item-is-not-in-an-adapter

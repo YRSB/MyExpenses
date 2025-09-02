@@ -151,4 +151,8 @@
     <string name="menu_restore">"កំណត់​ទៅ​លំនាំដើម​ឡើងវិញ"</string>
     <string name="widgets">"ធាតុ​ក្រាហ្វិក"</string>
     <string name="menu_import">"នាំចូល"</string>
+    <string name="already_exists">"ឈ្មោះ​មាន​រួច​ហើយ"</string>
+    <string name="flag_inactive">"អសកម្ម​"</string>
+    <string name="count">"រាប់"</string>
+    <string name="empty">"ទទេ"</string>
 </resources>

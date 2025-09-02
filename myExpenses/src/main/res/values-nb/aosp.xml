@@ -104,4 +104,8 @@
     <string name="at_end">Slutt</string>
     <string name="widgets">"Moduler"</string>
     <string name="menu_import">"Importér"</string>
+    <string name="already_exists">"Navnet finnes allerede"</string>
+    <string name="flag_inactive">"Inaktiv"</string>
+    <string name="count">"Tell"</string>
+    <string name="empty">"Tom"</string>
 </resources>

@@ -116,14 +116,14 @@ interface PrefHandler {
         get() = try {
             requireString((PrefKey.GROUP_MONTH_STARTS), "1").toInt()
                 .takeIf { it in 1..31 }
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             null
         } ?: 1
 
     val weekStart
         get() = try {
             getString(PrefKey.GROUP_WEEK_STARTS)?.toInt()
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             null
         }.takeIf { it in Calendar.SUNDAY..Calendar.SATURDAY }
 
@@ -154,7 +154,7 @@ interface PrefHandler {
                 stored.mapNotNull {
                     try {
                         MenuItem.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
+                    } catch (_: IllegalArgumentException) {
                         null
                     }
                 }
@@ -197,8 +197,8 @@ fun PrefHandler.saveIntList(key: PrefKey, list: List<Int>) {
     putString(key, list.joinToString(","))
 }
 
-fun PrefHandler.loadIntList(key: PrefKey) = getString(key, null)?.let {
-    it.split(",").mapNotNull { it.toIntOrNull() }
+fun PrefHandler.loadIntList(key: PrefKey) = getString(key, null)?.let { value ->
+    value.split(",").mapNotNull { it.toIntOrNull() }
 }
 
 val printLayoutDefault = listOf(

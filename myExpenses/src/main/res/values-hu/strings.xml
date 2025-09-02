@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Számlák</string>
     <string name="account_type_asset">Forgóeszköz számla</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Forgóeszköz számlák</string>
     <string name="account_type_bank">Bankszámla</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Bankszámlák</string>
     <string name="account_type_cash">Készpénz számla</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Készpénz számlák</string>
     <string name="account_type_ccard">Hitelkártya</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Hitelkártyák</string>
     <string name="account_type_liability">Megtakarítási számla</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Kötelezettség alá eső számlák</string>
     <string name="already_defined">%1$s már létezik</string>
     <string name="amount">Összeg</string>
     <string name="app_name">Kiadásaim</string>
@@ -666,13 +656,10 @@
     <string name="menu_close">Bezár</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Újranyitás</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Rejtett fiókok</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Zárva</string>
     <string name="warning_synced_account_cannot_be_closed">A szinkronizációs háttérprogramhoz kapcsolt fiókot nem lehet bezárni</string>
     <string name="translated_by">A fordítást készítette</string>
-    <string name="warning_no_account">Legalább egy számlának láthatónak és nyitottnak kell lennie új tranzakciók létrehozásához.</string>
     <string name="content_description_dates_are_linked">A foglalás és az érték dátuma együtt van frissítve</string>
     <string name="content_description_dates_are_not_linked">A foglalási dátum és az érték dátuma nem frissül együtt</string>
     <string name="roadmap_vote">Ütemterv szavazás</string>
@@ -958,4 +945,5 @@
     <string name="balance_sheet_section_liabilities">Kötelezettségek</string>
     <string name="balance_sheet_net_worth">Nettó vagyon</string>
     <string name="price_history">Ártörténet</string>
+    <string name="pref_account_list_display_configuration_title">Fiókok listája</string>
 </resources>

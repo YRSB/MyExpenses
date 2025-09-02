@@ -89,16 +89,18 @@ class ExchangeRateHandler(
         source: ExchangeRateApi,
         start: LocalDate,
         end: LocalDate,
+        except: Set<LocalDate>,
         other: String,
         base: String,
     ): Pair<Int, Exception?> = withContext(Dispatchers.IO) {
         val (list, exception) = exchangeRateService.getTimeSeries(
-            source,
-            (source as? ExchangeRateApi.SourceWithApiKey)?.requireApiKey(prefHandler),
-            start,
-            end,
-            other,
-            base
+            source = source,
+            apiKey = (source as? ExchangeRateApi.SourceWithApiKey)?.requireApiKey(prefHandler),
+            start = start,
+            end = end,
+            except = except,
+            base = other,
+            symbol = base
         )
         list.forEach { (date, rate) ->
             repository.savePrice(

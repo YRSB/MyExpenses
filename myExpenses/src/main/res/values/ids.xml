@@ -103,10 +103,6 @@
     <item name="SORT_LAST_USED_COMMAND" type="id" />
     <item name="SORT_AMOUNT_COMMAND" type="id" />
     <item name="SORT_ACCOUNT_COMMAND" type="id" />
-    <item name="GROUPING_ACCOUNTS_COMMAND" type="id" />
-    <item name="GROUPING_ACCOUNTS_TYPE_COMMAND" type="id" />
-    <item name="GROUPING_ACCOUNTS_CURRENCY_COMMAND" type="id" />
-    <item name="GROUPING_ACCOUNTS_NONE_COMMAND" type="id" />
     <item name="SORT_CUSTOM_COMMAND" type="id" />
     <item name="GROUPING_NONE_COMMAND" type="id" />
     <item name="GROUPING_DAY_COMMAND" type="id" />
@@ -152,11 +148,6 @@
     <item name="ExchangeRateEdit1" type="id" />
     <item name="ExchangeRateEdit2" type="id" />
     <item name="UNGROUP_SPLIT_COMMAND" type="id" />
-    <item name="AccountTypeCheckboxCash" type="id" />
-    <item name="AccountTypeCheckboxBank" type="id" />
-    <item name="AccountTypeCheckboxCcard" type="id" />
-    <item name="AccountTypeCheckboxAsset" type="id" />
-    <item name="AccountTypeCheckboxLiability" type="id" />
     <item name="GDPR_NO_CONSENT_COMMAND" type="id" />
     <item name="GDPR_CONSENT_COMMAND" type="id" />
     <item name="COLOR_COMMAND" type="id" />
@@ -165,7 +156,7 @@
     <item name="BACK_COMMAND" type="id" />
     <item name="FORWARD_COMMAND" type="id" />
     <item name="ROADMAP_COMMAND" type="id" />
-    <item name="HIDDEN_ACCOUNTS_COMMAND" type="id" />
+    <item name="ACCOUNT_FLAGS_COMMAND" type="id" />
     <item name="BUDGET_ALLOCATED_ONLY" type="id" />
     <item name="REMAP_CATEGORY_COMMAND" type="id" />
     <item name="REMAP_PAYEE_COMMAND" type="id" />
@@ -177,7 +168,7 @@
     <item name="PLANNER_COMMAND" type="id" />
     <item name="SCAN_MODE_COMMAND" type="id" />
     <item name="OCR_DOWNLOAD_COMMAND" type="id" />
-    <item name="OCR_FAQ_COMMAND" type="id" />
+    <item name="FAQ_COMMAND" type="id" />
     <item name="LOAD_TEMPLATE_DO" type="id" />
     <item name="DEFAULT_ACTION_SAVE_COMMAND" type="id" />
     <item name="DEFAULT_ACTION_EDIT_COMMAND" type="id" />
@@ -203,7 +194,6 @@
     <item name="SAFE_MODE_COMMAND" type="id" />
     <item name="EDIT_ACCOUNT_COMMAND" type="id" />
     <item name="DELETE_ACCOUNT_COMMAND" type="id" />
-    <item name="HIDE_ACCOUNT_COMMAND" type="id" />
     <item name="TOGGLE_SEALED_COMMAND" type="id" />
     <item name="RECONFIGURE_COMMAND" type="id" />
     <item name="ENCRYPT_CANCEL_COMMAND" type="id" />
@@ -219,7 +209,6 @@
     <item name="FILTER_INCOME_COMMAND" type="id" />
     <item name="AGGREGATE_COMMAND" type="id" />
     <item name="CATEGORY_COMMAND" type="id" />
-    <item name="MANAGE_ACCOUNT_COMMAND" type="id" />
     <item name="DELETE_CALENDAR_COMMAND" type="id" />
     <item name="UNLINK_TRANSFER_COMMAND" type="id" />
     <item name="TRANSFORM_TO_TRANSFER_COMMAND" type="id" />
@@ -244,4 +233,5 @@
     <item name="SORT_DESCENDING_COMMAND" type="id" />
     <item name="BATCH_DOWNLOAD_COMMAND" type="id" />
     <item name="IMPORT_COMMAND_DO" type="id" />
+    <item name="MANAGE_ACCOUNT_TYPES_COMMAND" type="id" />
 </resources>

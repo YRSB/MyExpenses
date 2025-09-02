@@ -10,7 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.adevinta.android.barista.interaction.BaristaCheckboxInteractions
-import org.assertj.core.api.Assertions.assertThat
+import com.google.common.truth.Truth.assertThat
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.containsString
 import org.junit.After
@@ -21,15 +21,16 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.ManageCurrencies
 import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.getTransactionSum
 import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.model.Money
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
 import org.totschnig.myexpenses.model.PreferencesCurrencyContext
 import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.testutils.BaseUiTest
 import org.totschnig.myexpenses.testutils.cleanup
-import org.totschnig.myexpenses.testutils.isOrchestrated
 import org.totschnig.myexpenses.viewmodel.data.Currency.Companion.create
 
 
@@ -75,7 +76,8 @@ class ManageCurrenciesTest : BaseUiTest<ManageCurrencies>() {
             Account(
                 label = "TEST ACCOUNT",
                 openingBalance = 5000L,
-                currency = CURRENCY_CODE
+                currency = CURRENCY_CODE,
+                type = repository.findAccountType(PREDEFINED_NAME_CASH)!!
             )
         )
         val op = Transaction.getNewInstance(account.id, currencyUnit)

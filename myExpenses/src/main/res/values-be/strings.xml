@@ -15,11 +15,11 @@
   along with My Expenses.  If not, see <http://www.gnu.org/licenses/>.
  --><resources xmlns:tools="http://schemas.android.com/tools">
     <string name="account">Акаўнт</string>
-    <string name="account_type_asset">Рахунак актываў</string>
-    <string name="account_type_bank">Банкаўскі рахунак</string>
-    <string name="account_type_cash">Грашовы рахунак</string>
+    <string name="account_type_asset">Іншыя актывы</string>
+    <string name="account_type_bank">Банк</string>
+    <string name="account_type_cash">Наяўныя</string>
     <string name="account_type_ccard">Крэдытная картка</string>
-    <string name="account_type_liability">Рахунак абавязкаў</string>
+    <string name="account_type_liability">Іншыя абавязацельствы</string>
     <string name="amount">Колькасць</string>
     <string name="app_name">Мае Выдаткі</string>
     <string name="category">Катэгорыя</string>
@@ -204,13 +204,8 @@
     <string name="comparison_operator_equal">роўна</string>
     <string name="menu_undelete_transaction">Не выдаляць</string>
     <string name="account_types">Тып акаўнта</string>
-    <string name="account_type_asset_plural">Рахункі актываў</string>
-    <string name="account_type_bank_plural">Банкаўскія рахункі</string>
-    <string name="account_type_cash_plural">Грашовыя рахункі</string>
-    <string name="account_type_ccard_plural">Крэдытныя карткі</string>
     <string name="already_defined">%1$s ужо вызначаны</string>
     <string name="backup_success">База дадзеных і налады паспяхова запісаны ў \"%1$s\".</string>
-    <string name="account_type_liability_plural">Рахункі абавязкаў</string>
     <string name="number_format_illegal">Недапушчальны фармат нумара</string>
     <string name="decimal_separator">Дзесятковы падзельнік</string>
     <string name="pref_sync_frequency_summary_0">Усталюйце 0, каб адключыць аўтаматычную сінхранізацыю.</string>
@@ -641,7 +636,6 @@
     <string name="licence_expires_n_days" tools:ignore="PluralsCandidate">Тэрмін дзеяння вашага прафесійнага ключа скончыцца праз %d дзён.</string>
     <string name="pref_value_date_summary">Дазволіць усталёўваць дату валютавання ў дадатак да даты браніравання. Час транзакцыі будзе схаваны. Гэтая налада не распаўсюджваецца на грашовыя рахункі.</string>
     <string name="booking_date">Дата браніравання</string>
-    <string name="warning_no_account">Для стварэння новых транзакцый павінен быць бачны і адкрыты хаця б адзін рахунак.</string>
     <string name="pref_sync_wifi_only_summary">Сінхранізаваць толькі пры падключэнні да Wi-Fi</string>
     <string name="goal_or_limit">Мэта / Ліміт</string>
     <string name="remap_empty_list">Не знойдзены ніводны элемент, які можа быць супастаўлены з усімі абранымі транзакцыямі.</string>
@@ -650,7 +644,6 @@
     <string name="currency_code_already_definded">Код валюты ўжо вызначаны.</string>
     <string name="currency_still_used">Валюта выкарыстоўваецца, яе нельга выдаліць.</string>
     <string name="unmapped_filter_only_single">Фільтр «Не нанесена на карту» нельга ўключыць у множны выбар</string>
-    <string name="menu_hidden_accounts">Схаваныя акаўнты</string>
     <string name="pref_exchange_rate_provider_summary">Выберыце пастаўшчыка для загрузкі курсаў абмену</string>
     <string name="grand_total">Агульная сума</string>
     <string name="synchronization_postponed">Сінхранізацыя адкладзена.</string>
@@ -908,7 +901,6 @@
     <string name="dynamic_exchange_rate">Дынамічны абменны курс</string>
     <string name="progress_recalculating">Пераразлік</string>
     <string name="equivalent_amount_plural">Эквівалентныя сумы</string>
-    <string name="menu_recalculate">Пералічыць</string>
     <string name="menu_transform_to_transfer">Канвертаваць у перавод</string>
     <string name="filter_dialog_empty">Крытэрыі пакуль не дададзены. Націсніце кнопкі вышэй, каб вызначыць свой запыт і ўдакладніць вынікі.</string>
     <string name="merge_parties_strategy_group">Дублікаты групаваны як залежныя.</string>
@@ -942,4 +934,37 @@
     <string name="warning_budget_sync_import">Канфігурацыя гэтага бюджэту будзе імпартавана з бэкенда сінхранізацыі. Усе лакальныя змены будуць страчаны.</string>
     <string name="budget_import_can_be_imported">Можна імпартаваць наступныя бюджэты:</string>
     <string name="budget_import_cannot_be_imported">Наступныя бюджэты адносяцца да рахункаў, якія не сінхранізаваны:</string>
+    <string name="account_type_investment">Інвестыцыі</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Паказаць новы баланс пасля захавання транзакцыі</string>
+    <string name="print_configuration_empty">Калі ласка, дадайце хаця б адно поле для друку.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">Дакладныя дадзеныя знойдзены ў радку %d.</item>
+        <item quantity="few">Дакладныя дадзеныя знойдзены ў радках %d.</item>
+        <item quantity="many">Дакладныя дадзеныя знойдзены ў радках %d.</item>
+        <item quantity="other">Дакладныя дадзеныя знойдзены ў радках %d.</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d радок не можа быць апрацаваны.</item>
+        <item quantity="few">%d радкі не могуць быць апрацаваны.</item>
+        <item quantity="many">%d радкоў не могуць быць апрацаваны.</item>
+        <item quantity="other">%d радкоў не могуць быць апрацаваны.</item>
+    </plurals>
+    <string name="confirm_process_file_message">Вы ўпэўненыя, што хочаце імпартаваць цэны для \'%1$s\' з \'%2$s\'? Новыя цэны могуць паўплываць на існуючыя эквівалентныя сумы.</string>
+    <string name="warning_expense_category_credit">Вы прысвойваеце катэгорыю выдаткаў даходнай аперацыі. У выніку транзакцыя паменшыць суму вашых выдаткаў і па змаўчанні будзе адлюстроўвацца чырвоным колерам.</string>
+    <string name="warning_income_category_debit">Вы прысвойваеце катэгорыю даходу выдаткавай аперацыі. У выніку транзакцыя паменшыць суму вашага даходу і па змаўчанні будзе адлюстроўвацца зялёным колерам.</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Дынамічныя стаўкі для ўсіх рахункаў</string>
+    <string name="pref_dynamic_exchange_rates_static">Статычныя стаўкі для ўсіх рахункаў</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Наладзьце кожны акаўнт асобна</string>
+    <string name="category_type_main">Асноўная катэгорыя</string>
+    <string name="category_type_sub">Падкатэгорыя</string>
+    <string name="category_description_base">%1$s, узровень %2$d</string>
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, змяшчае адну падкатэгорыю узроўня %2$d.</item>
+        <item quantity="few">, змяшчае %1$d падкатэгорый узроўню %2$d.</item>
+        <item quantity="many">, змяшчае %1$d падкатэгорый узроўню %2$d.</item>
+        <item quantity="other">, змяшчае %1$d падкатэгорый узроўню %2$d.</item>
+    </plurals>
+    <string name="edit_account_type">Рэдагаваць тып акаўнта</string>
+    <string name="new_account_type">Новы тып акаўнта</string>
+    <string name="pref_account_list_display_configuration_title">Спіс уліковых запісаў</string>
 </resources>

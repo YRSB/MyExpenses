@@ -125,4 +125,6 @@
     <string name="menu_restore">"ڈیفالٹ پر دوبارہ ترتیب دیں"</string>
     <string name="widgets">"ویجیٹس"</string>
     <string name="menu_import">"درآمد کریں"</string>
+    <string name="already_exists">"نام پہلے سے موجود ہے"</string>
+    <string name="flag_inactive">"غیر فعال"</string>
 </resources>

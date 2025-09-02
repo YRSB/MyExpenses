@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Kontu motak</string>
     <string name="account_type_asset">Aktiboko kontua</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Aktiboko kontuak</string>
     <string name="account_type_bank">Banku kontua</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Banku kontuak</string>
     <string name="account_type_cash">Eskudiru kontua</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Eskudiru kontuak</string>
     <string name="account_type_ccard">Kreditu txartela</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Kreditu txartelak</string>
     <string name="account_type_liability">Pasiboko kontua</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Pasiboko kontuak</string>
     <string name="already_defined">%1$s badago definituta</string>
     <string name="amount">Kopurua</string>
     <string name="app_name">Nire gastuak</string>
@@ -308,7 +298,7 @@
     <string name="save_transaction_and_new_success">Ondo gorde da</string>
     <string name="save_transaction_error">Ezin izan da transakzio berria gorde txantiloitik</string>
     <plurals name="save_transaction_from_template_success">
-        <item quantity="one">Transakzio berria ondo gorde da txantiloitik</item>
+        <item quantity="one">Transakzio berria ondo gorde da txantiloitik.</item>
         <item quantity="other">%1$d transakzio berri ondo gorde dira txantiloietatik.</item>
     </plurals>
     <string name="save_transaction_template_deleted">Txantiloia ezabatu da</string>
@@ -603,4 +593,5 @@
     <string name="balance_sheet_section_liabilities">Pasiboak</string>
     <string name="balance_sheet_net_worth">Ondare garbia</string>
     <string name="price_history">Prezioen historia</string>
+    <string name="pref_account_list_display_configuration_title">Kontuen zerrenda</string>
 </resources>

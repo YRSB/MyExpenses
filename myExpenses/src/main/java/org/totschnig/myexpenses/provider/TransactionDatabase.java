@@ -20,13 +20,15 @@ import static android.database.sqlite.SQLiteDatabase.CONFLICT_NONE;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_EXPENSE;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_INCOME;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_NEUTRAL;
-import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ACCOUNTS_SEALED_TRIGGER_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ACCOUNT_ATTRIBUTES_CREATE;
+import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ACCOUNT_FLAG_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ACCOUNT_REMAP_TRANSFER_TRIGGER_CREATE;
+import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ACCOUNT_TYPE_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ATTACHMENTS_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.ATTRIBUTES_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.BANK_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.CATEGORY_TYPE_UPDATE_TRIGGER_MAIN;
+import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.DEFAULT_FLAG_TRIGGER;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.EQUIVALENT_AMOUNTS_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.PARTY_HIERARCHY_TRIGGER;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.PAYEE_CREATE;
@@ -66,7 +68,6 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.provider.CalendarContract.Events;
 
@@ -77,7 +78,6 @@ import androidx.sqlite.db.SupportSQLiteQueryBuilder;
 
 import org.totschnig.myexpenses.MyApplication;
 import org.totschnig.myexpenses.R;
-import org.totschnig.myexpenses.model.AccountType;
 import org.totschnig.myexpenses.model.CrStatus;
 import org.totschnig.myexpenses.model.CurrencyContext;
 import org.totschnig.myexpenses.model.CurrencyEnum;
@@ -149,7 +149,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
           + KEY_OPENING_BALANCE + " integer, "
           + KEY_DESCRIPTION + " text, "
           + KEY_CURRENCY + " text not null  references " + TABLE_CURRENCIES + "(" + KEY_CODE + "), "
-          + KEY_TYPE + " text not null check (" + KEY_TYPE + " in (" + AccountType.JOIN + ")) default '" + AccountType.CASH.name() + "', "
+          + KEY_TYPE + " integer references " + TABLE_ACCOUNT_TYPES + "(" + KEY_ROWID + ") NOT NULL, "
           + KEY_COLOR + " integer default -3355444, "
           + KEY_GROUPING + " text not null check (" + KEY_GROUPING + " in (" + Grouping.JOIN + ")) default '" + Grouping.NONE.name() + "', "
           + KEY_USAGES + " integer default 0,"
@@ -162,7 +162,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
           + KEY_SORT_BY + " text default 'date', "
           + KEY_SORT_DIRECTION + " text not null check (" + KEY_SORT_DIRECTION + " in ('ASC','DESC')) default 'DESC',"
           + KEY_CRITERION + " integer,"
-          + KEY_HIDDEN + " boolean default 0,"
+          + KEY_FLAG + " integer references " + TABLE_ACCOUNT_FLAGS + "(" + KEY_ROWID + ") NOT NULL default 0, "
           + KEY_SEALED + " boolean default 0,"
           + KEY_DYNAMIC + " boolean default 0,"
           + KEY_BANK_ID + " integer references " + TABLE_BANKS + "(" + KEY_ROWID + ") ON DELETE SET NULL);";
@@ -219,7 +219,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
   private static final String ACCOUNTTYE_METHOD_CREATE =
       "CREATE TABLE " + TABLE_ACCOUNTTYES_METHODS + " ("
-          + KEY_TYPE + " text not null check (" + KEY_TYPE + " in (" + AccountType.JOIN + ")), "
+          + KEY_TYPE + " integer references " + TABLE_ACCOUNT_TYPES + "(" + KEY_ROWID + "), "
           + KEY_METHODID + " integer references " + TABLE_METHODS + "(" + KEY_ROWID + "), "
           + "primary key (" + KEY_TYPE + "," + KEY_METHODID + "));";
 
@@ -296,13 +296,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
           KEY_TRANSACTIONID + " integer UNIQUE references " + TABLE_TRANSACTIONS + "(" + KEY_ROWID + ") ON DELETE CASCADE, " +
           "primary key (" + KEY_TEMPLATEID + "," + KEY_INSTANCEID + "));";
 
-  private static final String ACCOUNTS_TRIGGER_CREATE =
-      "CREATE TRIGGER sort_key_default " +
-          "AFTER INSERT ON " + TABLE_ACCOUNTS + " " +
-          "BEGIN UPDATE " + TABLE_ACCOUNTS + " SET " + KEY_SORT_KEY +
-          " = (SELECT coalesce(max(" + KEY_SORT_KEY + "),0) FROM " + TABLE_ACCOUNTS + ") + 1 WHERE " +
-          KEY_ROWID + " = NEW." + KEY_ROWID + "; END";
-
   private static final String CHANGES_CREATE =
       "CREATE TABLE " + TABLE_CHANGES
           + " ( " + KEY_ACCOUNTID + " integer not null references " + TABLE_ACCOUNTS + "(" + KEY_ROWID + ") ON DELETE CASCADE,"
@@ -351,30 +344,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
           + KEY_ONE_TIME + " boolean default 0, "
           + "primary key (" + KEY_BUDGETID + "," + KEY_CATID + "," + KEY_YEAR + "," + KEY_SECOND_GROUP + "));";
 
-
-  private static final String UPDATE_ACCOUNT_SYNC_NULL_TRIGGER = "CREATE TRIGGER update_account_sync_null "
-      + "AFTER UPDATE ON " + TABLE_ACCOUNTS
-      + " WHEN new." + KEY_SYNC_ACCOUNT_NAME + " IS NULL AND old." + KEY_SYNC_ACCOUNT_NAME + " IS NOT NULL "
-      + "BEGIN "
-      + "UPDATE " + TABLE_ACCOUNTS + " SET " + KEY_SYNC_SEQUENCE_LOCAL + " = 0 WHERE " + KEY_ROWID + " = old." + KEY_ROWID + "; "
-      + "DELETE FROM " + TABLE_CHANGES + " WHERE " + KEY_ACCOUNTID + " = old." + KEY_ROWID + "; "
-      + "END;";
-
-  private static final String UPDATE_ACCOUNT_METADATA_TRIGGER = String.format(
-      "CREATE TRIGGER update_account_metadata AFTER UPDATE OF %1$s,%2$s,%3$s,%4$s,%5$s,%6$s,%7$s,%8$s ON %9$s "
-          + " WHEN new.%10$s IS NOT NULL AND new.%16$s > 0 AND NOT EXISTS (SELECT 1 FROM %11$s)"
-          + " BEGIN INSERT INTO %12$s (%13$s, %14$s, %15$s, %16$s) VALUES ('metadata', '_ignored_', new.%17$s, new.%16$s); END;",
-      KEY_LABEL, KEY_OPENING_BALANCE, KEY_DESCRIPTION, KEY_CURRENCY, KEY_TYPE, KEY_COLOR, KEY_EXCLUDE_FROM_TOTALS, KEY_CRITERION,
-      TABLE_ACCOUNTS, KEY_SYNC_ACCOUNT_NAME, TABLE_SYNC_STATE,
-      TABLE_CHANGES, KEY_TYPE, KEY_UUID, KEY_ACCOUNTID, KEY_SYNC_SEQUENCE_LOCAL, KEY_ROWID);
-
-  private static final String UPDATE_ACCOUNT_EXCHANGE_RATE_TRIGGER = String.format(
-      "CREATE TRIGGER update_account_exchange_rate AFTER UPDATE ON %1$s "
-          + " WHEN %2$s"
-          + " BEGIN INSERT INTO %3$s (%4$s, %5$s, %6$s, %7$s) VALUES ('metadata', '_ignored_', new.%6$s, %8$s); END;",
-      TABLE_ACCOUNT_EXCHANGE_RATES,
-      shouldWriteChangeTemplate("new"),
-      TABLE_CHANGES, KEY_TYPE, KEY_UUID, KEY_ACCOUNTID, KEY_SYNC_SEQUENCE_LOCAL, sequenceNumberSelect("old"));
 
   private static final String SETTINGS_CREATE =
       "CREATE TABLE " + TABLE_SETTINGS + " ("
@@ -425,9 +394,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
   @Override
   public void onCorruption(@NonNull SupportSQLiteDatabase db) {
-    if (Build.VERSION.SDK_INT == 30) {
-        MoreDbUtilsKt.maybeRepairRequerySchema(db.getPath());
-    }
+    throw new RuntimeException("Database corrupted");
   }
 
   @Override
@@ -476,8 +443,12 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     db.execSQL(ACCOUNTS_CREATE);
     db.execSQL(ACCOUNTS_UUID_INDEX_CREATE);
     db.execSQL(SYNC_STATE_CREATE);
+    db.execSQL(ACCOUNT_TYPE_CREATE);
+    db.execSQL(ACCOUNT_FLAG_CREATE);
     db.execSQL(ACCOUNTTYE_METHOD_CREATE);
-    insertDefaultPaymentMethods(db);
+    insertDefaultAccountTypesAndMethods(db);
+    insertDefaultAccountFlags(db);
+    db.execSQL(DEFAULT_FLAG_TRIGGER);
     db.execSQL(CURRENCY_CREATE);
     //category for splits needed to honour foreign constraint
     ContentValues initialValues = new ContentValues();
@@ -585,26 +556,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     for (CurrencyEnum currency : CurrencyEnum.values()) {
       initialValues.put(KEY_CODE, currency.name());
       db.insert(TABLE_CURRENCIES, CONFLICT_NONE, initialValues);
-    }
-  }
-
-  /**
-   * @param db insert the predefined payment methods in the database, all of them are valid only for bank accounts
-   */
-  private void insertDefaultPaymentMethods(SupportSQLiteDatabase db) {
-    ContentValues initialValues;
-    long _id;
-    for (PreDefinedPaymentMethod pm : PreDefinedPaymentMethod.values()) {
-      initialValues = new ContentValues();
-      initialValues.put(KEY_LABEL, pm.name());
-      initialValues.put(KEY_TYPE, pm.getPaymentType());
-      initialValues.put(KEY_IS_NUMBERED, pm.isNumbered());
-      initialValues.put(KEY_ICON, pm.getIcon());
-      _id = db.insert(TABLE_METHODS, CONFLICT_NONE, initialValues);
-      initialValues = new ContentValues();
-      initialValues.put(KEY_METHODID, _id);
-      initialValues.put(KEY_TYPE, "BANK");
-      db.insert(TABLE_ACCOUNTTYES_METHODS, CONFLICT_NONE, initialValues);
     }
   }
 
@@ -2150,6 +2101,22 @@ public class TransactionDatabase extends BaseTransactionDatabase {
         createOrRefreshTemplateViews(db);
       }
 
+      if (oldVersion < 177) {
+        upgradeTo177(db);
+      }
+
+      if (oldVersion < 178) {
+        upgradeTo178(db);
+      }
+
+      if (oldVersion < 179) {
+        upgradeTo179(db);
+      }
+
+      if (oldVersion < 180) {
+        upgradeTo180(db);
+      }
+
       TransactionProvider.resumeChangeTrigger(db);
     } catch (SQLException e) {
       throw new SQLiteUpgradeFailedException(oldVersion, newVersion, e);
@@ -2166,26 +2133,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
   public void repairSplitPartDates(SupportSQLiteDatabase db) {
     repairWithSealedAccounts(db, () -> db.execSQL("UPDATE transactions set date = (select date from transactions parents where _id = transactions.parent_id) where parent_id is not null"));
-  }
-
-  private void createOrRefreshAccountTriggers(SupportSQLiteDatabase db) {
-    db.execSQL("DROP TRIGGER IF EXISTS update_account_sync_null");
-    db.execSQL("DROP TRIGGER IF EXISTS sort_key_default");
-    db.execSQL(UPDATE_ACCOUNT_SYNC_NULL_TRIGGER);
-    db.execSQL(ACCOUNTS_TRIGGER_CREATE);
-    createOrRefreshAccountSealedTrigger(db);
-  }
-
-  private void createOrRefreshAccountSealedTrigger(SupportSQLiteDatabase db) {
-    db.execSQL("DROP TRIGGER IF EXISTS sealed_account_update");
-    db.execSQL(ACCOUNTS_SEALED_TRIGGER_CREATE);
-  }
-
-  private void createOrRefreshAccountMetadataTrigger(SupportSQLiteDatabase db) {
-    db.execSQL("DROP TRIGGER IF EXISTS update_account_metadata");
-    db.execSQL("DROP TRIGGER IF EXISTS update_account_exchange_rate");
-    db.execSQL(UPDATE_ACCOUNT_METADATA_TRIGGER);
-    db.execSQL(UPDATE_ACCOUNT_EXCHANGE_RATE_TRIGGER);
   }
 
   private void createOrRefreshTransactionTriggers(SupportSQLiteDatabase db) {

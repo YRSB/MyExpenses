@@ -168,4 +168,8 @@
     <string name="at_end">Bitiş</string>
     <string name="widgets">"Widget'lar"</string>
     <string name="menu_import">"İçe aktar"</string>
+    <string name="already_exists">"Bu ad mevcut"</string>
+    <string name="flag_inactive">"Etkin değil"</string>
+    <string name="count">"Say"</string>
+    <string name="empty">"Boş"</string>
 </resources>

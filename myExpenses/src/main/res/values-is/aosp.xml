@@ -102,4 +102,8 @@
     <string name="at_end">Endar</string>
     <string name="widgets">"Græjur"</string>
     <string name="menu_import">"Flytja inn"</string>
+    <string name="already_exists">"Nafn er þegar til"</string>
+    <string name="flag_inactive">"Óvirkt"</string>
+    <string name="count">"Fjöldi"</string>
+    <string name="empty">"Tómt"</string>
 </resources>

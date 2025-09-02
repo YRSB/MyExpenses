@@ -1,10 +1,6 @@
 package org.totschnig.myexpenses.compose
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,9 +13,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,9 +30,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
 import org.totschnig.myexpenses.viewmodel.CategoryViewModel
 
 @Composable
@@ -50,10 +43,14 @@ fun CategoryEdit(
     val fieldPadding = 12.dp
     val context = LocalContext.current
     var label by rememberSaveable { mutableStateOf(dialogState.category?.label ?: "") }
-    var icon by rememberSaveable { mutableStateOf(dialogState.category?.icon) }
-    var typeFlags by rememberSaveable { mutableStateOf(dialogState.category?.typeFlags ?: 0) }
+    val icon = rememberSaveable { mutableStateOf(dialogState.category?.icon) }
+    var typeFlags by rememberSaveable {
+        mutableStateOf(
+            dialogState.category?.typeFlags ?: FLAG_NEUTRAL
+        )
+    }
     var shouldValidate by remember { mutableStateOf(false) }
-    var showIconSelection by rememberSaveable { mutableStateOf(false) }
+    val showIconSelection = rememberSaveable { mutableStateOf(false) }
 
     val isError = if (shouldValidate) {
         when {
@@ -70,13 +67,13 @@ fun CategoryEdit(
         } else stringResource(R.string.menu_edit_cat),
         onDismissRequest = onDismissRequest,
         cancelEnabled = !dialogState.saving,
-        positiveButton = Triple(
-            if (dialogState.isNew) R.string.menu_add else R.string.menu_save,
-            !dialogState.saving && isError == null
+        positiveButton = ButtonDefinition(
+            text = if (dialogState.isNew) R.string.menu_add else R.string.menu_save,
+            enabled = !dialogState.saving && isError == null
         ) {
             shouldValidate = true
             if (label.isNotBlank()) {
-                onSave(label, icon, typeFlags)
+                onSave(label, icon.value, typeFlags)
             }
         }
     ) {
@@ -104,41 +101,13 @@ fun CategoryEdit(
         Spacer(modifier = Modifier.height(fieldPadding))
 
         Text(stringResource(id = R.string.icon))
-        Button(onClick = { showIconSelection = true }) {
-            icon?.let {
+        Button(onClick = { showIconSelection.value = true }) {
+            icon.value?.let {
                 Icon(it)
             } ?: Text(stringResource(id = R.string.select))
         }
     }
-    if (showIconSelection) {
-        Dialog(
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            onDismissRequest = { showIconSelection = false }
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background,
-            ) {
-                Column {
-                    IconSelector(
-                        modifier = Modifier.weight(1f),
-                        onIconSelected = {
-                            icon = it
-                            showIconSelection = false
-                        }
-                    )
-                    ButtonRow(
-                        onCancel = { showIconSelection = false },
-                        positiveButton = if (icon != null)
-                            Triple(R.string.remove, true) {
-                                icon = null
-                                showIconSelection = false
-                            } else null
-                    )
-                }
-            }
-        }
-    }
+    IconSelectorDialog(showIconSelection, icon)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -158,9 +127,9 @@ fun CategoryMerge(
         title = stringResource(R.string.merge_categories_dialog_title),
         onDismissRequest = onDismissRequest,
         cancelEnabled = !dialogState.saving,
-        positiveButton = Triple(
-            R.string.menu_merge,
-            !dialogState.saving
+        positiveButton = ButtonDefinition(
+            text = R.string.menu_merge,
+            enabled = !dialogState.saving
         ) { onMerge(selectedIndex) }
     ) {
         Text(
@@ -210,73 +179,6 @@ fun CategoryMerge(
             text = stringResource(id = R.string.cannot_be_undone),
             modifier = Modifier.padding(top = 8.dp)
         )
-    }
-}
-
-@Composable
-private fun DialogFrame(
-    title: String,
-    onDismissRequest: () -> Unit = {},
-    cancelEnabled: Boolean,
-    positiveButton: Triple<Int, Boolean, () -> Unit>?,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val titleBottomPadding = 12.dp
-    Dialog(
-        onDismissRequest = { }
-    ) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Text(
-                    modifier = Modifier.padding(bottom = titleBottomPadding),
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                content()
-                ButtonRow(
-                    onCancel = onDismissRequest,
-                    positiveButton = positiveButton,
-                    cancelEnabled = cancelEnabled
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ButtonRow(
-    onCancel: () -> Unit,
-    positiveButton: Triple<Int, Boolean, () -> Unit>?,
-    cancelEnabled: Boolean = true
-) {
-    val buttonRowTopPadding = 12.dp
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = buttonRowTopPadding)
-    ) {
-        TextButton(
-            modifier = Modifier.weight(1f),
-            enabled = cancelEnabled,
-            onClick = onCancel
-        ) {
-            Text(stringResource(id = android.R.string.cancel))
-        }
-
-        if (positiveButton != null) {
-            TextButton(
-                modifier = Modifier
-                    .testTag(TEST_TAG_POSITIVE_BUTTON)
-                    .weight(1f),
-                enabled = positiveButton.second,
-                onClick = positiveButton.third
-            ) {
-                Text(stringResource(id = positiveButton.first))
-            }
-        }
     }
 }
 

@@ -167,4 +167,8 @@
     <string name="at_end">Amaiera</string>
     <string name="widgets">"Widgetak"</string>
     <string name="menu_import">"Inportatu"</string>
+    <string name="already_exists">"Izen hori badago lehendik ere"</string>
+    <string name="flag_inactive">"Inaktibo"</string>
+    <string name="count">"Zenbakia"</string>
+    <string name="empty">"Hutsik"</string>
 </resources>

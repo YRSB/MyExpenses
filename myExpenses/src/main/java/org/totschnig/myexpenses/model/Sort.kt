@@ -11,6 +11,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TITLE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USAGES
+import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
 import org.totschnig.myexpenses.util.enumValueOrNull
 
 enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
@@ -40,9 +41,9 @@ enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
         else -> null
     }
 
-    fun toOrderBy(collate: String, isDescending: Boolean = this.isDescending) =
-        toDatabaseColumn(collate)?.let {
-            if (isDescending) "$it DESC" else it
+    fun toOrderBy(collate: String, isDescending: Boolean = this.isDescending, tableName: String? = null) =
+        toDatabaseColumn(collate)?.let { column ->
+            "${tableName?.let { "$it." } ?: ""}$column${if (isDescending) " DESC" else ""}"
     }
 
     fun toOrderByWithDefault(defaultSort: Sort, collate: String): String? {
@@ -54,7 +55,8 @@ enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
     companion object {
         private val templateSort = arrayOf(TITLE, USAGES, LAST_USED, AMOUNT, ACCOUNT)
         private val templateWithPlansSort = arrayOf(TITLE, USAGES, LAST_USED, AMOUNT, ACCOUNT, NEXT_INSTANCE)
-        private val accountSort = arrayOf(LABEL, USAGES, LAST_USED, CUSTOM)
+        val accountSort = arrayOf(LABEL, USAGES, LAST_USED, CUSTOM)
+        val accountSortLabels = listOf(R.string.label, R.string.pref_sort_order_usages, R.string.pref_sort_order_last_used, R.string.pref_sort_order_custom)
 
         @JvmStatic
         fun fromCommandId(id: Int): Sort? {
@@ -94,9 +96,10 @@ enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
             prefKey: PrefKey,
             prefHandler: PrefHandler,
             defaultSort: Sort,
-            collate: String
+            collate: String,
+            tableName: String?
         ) =
-            preferredOrderByRestricted(prefKey, prefHandler, defaultSort, accountSort, collate)
+            preferredOrderByRestricted(prefKey, prefHandler, defaultSort, accountSort, collate, tableName)
 
         //returns null if the preferred Sort has null toOrderBy, otherwise the preferred Sort (with defaultOrderBy as secondary sort), otherwise the defaultOrderBy
         private fun preferredOrderByRestricted(
@@ -104,7 +107,8 @@ enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
             prefHandler: PrefHandler,
             defaultSort: Sort,
             restrictedSet: Array<Sort>,
-            collate: String
+            collate: String,
+            tableName: String? = null
         ): String? {
             if (!restrictedSet.contains(defaultSort)) throw java.lang.IllegalArgumentException(
                 "%s is not part of %s".format(defaultSort, restrictedSet)
@@ -117,9 +121,9 @@ enum class Sort(val commandId: Int, val isDescending: Boolean = true) {
             )?.takeIf {
                 restrictedSet.contains(it)
             } ?: defaultSort
-            val orderBy = configuredOrDefault.toOrderBy(collate)
+            val orderBy = configuredOrDefault.toOrderBy(collate, tableName = tableName)
             return if (orderBy == null || configuredOrDefault == defaultSort) orderBy else
-                orderBy + ", " + defaultSort.toOrderBy(collate)
+                orderBy + ", " + defaultSort.toOrderBy(collate, tableName = tableName)
         }
     }
 }

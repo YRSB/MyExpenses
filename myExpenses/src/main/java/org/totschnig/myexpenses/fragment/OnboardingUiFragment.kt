@@ -24,6 +24,7 @@ import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.ProtectedFragmentActivity
 import org.totschnig.myexpenses.adapter.FontSizeAdapter
+import org.totschnig.myexpenses.adapter.FontSizeAdapter.Companion.updateTextSize
 import org.totschnig.myexpenses.compose.AppTheme
 import org.totschnig.myexpenses.compose.CheckBoxWithLabel
 import org.totschnig.myexpenses.compose.CompactTransactionRenderer
@@ -152,7 +153,8 @@ class OnboardingUiFragment : OnboardingFragment() {
                         stringResource(id = R.string.testData_tag_project),
                         ResourcesCompat.getColor(resources, R.color.appDefault, null)
                     )
-                )
+                ),
+                accountType = 0
             )
             AppTheme {
                 Column {
@@ -168,7 +170,7 @@ class OnboardingUiFragment : OnboardingFragment() {
                             }
                         )
                         CheckBoxWithLabel(
-                            stringResource(id = R.string.icons_for_categories),
+                            label = stringResource(id = R.string.icons_for_categories),
                             checked = withCategoryIcon,
                             onCheckedChange = {
                                 viewModel.setWithCategoryIcon(it)
@@ -236,7 +238,7 @@ class OnboardingUiFragment : OnboardingFragment() {
         binding.fontSizeDisplayName.text = entry
         binding.fontSizeDisplayName.contentDescription =
             "${getString(R.string.title_font_size)}: $entry"
-        FontSizeAdapter.updateTextView(binding.fontSizeDisplayName, fontScale)
+        binding.fontSizeDisplayName.updateTextSize(requireContext(), fontScale)
     }
 
     private fun setContentDescriptionToThemeSwitch(themeSwitch: View, isLight: Boolean) {

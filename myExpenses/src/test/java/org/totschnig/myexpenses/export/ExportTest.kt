@@ -25,19 +25,26 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito
-import org.mockito.kotlin.any
 import org.robolectric.RobolectricTestRunner
 import org.totschnig.myexpenses.BaseTestWithRepository
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.addAttachments
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.findPaymentMethod
 import org.totschnig.myexpenses.db2.markAsExported
 import org.totschnig.myexpenses.db2.saveTagsForTransaction
 import org.totschnig.myexpenses.db2.writeTag
 import org.totschnig.myexpenses.export.AbstractExporter.Companion.UTF_8_BOM
-import org.totschnig.myexpenses.model.*
+import org.totschnig.myexpenses.model.CrStatus
+import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.model.ExportFormat
+import org.totschnig.myexpenses.model.Money
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_BANK
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
+import org.totschnig.myexpenses.model.PreDefinedPaymentMethod
+import org.totschnig.myexpenses.model.SplitTransaction
 import org.totschnig.myexpenses.model.Transaction
+import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.filter.CategoryCriterion
@@ -46,7 +53,8 @@ import java.io.File
 import java.io.FileReader
 import java.io.IOException
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 
 @RunWith(RobolectricTestRunner::class)
@@ -195,14 +203,14 @@ class ExportTest : BaseTestWithRepository() {
         label = "Account 1",
         currency = CurrencyUnit.DebugInstance.code,
         openingBalance = openingBalance,
-        type = AccountType.BANK
+        type = repository.findAccountType(PREDEFINED_NAME_BANK)!!
     ).createIn(repository)
 
     private fun buildAccount2() = Account(
         label = "Account 2",
         currency = CurrencyUnit.DebugInstance.code,
         openingBalance = openingBalance,
-        type = AccountType.CASH
+        type = repository.findAccountType(PREDEFINED_NAME_CASH)!!
     ).createIn(repository)
 
     private fun insertData3(): Pair<Account, Account> {

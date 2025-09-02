@@ -98,4 +98,8 @@
     <string name="at_end">Ավարտ</string>
     <string name="widgets">"Վիջեթներ"</string>
     <string name="menu_import">"Ներմուծել"</string>
+    <string name="already_exists">"Այդ անունն արդեն կա"</string>
+    <string name="flag_inactive">"Ոչ ակտիվ"</string>
+    <string name="count">"Հաշվարկ"</string>
+    <string name="empty">"Դատարկ"</string>
 </resources>

@@ -2,14 +2,13 @@ package org.totschnig.myexpenses.testutils
 
 import android.database.MatrixCursor
 import android.provider.CalendarContract
-import org.totschnig.myexpenses.model.AccountType
-import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.insert
-import org.totschnig.myexpenses.test.provider.Plan
 import org.totschnig.myexpenses.provider.AccountInfo
+import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.PayeeInfo
 import org.totschnig.myexpenses.provider.TemplateInfo
+import org.totschnig.myexpenses.provider.insert
 import org.totschnig.myexpenses.test.provider.EventProvider
+import org.totschnig.myexpenses.test.provider.Plan
 
 
 abstract class BaseTemplateTest : BaseDbTest() {
@@ -30,7 +29,7 @@ abstract class BaseTemplateTest : BaseDbTest() {
     val testAccountId by lazy {
         mDb.insert(
             DatabaseConstants.TABLE_ACCOUNTS,
-            AccountInfo("Test account", AccountType.CASH, 0).contentValues
+            AccountInfo("Test account", cashAccount.id, 0).contentValues
         )
     }
     val templateInfos: Array<TemplateInfo> by lazy {

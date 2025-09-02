@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">أنواع الحسابات</string>
     <string name="account_type_asset">حساب الاصول</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">حسابات الاصول</string>
     <string name="account_type_bank">حساب البنك</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">حسابات البنك</string>
     <string name="account_type_cash">حساب النقد</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">الحسابات النقدية</string>
     <string name="account_type_ccard">بطاقة ائتمانية</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">بطاقات الإتمان</string>
     <string name="account_type_liability">حساب الالتزامات</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">حسابات الالتزامات</string>
     <string name="already_defined">%1$s معرّف مسبقاً</string>
     <string name="amount">القيمة</string>
     <string name="app_name">نفقاتي</string>
@@ -695,13 +685,10 @@
     <string name="menu_close">إغلاق</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">إعادة فتح</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">الحسابات المخفية</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">تم الإغلاق</string>
     <string name="warning_synced_account_cannot_be_closed">لا يمكن إغلاق حساب مرتبط بخلفية مزامنة</string>
     <string name="translated_by">مت الترجمة بواسطة</string>
-    <string name="warning_no_account">يجب أن يكون حساب واحد على الأقل مرئياً ومفتوحاً من أجل إنشاء معاملات جديدة.</string>
     <string name="content_description_dates_are_linked">يتم تحديث تاريخ الحجز وتاريخ القيمة معاً</string>
     <string name="content_description_dates_are_not_linked">لا يتم تحديث تاريخ الحجز وتاريخ القيمة معاً</string>
     <string name="roadmap_vote">التصويت على خارطة الطريق</string>
@@ -1036,7 +1023,6 @@
     <string name="dynamic_exchange_rate">سعر الصرف المتغير</string>
     <string name="progress_recalculating">إعَادة الحساب</string>
     <string name="equivalent_amount_plural">المبالغ المعادلة</string>
-    <string name="menu_recalculate">إعادة الحساب</string>
     <string name="content_description_exchange_rate">سعر الصرف لوحدة 1 %1$s مقابل %2$s</string>
     <string name="filter_dialog_empty">لم تتم إضافة معايير حتى الآن. اضغط على الأزرار أعلاه لتحديد استعلامك وتحسين نتائجك.</string>
     <string name="recalculate_equivalent_amounts_warning">سيتم إعادة حساب المبالغ المعادلة إذا كانت أسعار الصرف المخزنة متوفرة.</string>
@@ -1054,4 +1040,5 @@
     <string name="batch_download">تحميل مكثف</string>
     <string name="batch_download_result">تم تنزيل %d الأسعار وتخزينها في قاعدة البيانات.</string>
     <string name="warning_batch_download_quota">ينطوي التنزيل الدفعي من %s على خطر استنفاد حد الاستخدام الخاص بك.</string>
+    <string name="pref_account_list_display_configuration_title">قائمة الحسابات</string>
 </resources>

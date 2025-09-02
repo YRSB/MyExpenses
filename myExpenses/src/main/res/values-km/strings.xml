@@ -16,20 +16,10 @@
  --><resources xmlns:tools="http://schemas.android.com/tools">
     <string name="account">គណនី</string>
     <string name="account_type_asset">គណនីទ្រព្យសកម្ម</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">គណនីទ្រព្យសកម្ម</string>
     <string name="account_type_bank">គណនីធនាគារ</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">គណនីធនាគារ</string>
     <string name="account_type_cash">គណនីសាច់ប្រាក់</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">គណនីសាច់ប្រាក់</string>
     <string name="account_type_ccard">កាតឥណទាន</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">កាតឥណទាន</string>
     <string name="account_type_liability">គណនីទ្រព្យ​អសកម្ម</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">គណនីអសកម្ម</string>
     <string name="already_defined">%1$s កំណត់​ហើយ</string>
     <string name="amount">ចំនួនទឹកប្រាក់</string>
     <string name="app_name">ការចំណាយរបស់ខ្ញុំ</string>
@@ -252,7 +242,7 @@
     <string name="save_transaction_and_new_success">រក្សាទុក​ដោយជោគជ័យ</string>
     <string name="save_transaction_error">មិន​អាច​រក្សា​ទុក​ ប្រតិបត្តិការ​ថ្មី​យក​ចេញ​ពី​ពុម្ព​បានទេ</string>
     <plurals name="save_transaction_from_template_success">
-        <item quantity="other">%1$d ប្រតិបត្តិការ​ថ្មីៗ​បាន​រក្សាទុក​ពី​ពុម្ព​គំរូ​ដោយ​ជោគជ័យ</item>
+        <item quantity="other">%1$d ប្រតិបត្តិការ​ថ្មីៗ​បាន​រក្សាទុក​ពី​ពុម្ព​គំរូ​ដោយ​ជោគជ័យ.</item>
     </plurals>
     <string name="save_transaction_template_deleted">ទិន្ន​ន័យ​គំរូ​ត្រូវ​បាន​លុបហើយ</string>
     <string name="select">ជ្រើសរើស</string>
@@ -349,4 +339,5 @@
     <string name="balance_sheet_section_liabilities">បំណុល</string>
     <string name="balance_sheet_net_worth">ទ្រព្យសម្បត្តិសុទ្ធ</string>
     <string name="price_history">ប្រវត្តិតម្លៃ</string>
+    <string name="pref_account_list_display_configuration_title">បញ្ជីគណនី</string>
 </resources>

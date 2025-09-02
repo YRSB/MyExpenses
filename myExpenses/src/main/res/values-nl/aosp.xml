@@ -166,4 +166,8 @@
     <string name="at_end">Einde</string>
     <string name="widgets">"Widgets"</string>
     <string name="menu_import">"Importeren"</string>
+    <string name="already_exists">"Naam bestaat reeds"</string>
+    <string name="flag_inactive">"Inactief"</string>
+    <string name="count">"Aantal"</string>
+    <string name="empty">"Leeg"</string>
 </resources>

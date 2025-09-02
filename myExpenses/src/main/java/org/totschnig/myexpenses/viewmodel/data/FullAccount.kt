@@ -7,6 +7,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.content.res.ResourcesCompat
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.model.AccountFlag
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
@@ -14,6 +15,7 @@ import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.SortDirection
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.provider.DataBaseAccount
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BANK_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CLEARED_TOTAL
@@ -35,6 +37,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTA
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_CLEARED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_FUTURE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_ASSET
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LAST_USED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LATEST_EXCHANGE_RATE
@@ -62,7 +65,6 @@ import org.totschnig.myexpenses.provider.getLong
 import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.provider.getStringOrNull
-import org.totschnig.myexpenses.util.enumValueOrNull
 import java.time.LocalDate
 import kotlin.math.roundToLong
 import kotlin.math.sign
@@ -73,7 +75,7 @@ abstract class BaseAccount : DataBaseAccount() {
     /**
      * null for aggregate accounts
      */
-    abstract val type: AccountType?
+    abstract val type: AccountType
     fun color(resources: Resources): Int = if (isAggregate)
         ResourcesCompat.getColor(resources, R.color.colorAggregate, null) else _color
 }
@@ -85,7 +87,8 @@ data class FullAccount(
     val description: String? = null,
     override val currencyUnit: CurrencyUnit,
     override val _color: Int = -1,
-    override val type: AccountType? = AccountType.CASH,
+    override val type: AccountType,
+    val flag: AccountFlag = AccountFlag.DEFAULT,
     val sealed: Boolean = false,
     val openingBalance: Long = 0,
     val currentBalance: Long = 0,
@@ -149,7 +152,8 @@ data class FullAccount(
                 description = cursor.getStringOrNull(KEY_DESCRIPTION),
                 currencyUnit = currencyContext[cursor.getString(KEY_CURRENCY)],
                 _color = cursor.getInt(KEY_COLOR),
-                type = enumValueOrNull<AccountType>(cursor.getStringOrNull(KEY_TYPE)),
+                type = AccountType.fromAccountCursor(cursor),
+                flag = AccountFlag.fromAccountCursor(cursor),
                 sealed = cursor.getInt(KEY_SEALED) == 1,
                 openingBalance = cursor.getLong(KEY_OPENING_BALANCE),
                 currentBalance = cursor.getLong(KEY_CURRENT_BALANCE),
@@ -191,7 +195,7 @@ data class FullAccount(
 @Immutable
 data class PageAccount(
     override val id: Long,
-    override val type: AccountType?,
+    override val type: AccountType,
     override val sortBy: String,
     override val sortDirection: SortDirection,
     override val grouping: Grouping,

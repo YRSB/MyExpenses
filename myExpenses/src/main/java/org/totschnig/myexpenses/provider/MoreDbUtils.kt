@@ -10,7 +10,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
-import android.os.Build
 import android.provider.CalendarContract
 import android.provider.CalendarContract.Calendars
 import androidx.sqlite.db.SimpleSQLiteQuery
@@ -21,7 +20,7 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.DEFAULT_CATEGORY_PATH_SEPARATOR
 import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.FLAG_INCOME
-import org.totschnig.myexpenses.db2.localizedLabelSqlColumn
+import org.totschnig.myexpenses.db2.localizedLabelForPaymentMethod
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Model
 import org.totschnig.myexpenses.model.Money
@@ -30,14 +29,18 @@ import org.totschnig.myexpenses.myApplication
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TPYE_LIST
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LIST
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMENT
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL_NORMALIZED
@@ -57,20 +60,12 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE_DATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTTYES_METHODS
+import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_TYPES
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CATEGORIES
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CHANGES
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_DEBTS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_METHODS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_ALL
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_CHANGES_EXTENDED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_COMMITTED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_EXTENDED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_TEMPLATES_ALL
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_TEMPLATES_EXTENDED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_TEMPLATES_UNCOMMITTED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_UNCOMMITTED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_WITH_ACCOUNT
 import org.totschnig.myexpenses.provider.PlannerUtils.Companion.copyEventData
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.sync.GenericAccountService.Companion.getAccount
@@ -245,27 +240,35 @@ fun SupportSQLiteStatement.bindAllArgsAsStrings(argsList: List<String>) {
 }
 
 fun groupByForPaymentMethodQuery(projection: Array<String>?) =
-    if (projection?.contains(KEY_ACCOUNT_TPYE_LIST) == true) KEY_ROWID else null
+    if (projection?.contains(KEY_ACCOUNT_TYPE_LIST) == true) KEY_ROWID else null
 
 fun havingForPaymentMethodQuery(projection: Array<String>?) =
-    if (projection?.contains(KEY_ACCOUNT_TPYE_LIST) == true) "$KEY_ACCOUNT_TPYE_LIST is not null" else null
+    if (projection?.contains(KEY_ACCOUNT_TYPE_LIST) == true) "$KEY_ACCOUNT_TYPE_LIST is not null" else null
 
 fun tableForPaymentMethodQuery(projection: Array<String>?) =
-    if (projection?.contains(KEY_ACCOUNT_TPYE_LIST) == true)
+    if (projection?.contains(KEY_ACCOUNT_TYPE_LIST) == true)
         "$TABLE_METHODS left join $TABLE_ACCOUNTTYES_METHODS on $KEY_METHODID = $KEY_ROWID"
     else
         TABLE_METHODS
 
-fun mapPaymentMethodProjection(projection: Array<String>, ctx: Context): Array<String> {
-    return projection.map { column ->
+fun mapPaymentMethodProjection(projection: Array<String>, ctx: Context) =
+    projection.map { column ->
         when (column) {
-            KEY_LABEL -> "${localizedLabelSqlColumn(ctx, column)} AS $column"
+            KEY_LABEL -> "${localizedLabelForPaymentMethod(ctx, column)} AS $column"
             KEY_TYPE -> "$TABLE_METHODS.$column"
-            KEY_ACCOUNT_TPYE_LIST -> "group_concat($TABLE_ACCOUNTTYES_METHODS.$KEY_TYPE) AS $column"
+            KEY_ACCOUNT_TYPE_LIST -> "group_concat($TABLE_ACCOUNTTYES_METHODS.$KEY_TYPE) AS $column"
             else -> column
         }
     }.toTypedArray()
-}
+
+fun mapAccountProjection(projection: Array<String>?) =
+    projection?.map { column ->
+        when (column) {
+            KEY_LABEL, KEY_DESCRIPTION, KEY_ROWID, KEY_CURRENCY, KEY_GROUPING -> "$TABLE_ACCOUNTS.$column AS $column"
+            KEY_ACCOUNT_TYPE_LABEL -> "$TABLE_ACCOUNT_TYPES.$KEY_LABEL AS $column"
+            else -> column
+        }
+    }?.toTypedArray()
 
 fun SupportSQLiteDatabase.findCategory(selection: String, selectionArgs: Array<Any>) = query(
     TABLE_CATEGORIES,
@@ -527,7 +530,7 @@ fun cacheSyncState(context: Context) {
                     val remoteValue = accountManager.getUserData(account, remoteKey)
                     editor.putString(localKey, localValue)
                     editor.putString(remoteKey, remoteValue)
-                } catch (e: SecurityException) {
+                } catch (_: SecurityException) {
                     break
                 }
             } while (it.moveToNext())
@@ -611,7 +614,7 @@ fun SupportSQLiteDatabase.safeInsert(table: String, values: ContentValues): Long
 
 fun SupportSQLiteDatabase.query(
     table: String,
-    columns: Array<String>,
+    columns: Array<String>?,
     selection: String? = null,
     selectionArgs: Array<Any>? = null,
     groupBy: String? = null,
@@ -686,55 +689,6 @@ fun backup(
             release()
         }
     }
-}
-
-fun Context.maybeRepairRequerySchema(prefHandler: PrefHandler) {
-    if (!prefHandler.encryptDatabase && Build.VERSION.SDK_INT == 30 && prefHandler.getInt(
-            PrefKey.CURRENT_VERSION,
-            -1
-        ) in 1..588
-    ) {
-        try {
-            maybeRepairRequerySchema(getDatabasePath("data").path)
-            prefHandler.putBoolean(PrefKey.DB_SAFE_MODE, false)
-        } catch (e: Exception) {
-            CrashHandler.report(e)
-        }
-    }
-}
-
-
-fun maybeRepairRequerySchema(path: String) {
-    val version = io.requery.android.database.sqlite.SQLiteDatabase.openDatabase(
-        path,
-        null,
-        io.requery.android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-    ).use {
-        it.version
-    }
-    if (version == 132 || version == 133) {
-        doRepairRequerySchema(path)
-    }
-}
-
-fun doRepairRequerySchema(path: String) {
-    io.requery.android.database.sqlite.SQLiteDatabase.openDatabase(
-        path,
-        null,
-        io.requery.android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
-    ).use { db ->
-        if (db.version < 132 || db.version > 133) throw IllegalStateException()
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_COMMITTED")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_UNCOMMITTED")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_ALL")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_EXTENDED")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_CHANGES_EXTENDED")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_WITH_ACCOUNT")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_TEMPLATES_ALL")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_TEMPLATES_EXTENDED")
-        db.execSQL("DROP VIEW IF EXISTS $VIEW_TEMPLATES_UNCOMMITTED")
-    }
-    CrashHandler.report(Throwable("Requery repair done"))
 }
 
 fun checkSyncAccounts(context: Context) {

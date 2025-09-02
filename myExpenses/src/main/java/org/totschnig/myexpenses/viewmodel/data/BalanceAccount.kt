@@ -8,17 +8,14 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HIDDEN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
 import org.totschnig.myexpenses.provider.getBoolean
 import org.totschnig.myexpenses.provider.getDouble
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getLong
 import org.totschnig.myexpenses.provider.getString
-import org.totschnig.myexpenses.provider.getStringOrNull
-import org.totschnig.myexpenses.util.enumValueOrDefault
 import kotlin.math.roundToLong
 
 data class BalanceData(
@@ -42,7 +39,7 @@ data class BalanceAccount(
     val color: Int = 0,
     val currency: CurrencyUnit = CurrencyUnit.DebugInstance,
     val equivalentCurrentBalance: Long = currentBalance,
-    val isHidden: Boolean = false,
+    val isVisible: Boolean = false,
 ) {
     companion object {
 
@@ -52,13 +49,13 @@ data class BalanceAccount(
         ) = BalanceAccount(
             id = cursor.getLong(KEY_ROWID),
             label = cursor.getString(KEY_LABEL),
-            type = enumValueOrDefault(cursor.getStringOrNull(KEY_TYPE), AccountType.CASH),
+            type = AccountType.fromAccountCursor(cursor),
             color = cursor.getInt(KEY_COLOR),
             currentBalance = cursor.getLong(KEY_CURRENT_BALANCE),
             equivalentCurrentBalance = cursor.getDouble(KEY_EQUIVALENT_CURRENT_BALANCE)
                 .roundToLong(),
             currency = currencyContext[cursor.getString(KEY_CURRENCY)],
-            isHidden = cursor.getBoolean(KEY_HIDDEN)
+            isVisible = cursor.getBoolean(KEY_VISIBLE)
         )
 
         fun List<BalanceAccount>.partitionByAccountType(): BalanceData

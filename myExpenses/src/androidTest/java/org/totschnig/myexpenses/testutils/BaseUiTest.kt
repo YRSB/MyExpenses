@@ -11,7 +11,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso.*
+import androidx.test.espresso.Espresso.closeSoftKeyboard
+import androidx.test.espresso.Espresso.onData
+import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.Espresso.pressBack
 import androidx.test.espresso.NoMatchingViewException
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.scrollTo
@@ -19,8 +22,11 @@ import androidx.test.espresso.assertion.ViewAssertions.doesNotExist
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
+import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
+import androidx.test.espresso.matcher.ViewMatchers.isChecked
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.isNotChecked
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withSpinnerText
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
@@ -28,22 +34,27 @@ import androidx.test.uiautomator.UiDevice
 import com.adevinta.android.barista.interaction.BaristaEditTextInteractions
 import com.adevinta.android.barista.interaction.BaristaScrollInteractions
 import com.adevinta.android.barista.internal.matcher.HelperMatchers.menuIdMatcher
-import org.assertj.core.api.Assertions
-import org.hamcrest.CoreMatchers.allOf
+import com.google.common.truth.Truth.assertThat
 import org.hamcrest.CoreMatchers.containsString
-import org.hamcrest.CoreMatchers.instanceOf
 import org.hamcrest.Matchers.not
+import org.junit.Assume
 import org.junit.Before
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.TestApp
 import org.totschnig.myexpenses.activity.ProtectedFragmentActivity
-import org.totschnig.myexpenses.adapter.IdHolder
 import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.saveCategory
-import org.totschnig.myexpenses.model.*
+import org.totschnig.myexpenses.model.ContribFeature
+import org.totschnig.myexpenses.model.CurrencyContext
+import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.model.Money
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
+import org.totschnig.myexpenses.model.SplitTransaction
+import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.model2.Category
 import org.totschnig.myexpenses.preference.PrefHandler
@@ -97,7 +108,8 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
             openingBalance = openingBalance,
             currency = currency,
             excludeFromTotals = excludeFromTotals,
-            dynamicExchangeRates = dynamicExchangeRates
+            dynamicExchangeRates = dynamicExchangeRates,
+            type = repository.findAccountType(PREDEFINED_NAME_CASH)!!
         ).createIn(repository)
 
     fun deleteAccount(label: String) {
@@ -159,6 +171,16 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
         }
     }
 
+    protected fun assertOverflowItemChecked(@IdRes menuItemId: Int, checked: Boolean) {
+        Espresso.openActionBarOverflowMenu()
+        onData(menuIdMatcher(menuItemId)).inRoot(RootMatchers.isPlatformPopup())
+            .check(
+                matches(
+                    hasDescendant(if (checked) isChecked() else isNotChecked()))
+                )
+        pressBack()
+    }
+
     protected fun assertMenuItemHidden(@IdRes menuItemId: Int, isCab: Boolean = false) {
         onView(withId(menuItemId)).apply {
             if (try {
@@ -210,9 +232,15 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
 
     protected fun doWithRotation(actions: () -> Unit) {
         val device = UiDevice.getInstance(getInstrumentation())
+        Assume.assumeTrue(device.isNaturalOrientation)
         device.setOrientationRight()
-        actions()
-        device.setOrientationNatural()
+        try {
+            //without the sleep, actions might run before the orientation change
+            Thread.sleep(500)
+            actions()
+        } finally {
+            device.setOrientationNatural()
+        }
     }
 
     fun assertCanceled() {
@@ -221,7 +249,7 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
 
     @JvmOverloads
     fun assertFinishing(resultCode: Int = Activity.RESULT_OK) {
-        Assertions.assertThat(testScenario.result.resultCode).isEqualTo(resultCode)
+        assertThat(testScenario.result.resultCode).isEqualTo(resultCode)
     }
 
     protected fun getQuantityString(
@@ -306,7 +334,7 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
 
     fun setAccount(label: String) {
         onView(withId(R.id.Account)).perform(scrollTo(), click())
-        onData(allOf(instanceOf(IdHolder::class.java), withAccount(label)))
+        onData(withAccountGrouped(label))
             .perform(click())
     }
 }

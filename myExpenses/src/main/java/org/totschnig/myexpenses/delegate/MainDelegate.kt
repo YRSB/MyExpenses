@@ -179,10 +179,12 @@ abstract class MainDelegate<T : ITransaction>(
             return null
         return buildMainTransaction(account).apply {
             this.amount = amount
-            if (this@MainDelegate.payeeId != null) {
-                this.payeeId = this@MainDelegate.payeeId
+            if (!isSplitPart) {
+                if (this@MainDelegate.payeeId != null) {
+                    this.payeeId = this@MainDelegate.payeeId
+                }
+                payee = viewBinding.Payee.text.toString().trim()
             }
-            payee = viewBinding.Payee.text.toString().trim()
             this.debtId = this@MainDelegate.debtId
             this.methodId = this@MainDelegate.methodId
             val selectedItem = viewBinding.OriginalAmount.selectedCurrency
@@ -219,10 +221,7 @@ abstract class MainDelegate<T : ITransaction>(
 
     override fun createAdapters(withTypeSpinner: Boolean, withAutoFill: Boolean) {
         createPayeeAdapter(withAutoFill)
-        createStatusAdapter()
-        if (withTypeSpinner) {
-            createOperationTypeAdapter()
-        }
+        super.createAdapters(withTypeSpinner, withAutoFill)
     }
 
     override fun populateFields(transaction: T, withAutoFill: Boolean) {
@@ -601,7 +600,7 @@ abstract class MainDelegate<T : ITransaction>(
         viewBinding.EquivalentAmountRow.isVisible = needsEquivalentAmount
         if (needsEquivalentAmount) {
             viewBinding.EquivalentAmount.configureExchange(currencyUnit, homeCurrency)
-            if (isInitialSetup && host.newInstance) {
+            if (isInitialSetup) {
                 loadPrice()
             }
         }

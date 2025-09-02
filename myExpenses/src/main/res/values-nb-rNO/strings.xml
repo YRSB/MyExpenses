@@ -17,7 +17,6 @@
     <string name="menu_create_budget">Nytt budsjett</string>
     <string name="translated_by">Oversatt av</string>
     <string name="content_description_closed">Lukket</string>
-    <string name="menu_hidden_accounts">Skjulte kontoer</string>
     <string name="menu_reopen">Gjenåpne</string>
     <string name="menu_close">Lukk</string>
     <string name="joining_or">eller</string>
@@ -259,9 +258,7 @@
     <string name="app_name">Mine utgifter</string>
     <string name="amount">Beløp</string>
     <string name="already_defined">%1$s finnes allerede</string>
-    <string name="account_type_cash_plural">Brukskontoer</string>
     <string name="account_type_cash">Brukskonto</string>
-    <string name="account_type_bank_plural">Bankkontoer</string>
     <string name="account_type_bank">Bankkonto</string>
     <string name="account_types">Kontotyper</string>
     <string name="account">Konto</string>

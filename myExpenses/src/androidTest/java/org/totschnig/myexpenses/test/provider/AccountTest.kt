@@ -9,7 +9,6 @@ import org.junit.After
 import org.junit.Assert.assertThrows
 import org.junit.Rule
 import org.junit.Test
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.SortDirection
 import org.totschnig.myexpenses.provider.AccountInfo
@@ -41,12 +40,13 @@ class AccountTest {
         get() = providerRule.resolver
 
     private val testAccounts = arrayOf(
-        AccountInfo("Account 0", AccountType.CASH, 0),
-        AccountInfo("Account 1", AccountType.BANK, 100),
-        AccountInfo("Account 2", AccountType.CCARD, -100)
+        AccountInfo("Account 0", 1, 0),
+        AccountInfo("Account 1", 2, 100),
+        AccountInfo("Account 2", 3, -100)
     )
 
     private fun insertData() {
+        //TODO set up account type
         for (account in testAccounts) {
             resolver.insert(
                 TransactionProvider.ACCOUNTS_URI,
@@ -67,12 +67,13 @@ class AccountTest {
     private fun insertAccountWithTwoBudgets(): Long {
         val grouping = Grouping.MONTH
 
+        //TODO set up account type
         return ContentUris.parseId(
             resolver.insert(
                 TransactionProvider.ACCOUNTS_URI,
                 AccountInfo(
                     "Account with 2 budgets",
-                    AccountType.CCARD,
+                    1,
                     -100,
                     "EUR"
                 ).contentValues
@@ -104,7 +105,7 @@ class AccountTest {
             KEY_DESCRIPTION,
             KEY_CURRENCY
         )
-        val commentSelection = "$KEY_LABEL = ?"
+        val commentSelection = "$TABLE_ACCOUNTS.$KEY_LABEL = ?"
         val selectionColumns =
             "$commentSelection OR $commentSelection OR $commentSelection"
         val selectionArgs = arrayOf("Account 0", "Account 1", "Account 2")
@@ -174,7 +175,7 @@ class AccountTest {
 
     @Test
     fun testQueriesOnAccountIdUri() {
-        val columns = "$KEY_LABEL = ?"
+        val selection = "$TABLE_ACCOUNTS.$KEY_LABEL = ?"
         val query = "Account 0"
         val args = arrayOf(query)
         val projection = arrayOf(
@@ -197,7 +198,7 @@ class AccountTest {
 
         resolver.query(
             uri, arrayOf(KEY_LABEL),
-            columns,
+            selection,
             args,
             null
         ).useAndAssert {
@@ -220,7 +221,7 @@ class AccountTest {
         }
         val account = AccountInfo(
             "Account 4",
-            AccountType.ASSET, 1000
+            4, 1000
         )
 
         val accountId = ContentUris.parseId(
@@ -257,12 +258,12 @@ class AccountTest {
 
     @Test
     fun testDeletes() {
-        val columns = "$KEY_LABEL = ?"
+        val selection = "$TABLE_ACCOUNTS.$KEY_LABEL = ?"
         val args = arrayOf("Account 0")
         assertThat(
             resolver.delete(
                 TransactionProvider.ACCOUNTS_URI,
-                columns,
+                selection,
                 args
             )
         ).isEqualTo(0)
@@ -270,14 +271,14 @@ class AccountTest {
         assertThat(
             resolver.delete(
                 TransactionProvider.ACCOUNTS_URI,
-                columns,
+                selection,
                 args
             )
         ).isEqualTo(1)
         resolver.query(
             TransactionProvider.ACCOUNTS_URI,
             null,
-            columns,
+            selection,
             args,
             null
         ).useAndAssert {
@@ -287,7 +288,7 @@ class AccountTest {
 
     @Test
     fun testUpdates() {
-        val columns = "$KEY_LABEL = ?"
+        val selection = "$TABLE_ACCOUNTS.$KEY_LABEL = ?"
         val selectionArgs = arrayOf("Account 1")
         val values = ContentValues().apply {
             put(KEY_LABEL, "Testing an update with this string")
@@ -297,7 +298,7 @@ class AccountTest {
             resolver.update(
                 TransactionProvider.ACCOUNTS_URI,
                 values,
-                columns,
+                selection,
                 selectionArgs
             )
         ).isEqualTo(0)
@@ -306,7 +307,7 @@ class AccountTest {
             resolver.update(
                 TransactionProvider.ACCOUNTS_URI,
                 values,
-                columns,
+                selection,
                 selectionArgs
             )
         ).isEqualTo(1)
@@ -401,7 +402,7 @@ class AccountTest {
     fun testQueryWithSum() {
         val id = resolver.insert(
             TransactionProvider.ACCOUNTS_URI,
-            AccountInfo("Account 0", AccountType.CASH, 0).contentValues
+            AccountInfo("Account 0", 1, 0).contentValues
         ).let {
             ContentUris.parseId(it!!)
         }

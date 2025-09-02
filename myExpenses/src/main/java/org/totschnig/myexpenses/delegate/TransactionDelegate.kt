@@ -18,8 +18,9 @@ import org.totschnig.myexpenses.activity.ExpenseEdit
 import org.totschnig.myexpenses.activity.HELP_VARIANT_SPLIT_PART_CATEGORY
 import org.totschnig.myexpenses.activity.HELP_VARIANT_TEMPLATE_CATEGORY
 import org.totschnig.myexpenses.activity.HELP_VARIANT_TRANSACTION
+import org.totschnig.myexpenses.adapter.AccountAdapter
 import org.totschnig.myexpenses.adapter.CrStatusAdapter
-import org.totschnig.myexpenses.adapter.IdAdapter
+import org.totschnig.myexpenses.adapter.GroupedSpinnerAdapter
 import org.totschnig.myexpenses.adapter.NothingSelectedSpinnerAdapter
 import org.totschnig.myexpenses.adapter.RecurrenceAdapter
 import org.totschnig.myexpenses.contract.TransactionsContract.Transactions.TYPE_SPLIT
@@ -28,8 +29,11 @@ import org.totschnig.myexpenses.contract.TransactionsContract.Transactions.TYPE_
 import org.totschnig.myexpenses.databinding.DateEditBinding
 import org.totschnig.myexpenses.databinding.MethodRowBinding
 import org.totschnig.myexpenses.databinding.OneExpenseBinding
+import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
+import org.totschnig.myexpenses.db2.asCategoryType
 import org.totschnig.myexpenses.di.AppComponent
-import org.totschnig.myexpenses.model.AccountType
+import org.totschnig.myexpenses.dialog.addAllAccounts
+import org.totschnig.myexpenses.model.AccountFlag
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
@@ -85,6 +89,9 @@ abstract class TransactionDelegate<T : ITransaction>(
     @State
     var catId: Long? = null
 
+    @State
+    var catType: Byte = FLAG_NEUTRAL
+
     @Inject
     lateinit var prefHandler: PrefHandler
 
@@ -113,6 +120,7 @@ abstract class TransactionDelegate<T : ITransaction>(
     val recurrenceSpinner = SpinnerHelper(viewBinding.Recurrence)
     private lateinit var methodsAdapter: ArrayAdapter<PaymentMethod>
     private lateinit var operationTypeAdapter: ArrayAdapter<OperationType>
+    private lateinit var accountAdapter: GroupedSpinnerAdapter<AccountFlag, Account>
 
     init {
         createMethodAdapter()
@@ -120,7 +128,8 @@ abstract class TransactionDelegate<T : ITransaction>(
             SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                 seekBar.requestFocusFromTouch() //prevent jump to first EditText https://stackoverflow.com/a/6177270/1199911
-                viewBinding.advanceExecutionValue.text = String.format(Locale.getDefault(), "%d", progress)
+                viewBinding.advanceExecutionValue.text =
+                    String.format(Locale.getDefault(), "%d", progress)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -369,10 +378,16 @@ abstract class TransactionDelegate<T : ITransaction>(
         )
     }
 
-    fun setCategory(label: String?, categoryIcon: String?, catId: Long?) {
+    fun setCategory(
+        label: String?,
+        categoryIcon: String?,
+        catId: Long?,
+        catType: Byte = FLAG_NEUTRAL
+    ) {
         this.label = label
         this.categoryIcon = categoryIcon
         this.catId = catId
+        this.catType = catType
         setCategoryButton()
     }
 
@@ -432,7 +447,8 @@ abstract class TransactionDelegate<T : ITransaction>(
     }
 
     private fun updateStatusContentDescription() {
-        statusSpinner.spinner.contentDescription =  context.getString(R.string.status) + ": " + context.getString(crStatus.toStringRes())
+        statusSpinner.spinner.contentDescription =
+            context.getString(R.string.status) + ": " + context.getString(crStatus.toStringRes())
     }
 
     fun fillAmount(amount: BigDecimal) {
@@ -522,7 +538,13 @@ abstract class TransactionDelegate<T : ITransaction>(
     val host: ExpenseEdit
         get() = context as ExpenseEdit
 
-    abstract fun createAdapters(withTypeSpinner: Boolean, withAutoFill: Boolean)
+    open fun createAdapters(withTypeSpinner: Boolean, withAutoFill: Boolean) {
+        createStatusAdapter()
+        if (withTypeSpinner) {
+            createOperationTypeAdapter()
+        }
+        createAccountAdapter()
+    }
 
     private fun labelForNewInstance(type: Int) = context.getString(
         when (type) {
@@ -557,6 +579,11 @@ abstract class TransactionDelegate<T : ITransaction>(
         if (crStatus != CrStatus.RECONCILED) {
             statusSpinner.adapter = CrStatusAdapter(context)
         }
+    }
+
+    protected fun createAccountAdapter() {
+        accountAdapter = AccountAdapter(context)
+        accountSpinner.adapter = accountAdapter
     }
 
     private fun createMethodAdapter() {
@@ -640,7 +667,7 @@ abstract class TransactionDelegate<T : ITransaction>(
 
             accountSpinner.id -> {
                 val oldAccount = mAccounts.first { it.id == accountId }
-                val newAccount = mAccounts[position]
+                val newAccount = mAccounts.first { it.id == id }
                 if (newAccount.color == oldAccount.color || !host.maybeApplyDynamicColor()) {
                     updateAccount(newAccount, oldAccount.currency.code != newAccount.currency.code)
                 } else {
@@ -728,6 +755,9 @@ abstract class TransactionDelegate<T : ITransaction>(
     val isIncome: Boolean
         get() = viewBinding.Amount.type
 
+    val shouldShowCategoryWarning: Byte?
+        get() = catType.takeIf { it != FLAG_NEUTRAL && it != isIncome.asCategoryType }
+
     private fun readZonedDateTime(dateEdit: DateButton): ZonedDateTime {
         return ZonedDateTime.of(
             dateEdit.date,
@@ -738,19 +768,9 @@ abstract class TransactionDelegate<T : ITransaction>(
 
     fun currentAccount() = getAccountFromSpinner(accountSpinner)
 
-    protected fun getAccountFromSpinner(spinner: SpinnerHelper): Account? {
-        val selected = spinner.selectedItemPosition
-        if (selected == AdapterView.INVALID_POSITION) {
-            return null
-        }
-        val selectedID = spinner.selectedItemId
-        for (account in mAccounts) {
-            if (account.id == selectedID) {
-                return account
-            }
-        }
-        return null
-    }
+    protected fun getAccountFromSpinner(spinner: SpinnerHelper) =
+        if (spinner.selectedItemPosition == AdapterView.INVALID_POSITION)
+            null else mAccounts.find { it.id == spinner.selectedItemId }
 
     protected fun buildTemplate(account: Account) =
         Template.getTypedNewInstance(
@@ -904,25 +924,16 @@ abstract class TransactionDelegate<T : ITransaction>(
 
     open fun setAccount(isInitialSetup: Boolean) {
         //if the accountId we have been passed does not exist, we select the first entry
-        var selected = 0
-        for (item in mAccounts.indices) {
-            val account = mAccounts[item]
-            if (account.id == accountId) {
-                selected = item
-                break
-            }
-        }
-        accountSpinner.setSelection(selected)
-        updateAccount(mAccounts[selected], isInitialSetup)
+        val selected = mAccounts.find { it.id == accountId } ?: mAccounts.first()
+        accountSpinner.setSelection(accountAdapter.getPosition(selected.id))
+        updateAccount(selected, isInitialSetup)
     }
 
     open fun setAccounts(data: List<Account>, firstLoad: Boolean, isInitialSetup: Boolean) {
         if (firstLoad) {
             mAccounts.clear()
             mAccounts.addAll(data)
-            accountSpinner.adapter = IdAdapter(context, data).apply {
-                setDropDownViewResource(androidx.appcompat.R.layout.support_simple_spinner_dropdown_item)
-            }
+            accountAdapter.addAllAccounts(data)
             viewBinding.Amount.setTypeEnabled(true)
             isProcessingLinkedAmountInputs = true
             configureType()
@@ -938,7 +949,7 @@ abstract class TransactionDelegate<T : ITransaction>(
     private fun configureStatusSpinner() {
         currentAccount()?.let {
             statusSpinner.spinner.isVisible =
-                !isSplitPart && !isTemplate && it.type != AccountType.CASH && crStatus != CrStatus.RECONCILED
+                !isSplitPart && !isTemplate && it.type.supportsReconciliation && crStatus != CrStatus.RECONCILED
         }
     }
 

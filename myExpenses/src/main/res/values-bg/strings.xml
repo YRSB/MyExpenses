@@ -17,21 +17,11 @@
     <string name="account">Сметка</string>
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Типове сметки</string>
-    <string name="account_type_asset">сметка Активи</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">сметки Активи</string>
-    <string name="account_type_bank">Банкова сметка</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Банкови сметки</string>
-    <string name="account_type_cash">разплащателна сметка</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">разплащателни сметки</string>
+    <string name="account_type_asset">Други активи</string>
+    <string name="account_type_bank">Банка</string>
+    <string name="account_type_cash">В брой</string>
     <string name="account_type_ccard">кредитна карта</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">кредитни карти</string>
-    <string name="account_type_liability">сметка Пасиви</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">сметки Пасиви</string>
+    <string name="account_type_liability">Други задължения</string>
     <string name="already_defined">%1$s вече е дефинирана</string>
     <string name="amount">Сума</string>
     <string name="app_name">Моите разходи</string>
@@ -585,7 +575,7 @@
     <string name="history_chart_in_label">Приход</string>
     <string name="menu_history_totals">Показване на суми</string>
     <string name="pref_home_currency_title">Основна валута</string>
-    <string name="grand_total">Общо</string>
+    <string name="grand_total">Общо всичко</string>
     <string name="menu_original_amount">Оригинална сума</string>
     <string name="menu_equivalent_amount">Еквивалентна сума</string>
     <string name="warning_split_transactions">Избраните транзакции ще бъдат групирани в една разпределена транзакция. Информацията им за дата ще бъде изгубена, т.е. заменена от средната им стойност.</string>
@@ -664,13 +654,10 @@
     <string name="menu_close">Затвори</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Направи отворена</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Скрити сметки</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Затворена</string>
     <string name="warning_synced_account_cannot_be_closed">Сметка, която е свързана с хранилище за синхронизиране, не може да бъде затворена</string>
     <string name="translated_by">Превод на български</string>
-    <string name="warning_no_account">За да се създават нови транзакции трябва поне една сметка трябва да е видима и отворена.</string>
     <string name="content_description_dates_are_linked">Датата на резервиране и вальорът да се актуализират заедно</string>
     <string name="content_description_dates_are_not_linked">Датата на резервация и вальорът да не се актуализират заедно</string>
     <string name="roadmap_vote">Гласуване в картата за развитие</string>
@@ -1001,7 +988,6 @@
     <string name="balance_sheet_section_liabilities">Пасиви</string>
     <string name="balance_sheet_net_worth">Нетна стойност</string>
     <string name="equivalent_amount_plural">Еквивалентни суми</string>
-    <string name="menu_recalculate">Преизчисли</string>
     <string name="recalculate_equivalent_amounts_warning">Еквивалентните суми ще бъдат (пре)изчислени, ако са налични запазени обменни курсове.</string>
     <string name="account_closed">Сметката е закрита</string>
     <string name="mark_as_unreconciled">Маркирай като несъгласувано</string>
@@ -1011,4 +997,41 @@
     <string name="batch_download_result">%d цени бяха заредени и запазени в базата данни.</string>
     <string name="warning_batch_download_quota">Груповото зареждане от %s поражда риск от изразходване на лимита на употреба.</string>
     <string name="sort_direction">Посока на сортиране</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Покажи новия баланс след запис на транзакция</string>
+    <string name="print_configuration_empty">Моля, изберете поне едно поле за печат.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">Намерени валидни данни в %d ред.</item>
+        <item quantity="other">Намерени валидни данни в %d реда.</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d ред не може да бъде обработен.</item>
+        <item quantity="other">%d реда не могат да бъдат обработени.</item>
+    </plurals>
+    <string name="confirm_process_file_message">Наистина ли искате да импортирате цени за \'%1$s\' от \'%2$s\'? Новите цени може да засегнат вече съществуващи еквивалентни суми.</string>
+    <string name="warning_expense_category_credit">Назначавате категория за разход на транзакция за приход. Такава транзакция ще намали сумата на разходите Ви и по подразбиране ще бъде в червено.</string>
+    <string name="warning_income_category_debit">Назначавате категория за приход на транзакция за разход. Такава транзакция ще намали сумата на приходите Ви и по подразбиране ще бъде в червено.</string>
+    <string name="account_type_investment">Инвестиции</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Динамични курсове за всички сметки</string>
+    <string name="pref_dynamic_exchange_rates_static">Статични курсове за всички сметки</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Настройте всяка сметка индивидуално</string>
+    <string name="category_type_main">Основна категория</string>
+    <string name="category_type_sub">Подкатегория</string>
+    <string name="category_description_base">%1$s, ниво %2$d</string>
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, съдържа една подкатегория от ниво %2$d.</item>
+        <item quantity="other">, съдържа %1$d подкатегории от ниво %2$d.</item>
+    </plurals>
+    <string name="edit_account_type">Редактиране на типа на сметката</string>
+    <string name="new_account_type">Нов тип на сметка</string>
+    <string name="pref_account_list_display_configuration_title">Списък на сметките</string>
+    <string name="pref_print_layout_summary">Настройка на ширината и разположението на колоните</string>
+    <string name="menu_account_flags">Флагове</string>
+    <string name="menu_flag">Флаг</string>
+    <string name="edit_account_flag">Редактиране на флаг</string>
+    <string name="new_account_flag">Нов флаг</string>
+    <string name="flag_unflagged">Без флагове</string>
+    <string name="flag_favorite">Предпочитани</string>
+    <string name="supports_reconciliation">Поддържа сверяване</string>
+    <string name="aggregate_invisible">Включи невидимите сметки в обобщените сметки и баланса</string>
+    <string name="select_accounts_for_flag">Изберете сметки за флага %s</string>
 </resources>

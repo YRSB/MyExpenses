@@ -2,12 +2,13 @@ package org.totschnig.myexpenses.adapter
 
 import android.content.Context
 import android.widget.ArrayAdapter
-import org.totschnig.myexpenses.R
 
 interface IdHolder {
     val id: Long
 }
-class  IdAdapter<T: IdHolder>(context: Context, objects: List<T>): ArrayAdapter<T>(context, android.R.layout.simple_spinner_item, android.R.id.text1, objects) {
+
+open class IdAdapter<T : IdHolder>(context: Context, objects: List<T>) :
+    ArrayAdapter<T>(context, android.R.layout.simple_spinner_item, android.R.id.text1, objects) {
     constructor(context: Context) : this(context, mutableListOf())
 
     init {
@@ -18,9 +19,9 @@ class  IdAdapter<T: IdHolder>(context: Context, objects: List<T>): ArrayAdapter<
 
     override fun getItemId(position: Int) = getItem(position)!!.id
 
-    fun getPosition(accountId: Long): Int {
+    fun getPosition(id: Long): Int {
         for (i in 0 until count) {
-            if (getItem(i)!!.id == accountId) return i
+            if (getItem(i)!!.id == id) return i
         }
         return -1
     }

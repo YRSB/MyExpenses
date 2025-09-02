@@ -15,17 +15,14 @@
 
 package org.totschnig.myexpenses.dialog;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.OpenableColumns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -33,7 +30,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -44,8 +40,8 @@ import org.totschnig.myexpenses.MyApplication;
 import org.totschnig.myexpenses.R;
 import org.totschnig.myexpenses.activity.BaseActivity;
 import org.totschnig.myexpenses.activity.ProtectedFragmentActivity;
-import org.totschnig.myexpenses.adapter.AccountTypeAdapter;
 import org.totschnig.myexpenses.adapter.CurrencyAdapter;
+import org.totschnig.myexpenses.adapter.IdAdapter;
 import org.totschnig.myexpenses.model.AccountType;
 import org.totschnig.myexpenses.preference.PrefHandler;
 import org.totschnig.myexpenses.preference.PrefKey;
@@ -54,15 +50,12 @@ import org.totschnig.myexpenses.util.Utils;
 import org.totschnig.myexpenses.util.distrib.DistributionHelper;
 
 import java.util.Arrays;
-import java.util.List;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
 import static org.totschnig.myexpenses.activity.ConstantsKt.IMPORT_FILENAME_REQUEST_CODE;
-import static org.totschnig.myexpenses.util.PermissionHelper.PermissionGroup.CALENDAR;
 
 public class DialogUtils {
   private DialogUtils() {
@@ -199,17 +192,6 @@ public class DialogUtils {
             .indexOf(prefHandler.getString(prefName, ",")));
   }
 
-  public static void configureCurrencySpinner(Spinner spinner, AdapterView.OnItemSelectedListener listener) {
-    CurrencyAdapter curAdapter = new CurrencyAdapter(spinner.getContext(), android.R.layout.simple_spinner_item);
-    spinner.setAdapter(curAdapter);
-    spinner.setOnItemSelectedListener(listener);
-  }
-
-  public static void configureTypeSpinner(Spinner spinner) {
-    ArrayAdapter<AccountType> typAdapter = new AccountTypeAdapter(spinner.getContext());
-    spinner.setAdapter(typAdapter);
-  }
-
   public static void openBrowse(Uri uri, Fragment fragment) {
     Intent intent = new Intent(Intent.ACTION_GET_CONTENT);//TODO implement preference that allows to use ACTION_OPEN_DOCUMENT
     intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -236,7 +218,6 @@ public class DialogUtils {
     b.putString(DatabaseConstants.KEY_UUID, uuid);
     b.putInt(ConfirmationDialogFragment.KEY_COMMAND_POSITIVE, R.id.SYNC_UNLINK_COMMAND);
     b.putInt(ConfirmationDialogFragment.KEY_POSITIVE_BUTTON_LABEL, R.string.menu_sync_unlink);
-    b.putInt(ConfirmationDialogFragment.KEY_NEGATIVE_BUTTON_LABEL, android.R.string.cancel);
     ConfirmationDialogFragment.newInstance(b).show(context.getSupportFragmentManager(), "SYNC_UNLINK");
   }
 }

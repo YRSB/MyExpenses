@@ -169,4 +169,8 @@
     <string name="at_end">Кінець</string>
     <string name="widgets">"Віджети"</string>
     <string name="menu_import">"Імпортувати"</string>
+    <string name="already_exists">"Назва вже використовується"</string>
+    <string name="flag_inactive">"Неактивно"</string>
+    <string name="count">"Кількість"</string>
+    <string name="empty">"Порожньо"</string>
 </resources>

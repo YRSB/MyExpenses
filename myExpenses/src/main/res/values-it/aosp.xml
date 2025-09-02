@@ -169,4 +169,8 @@
     <string name="at_end">Fine</string>
     <string name="widgets">"Widget"</string>
     <string name="menu_import">"Importa"</string>
+    <string name="already_exists">"Nome già in uso"</string>
+    <string name="flag_inactive">"Non attiva"</string>
+    <string name="count">"Numero"</string>
+    <string name="empty">"Vuoto"</string>
 </resources>

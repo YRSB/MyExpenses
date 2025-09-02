@@ -13,13 +13,13 @@ import androidx.core.content.ContextCompat
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.fragment.AccountWidgetConfigurationFragment
 import org.totschnig.myexpenses.injector
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HIDDEN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TOTAL
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_FULL_URI
@@ -27,6 +27,8 @@ import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_MER
 import org.totschnig.myexpenses.util.ICurrencyFormatter
 import org.totschnig.myexpenses.util.formatMoney
 import javax.inject.Inject
+import androidx.core.net.toUri
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
 
 
 class AccountWidgetService : RemoteViewsService() {
@@ -119,7 +121,7 @@ class AccountRemoteViewsFactory(
                         buttonId, PendingIntent.getBroadcast(
                             context, clickInfo.first, clickInfo.second.apply {
                                 block()
-                                data = Uri.parse(this.toUri(Intent.URI_INTENT_SCHEME))
+                                data = toUri(Intent.URI_INTENT_SCHEME).toUri()
                             }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                         )
                     )
@@ -143,7 +145,7 @@ class AccountRemoteViewsFactory(
             buttons: List<AccountWidgetConfigurationFragment.Button>
         ) {
             with(remoteViews) {
-                val account = Account.fromCursor(cursor)
+                val account = Account.fromCursor(cursor, AccountType.fromAccountCursor(cursor))
                 setBackgroundColorSave(
                     R.id.divider3,
                     if (account.isAggregate) ContextCompat.getColor(context, R.color.colorAggregate)
@@ -201,7 +203,7 @@ class AccountRemoteViewsFactory(
                     QUERY_PARAMETER_MERGE_CURRENCY_AGGREGATES,
                     accountId.takeIf { it != Long.MAX_VALUE.toString() } ?: "1"
                 ).build()
-                selection = "$KEY_HIDDEN = 0"
+                selection = "$KEY_VISIBLE = 1"
                 selectionArgs = null
             }
             return context.contentResolver.query(uri, null, selection, selectionArgs, null)

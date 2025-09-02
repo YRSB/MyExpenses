@@ -105,4 +105,8 @@
     <string name="at_end">Lõpp</string>
     <string name="widgets">"Vidinad"</string>
     <string name="menu_import">"Importimine"</string>
+    <string name="already_exists">"Nimi on juba olemas"</string>
+    <string name="flag_inactive">"Mitteaktiivne"</string>
+    <string name="count">"Arv"</string>
+    <string name="empty">"Tühi"</string>
 </resources>

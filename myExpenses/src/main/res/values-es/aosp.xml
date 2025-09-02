@@ -170,4 +170,8 @@
     <string name="at_end">Fin</string>
     <string name="widgets">"Widgets"</string>
     <string name="menu_import">"Importar"</string>
+    <string name="already_exists">"El nombre ya existe"</string>
+    <string name="flag_inactive">"Inactiva"</string>
+    <string name="count">"Recuento"</string>
+    <string name="empty">"Vacío"</string>
 </resources>

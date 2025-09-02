@@ -7,9 +7,9 @@ import androidx.core.database.getStringOrNull
 import app.cash.copper.flow.mapToOne
 import app.cash.copper.flow.observeQuery
 import kotlinx.coroutines.flow.Flow
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.Model
-import org.totschnig.myexpenses.model.SortDirection
 import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.provider.*
@@ -42,7 +42,7 @@ fun Repository.getLastUsedOpenAccount() =
         null,
         "$KEY_LAST_USED DESC"
     )?.use {
-        if (it.moveToFirst()) it.getLong(0) to currencyContext.get(it.getString(1)) else null
+        if (it.moveToFirst()) it.getLong(0) to currencyContext[it.getString(1)] else null
     }
 
 
@@ -74,7 +74,9 @@ fun Repository.loadAccount(accountId: Long): Account? {
         Account.PROJECTION,
         null, null, null
     )?.use {
-        if (it.moveToFirst()) Account.fromCursor(it) else null
+        if (it.moveToFirst()) {
+            Account.fromCursor(it, AccountType.fromAccountCursor(it))
+        } else null
     }
 }
 
@@ -85,26 +87,7 @@ fun Repository.loadAccountFlow(accountId: Long): Flow<Account> {
         Account.PROJECTION,
         null, null, null
     ).mapToOne {
-        Account.fromCursor(it)
-    }
-}
-
-fun Repository.loadAggregateAccount(accountId: Long): Account? {
-    require(accountId < 0L)
-    return contentResolver.query(
-        ContentUris.withAppendedId(TransactionProvider.ACCOUNTS_AGGREGATE_URI, accountId),
-        null, null, null, null
-    )?.use {
-        if (it.moveToFirst()) Account(
-            id = accountId,
-            label = it.getString(KEY_LABEL),
-            currency = it.getString(KEY_CURRENCY),
-            openingBalance = it.getLong(KEY_OPENING_BALANCE),
-            grouping = it.getEnum(KEY_GROUPING, Grouping.NONE),
-            isSealed = it.getBoolean(KEY_SEALED),
-            sortBy = it.getString(KEY_SORT_BY),
-            sortDirection = it.getEnum(KEY_SORT_DIRECTION, SortDirection.DESC)
-        ) else null
+        Account.fromCursor(it, AccountType.fromAccountCursor(it))
     }
 }
 
@@ -120,7 +103,8 @@ fun Repository.loadAggregateAccountFlow(accountId: Long): Flow<Account> {
             currency = it.getString(KEY_CURRENCY),
             openingBalance = it.getLong(KEY_OPENING_BALANCE),
             grouping = it.getEnum(KEY_GROUPING, Grouping.NONE),
-            isSealed = it.getBoolean(KEY_SEALED)
+            isSealed = it.getBoolean(KEY_SEALED),
+            type = AccountType(name = "Aggregate")
         )
     }
 }
@@ -130,7 +114,7 @@ fun Account.toContentValues() = ContentValues().apply {
     put(KEY_OPENING_BALANCE, openingBalance)
     put(KEY_DESCRIPTION, description)
     put(KEY_CURRENCY, currency)
-    put(KEY_TYPE, type.name)
+    put(KEY_TYPE, type.id)
     put(KEY_COLOR, color)
     put(KEY_SYNC_ACCOUNT_NAME, syncAccountName)
     if (criterion != null) {
@@ -143,6 +127,7 @@ fun Account.toContentValues() = ContentValues().apply {
         put(KEY_BANK_ID, it)
     }
     put(KEY_DYNAMIC, dynamicExchangeRates)
+    put(KEY_FLAG, flagId)
 }
 
 fun Repository.createAccount(account: Account): Account {
@@ -257,7 +242,7 @@ fun Repository.markAsExported(accountId: Long, filter: Criterion?) {
  * @param label label of the account we want to retrieve
  * @return id or null if not found
  */
-fun Repository.findAnyOpenByLabel(label: String) = findAnyOpen(KEY_LABEL, label)
+fun Repository.findAnyOpenByLabel(label: String) = findAnyOpen("$TABLE_ACCOUNTS.$KEY_LABEL", label)
 
 /**
  * Returns the first account which uses the passed in currency, order is undefined

@@ -105,4 +105,7 @@
     <string name="at_end">Selesai</string>
     <string name="widgets">"Widget"</string>
     <string name="menu_import">"Impor"</string>
+    <string name="already_exists">"Nama sudah ada"</string>
+    <string name="flag_inactive">"Tidak aktif"</string>
+    <string name="empty">"Kosong"</string>
 </resources>

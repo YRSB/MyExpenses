@@ -15,7 +15,7 @@
 
 package org.totschnig.myexpenses.provider;
 
-import static org.totschnig.myexpenses.db2.RepositoryPaymentMethodKt.localizedLabelSqlColumn;
+import static org.totschnig.myexpenses.db2.RepositoryPaymentMethodKt.localizedLabelForPaymentMethod;
 import static org.totschnig.myexpenses.provider.DbConstantsKt.TRANSFER_ACCOUNT_LABEL;
 
 import android.content.Context;
@@ -111,7 +111,7 @@ public class DatabaseConstants {
             KEY_TRANSFER_ACCOUNT,
             TRANSFER_ACCOUNT_LABEL,
             KEY_METHODID,
-            localizedLabelSqlColumn(context, KEY_METHOD_LABEL) + " AS " + KEY_METHOD_LABEL,
+            localizedLabelForPaymentMethod(context, KEY_METHOD_LABEL) + " AS " + KEY_METHOD_LABEL,
             KEY_CR_STATUS,
             KEY_REFERENCE_NUMBER,
             YEAR_OF_WEEK_START + " AS " + KEY_YEAR_OF_WEEK_START,
@@ -179,6 +179,7 @@ public class DatabaseConstants {
   public static final String KEY_LEVEL = "level";
   public static final String KEY_COLOR = "color";
   public static final String KEY_TYPE = "type";
+  public static final String KEY_FLAG = "flag";
   public static final String KEY_CURRENCY = "currency";
   public static final String KEY_DESCRIPTION = "description";
   public static final String KEY_OPENING_BALANCE = "opening_balance";
@@ -245,7 +246,6 @@ public class DatabaseConstants {
   public static final String KEY_HAS_FUTURE = "has_future"; //has the accounts transactions stored for future dates
   public static final String KEY_SUM = "sum";
   public static final String KEY_SORT_KEY = "sort_key";
-  public static final String KEY_SORT_KEY_TYPE = "sort_key_type";
   public static final String KEY_EXCLUDE_FROM_TOTALS = "exclude_from_totals";
   public static final String KEY_PREDEFINED_METHOD_NAME = "predefined";
   public static final String KEY_UUID = "uuid";
@@ -299,7 +299,7 @@ public class DatabaseConstants {
    * If this field is part of a projection for a query to the Methods URI, only payment methods
    * mapped to account types will be returned
    */
-  public static final String KEY_ACCOUNT_TPYE_LIST = "account_type_list";
+  public static final String KEY_ACCOUNT_TYPE_LIST = "account_type_list";
 
   /**
    * Used for both saving goal and credit limit on accounts
@@ -328,10 +328,12 @@ public class DatabaseConstants {
    */
   public static final String KEY_BUDGET_ROLLOVER_NEXT = "rollOverNext";
 
-  /**
-   * boolean flag for accounts: An archived account is not displayed
-   */
-  public static final String KEY_HIDDEN = "hidden";
+  public static final String KEY_VISIBLE = "visible";
+  public static final String KEY_FLAG_LABEL = "flag_label";
+  public static final String KEY_FLAG_SORT_KEY = "flag_sort_key";
+  public static final String KEY_FLAG_ICON = "flag_icon";
+  public static final String METHOD_FLAG_SORT = "flagSort";
+  public static final String KEY_SORTED_IDS = "sortedIds";
 
   /**
    * boolean flag for accounts: A sealed account can no longer be edited
@@ -387,6 +389,9 @@ public class DatabaseConstants {
   public static final String KEY_DYNAMIC = "dynamic";
   public static final String KEY_LATEST_EXCHANGE_RATE = "latest_exchange_rate";
   public static final String KEY_LATEST_EXCHANGE_RATE_DATE = "latest_exchange_rate_date";
+
+
+  public static final String KEY_ACCOUNT_TYPE_LABEL = "account_type_label";
   /**
    * No special status
    */
@@ -485,6 +490,14 @@ public class DatabaseConstants {
           "  (SELECT " + KEY_ICON + " FROM " + TABLE_CATEGORIES + " WHERE " + KEY_ROWID + " = " + KEY_CATID + ") " +
           " ELSE null" +
           " END AS " + KEY_ICON;
+
+  public static final String TABLE_ACCOUNT_TYPES = "account_types";
+  public static final String KEY_IS_ASSET = "isAsset";
+  public static final String KEY_TYPE_SORT_KEY = "type_sort_key";
+  public static final String KEY_SUPPORTS_RECONCILIATION = "supportsReconciliation";
+  public static final String METHOD_TYPE_SORT = "typeSort";
+
+  public static final String TABLE_ACCOUNT_FLAGS = "account_flags";
 
   public static final Long SPLIT_CATID = 0L;
   public static final long NULL_ROW_ID = 0L;

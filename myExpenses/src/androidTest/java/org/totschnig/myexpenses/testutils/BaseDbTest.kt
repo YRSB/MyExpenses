@@ -3,7 +3,6 @@
 package org.totschnig.myexpenses.testutils
 
 import androidx.sqlite.db.SupportSQLiteDatabase
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.provider.AccountInfo
 import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
@@ -18,6 +17,7 @@ open class BaseDbTest : BaseProviderTest() {
     // Contains an SQLite database, used as test data
     lateinit var mDb: SupportSQLiteDatabase
 
+    @Deprecated("Deprecated in Java")
     @Throws(Exception::class)
     override fun setUp() {
         super.setUp()
@@ -26,9 +26,10 @@ open class BaseDbTest : BaseProviderTest() {
 
     fun setupTestAccount(): Long = mDb.insert(
         TABLE_ACCOUNTS,
-        AccountInfo("Test account", AccountType.CASH, 0).contentValues
+        AccountInfo("Test account", cashAccount.id, 0).contentValues
     )
 
+    @Deprecated("Deprecated in Java")
     @Throws(Exception::class)
     override fun tearDown() {
         super.tearDown()

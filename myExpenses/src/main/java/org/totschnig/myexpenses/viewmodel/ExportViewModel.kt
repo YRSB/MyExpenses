@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.db2.hasSealed
 import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.db2.markAsExported
 import org.totschnig.myexpenses.export.CsvExporter
@@ -24,6 +25,7 @@ import org.totschnig.myexpenses.model.ExportFormat
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DataBaseAccount
+import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
@@ -126,47 +128,58 @@ class ExportViewModel(application: Application) : ContentResolvingAndroidViewMod
                             val successfullyExported = ArrayList<Account>()
                             val simpleDateFormat = SimpleDateFormat("yyyMMdd-HHmmss", Locale.US)
                             val now = Date()
+                            var append = false
                             for (i in accountIds.indices) {
                                 account = repository.loadAccount(accountIds[i])
                                 if (account == null) continue
                                 publishProgress(account.label + " ...")
                                 try {
-                                    val append = mergeP && i > 0
                                     val fileNameForAccount =
                                         if (oneFile) fileName else String.format(
                                             "%s-%s", Utils.escapeForFileName(account.label),
                                             simpleDateFormat.format(now)
                                         )
                                     val exporter = when (format) {
-                                        ExportFormat.CSV -> CsvExporter(
-                                            account,
-                                            currencyContext,
-                                            filter,
-                                            notYetExportedP,
-                                            dateFormat,
-                                            decimalSeparator,
-                                            encoding,
-                                            !append,
-                                            delimiter,
-                                            mergeP,
-                                            prefHandler.getBoolean(
-                                                PrefKey.CSV_EXPORT_SPLIT_CATEGORIES,
-                                                false
-                                            ),
-                                            prefHandler.getBoolean(
-                                                PrefKey.CSV_EXPORT_SPLIT_AMOUNT,
-                                                true
-                                            ),
-                                            timeFormat,
-                                            prefHandler.getBoolean(
+                                        ExportFormat.CSV -> {
+                                            val withOriginalAmountAndEquivalentAmount = prefHandler.getBoolean(
                                                 PrefKey.CSV_EXPORT_ORIGINAL_EQUIVALENT_AMOUNTS,
                                                 false
-                                            ),
-                                            prefHandler.requireString(
-                                                PrefKey.CSV_EXPORT_CATEGORY_SEPARATOR,
-                                                " > "
                                             )
-                                        )
+                                            val homeCurrencyString = currencyContext.homeCurrencyString
+                                            val withEquivalentAmountHeader = withOriginalAmountAndEquivalentAmount &&
+                                                    (account.currency != homeCurrencyString
+                                                            || (mergeP && (currency == null || currency != homeCurrencyString)))
+                                            val withEquivalentAmount = withOriginalAmountAndEquivalentAmount && account.currency != homeCurrencyString
+                                            CsvExporter(
+                                                account = account,
+                                                currencyContext = currencyContext,
+                                                filter = filter,
+                                                notYetExportedP = notYetExportedP,
+                                                dateFormat = dateFormat,
+                                                decimalSeparator = decimalSeparator,
+                                                encoding = encoding,
+                                                withHeader = !append,
+                                                delimiter = delimiter,
+                                                withAccountColumn = mergeP,
+                                                splitCategoryLevels = prefHandler.getBoolean(
+                                                    PrefKey.CSV_EXPORT_SPLIT_CATEGORIES,
+                                                    false
+                                                ),
+                                                splitAmount = prefHandler.getBoolean(
+                                                    PrefKey.CSV_EXPORT_SPLIT_AMOUNT,
+                                                    true
+                                                ),
+                                                timeFormat = timeFormat,
+                                                withOriginalAmount = withOriginalAmountAndEquivalentAmount,
+                                                withEquivalentAmountHeader = withEquivalentAmountHeader,
+                                                withEquivalentAmount = withEquivalentAmount,
+                                                categoryPathSeparator = prefHandler.requireString(
+                                                    PrefKey.CSV_EXPORT_CATEGORY_SEPARATOR,
+                                                    " > "
+                                                ),
+                                                withCurrencyColumn = accountId == 0L && currency == null
+                                            )
+                                        }
 
                                         ExportFormat.QIF -> QifExporter(
                                             account,
@@ -217,6 +230,7 @@ class ExportViewModel(application: Application) : ContentResolvingAndroidViewMod
                                                 it.displayName
                                             )
                                         )
+                                        append = mergeP
                                     }.onFailure {
                                         publishProgress("... " + it.message)
                                     }
@@ -233,8 +247,21 @@ class ExportViewModel(application: Application) : ContentResolvingAndroidViewMod
                             for (a in successfullyExported) {
                                 try {
                                     if (deleteP) {
-                                        if (a.isSealed) {
-                                            publishProgress(getString(R.string.object_sealed))
+                                        val cannotResetConditions: List<Int> = if (a.isSealed) {
+                                            listOf(R.string.account_closed)
+                                        } else {
+                                            val (sealedTransfer, sealedDebt) = repository.hasSealed(
+                                                a.id
+                                            )
+                                            listOfNotNull(
+                                                if (sealedTransfer) R.string.object_sealed else null,
+                                                if (sealedDebt) R.string.object_sealed_debt else null
+                                            )
+                                        }
+                                        if (cannotResetConditions.isNotEmpty()) {
+                                            publishProgress(cannotResetConditions.joinToString {
+                                                getString(it)
+                                            })
                                         } else {
                                             reset(a, filter, handleDelete, fileName)
                                         }

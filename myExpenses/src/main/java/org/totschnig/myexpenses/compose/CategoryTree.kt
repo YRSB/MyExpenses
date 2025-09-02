@@ -27,6 +27,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,13 +35,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.collapse
 import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.expand
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -196,6 +201,32 @@ fun Category(
     }
 }
 
+@Composable
+fun getCategoryContentDescription(category: Category): String {
+     val categoryTypeString = if (category.level == 1) {
+        stringResource(id = R.string.category_type_main)
+    } else {
+        stringResource(id = R.string.category_type_sub)
+    }
+
+    var description = stringResource(
+        id = R.string.category_description_base,
+        categoryTypeString, // %1$s
+        category.level      // %2$d
+    )
+
+    if (category.children.isNotEmpty()) {
+        val childrenSuffix = pluralStringResource(
+            id = R.plurals.category_description_children_suffix,
+            count = category.children.size,
+            category.children.size,
+            category.level + 1
+        )
+        description += childrenSuffix
+    }
+    return description
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryRenderer(
@@ -210,8 +241,9 @@ fun CategoryRenderer(
 ) {
     val activatedBackgroundColor = colorResource(id = R.color.activatedBackground)
     val isExpanded = expansionMode.isExpanded(category.id)
-    val showMenu = remember { mutableStateOf(false) }
+    val showMenu = rememberSaveable { mutableStateOf(false) }
     val menu = menuGenerator(category)
+    val contentDescription = getCategoryContentDescription(category)
     Row(
         modifier = Modifier
             .height(48.dp)
@@ -249,6 +281,7 @@ fun CategoryRenderer(
             }
             .conditional(choiceMode.isNodeSelected(category.id)) {
                 background(activatedBackgroundColor)
+                    .semantics { selected = true }
             }
             .padding(end = 24.dp, start = startPadding)
             .conditional(category.children.isNotEmpty()) {
@@ -265,22 +298,24 @@ fun CategoryRenderer(
                         }
                     }
                 }
-            },
+            }
+            .semantics { this.contentDescription = contentDescription },
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (category.children.isEmpty()) {
             Spacer(modifier = Modifier.width(48.dp))
         } else {
-            ExpansionHandle(isExpanded = isExpanded) {
+            ExpansionHandle(
+                isExpanded = isExpanded
+            ) {
                 expansionMode.toggle(category)
             }
         }
         if (category.icon != null) {
             Box(
                 modifier = Modifier
-                    .size(48.dp).clearAndSetSemantics {
-
-                    },
+                    .size(48.dp)
+                    .clearAndSetSemantics {},
                 contentAlignment = Alignment.Center
             ) {
 
@@ -299,7 +334,7 @@ fun CategoryRenderer(
         Text(
             text = category.label,
             modifier = Modifier.weight(1f),
-            color = category.typeFlags?.takeIf { withTypeColors }.typeTextColor
+            color = category.typeFlags.takeIf { withTypeColors }.typeTextColor
         )
 
         sumCurrency?.let {
@@ -454,10 +489,10 @@ sealed class ChoiceMode(
         }
     }
 
-        data object NoChoice : ChoiceMode(false, isSelectable = { false }) {
-            override fun isSelected(id: Long) = false
+    data object NoChoice : ChoiceMode(false, isSelectable = { false }) {
+        override fun isSelected(id: Long) = false
 
-            override fun toggleSelection(selectedAncestor: Category?, category: Category) {}
-        }
+        override fun toggleSelection(selectedAncestor: Category?, category: Category) {}
+    }
 }
 

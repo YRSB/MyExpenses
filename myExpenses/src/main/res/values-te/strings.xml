@@ -4,11 +4,9 @@
     <string name="roadmap_vote">రోడ్‌మ్యాప్ ఓటు</string>
     <string name="content_description_dates_are_not_linked">బుకింగ్ తేదీ మరియు విలువ తేదీ కలిసి నవీకరించబడవు</string>
     <string name="content_description_dates_are_linked">బుకింగ్ తేదీ మరియు విలువ తేదీ కలిసి నవీకరించబడతాయి</string>
-    <string name="warning_no_account">క్రొత్త లావాదేవీలను సృష్టించడానికి కనీసం ఒక ఖాతా కనిపించాలి మరియు తెరవాలి.</string>
     <string name="translated_by">అనువాదించినవారు</string>
     <string name="warning_synced_account_cannot_be_closed">సమకాలీకరణ బ్యాకెండ్‌తో అనుసంధానించబడిన ఖాతా మూసివేయబడదు</string>
     <string name="content_description_closed">మూసివేయబడింది</string>
-    <string name="menu_hidden_accounts">దాచిన ఖాతాలు</string>
     <string name="menu_reopen">తిరిగి తెరవండి</string>
     <string name="menu_close">దగ్గరగా</string>
     <string name="joining_or">లేదా</string>
@@ -518,15 +516,10 @@
     <string name="app_name">నా ఖర్చులు</string>
     <string name="amount">మొత్తం</string>
     <string name="already_defined">%1$s ఇప్పటికే నిర్వచించబడింది</string>
-    <string name="account_type_liability_plural">బాధ్యతల ఖాతాలు</string>
     <string name="account_type_liability">బాధ్యతల ఖాతా</string>
-    <string name="account_type_ccard_plural">క్రెడిట్ కార్డులు</string>
     <string name="account_type_ccard">క్రెడిట్ కార్డు</string>
-    <string name="account_type_cash_plural">నగదు ఖాతాలు</string>
     <string name="account_type_cash">నగదు ఖాతా</string>
-    <string name="account_type_bank_plural">బ్యాంకు ఖాతాలు</string>
     <string name="account_type_bank">బ్యాంకు ఖాతా</string>
-    <string name="account_type_asset_plural">ఆస్తి ఖాతాలు</string>
     <string name="account_types">ఖాతా రకాలు</string>
     <string name="account_type_asset">ఆస్తి ఖాతా</string>
     <string name="account">ఖాతా</string>
@@ -775,4 +768,5 @@
     <string name="balance_sheet_section_liabilities">బాధ్యతలు</string>
     <string name="balance_sheet_net_worth">నికర విలువ</string>
     <string name="price_history">ధర చరిత్ర</string>
+    <string name="pref_account_list_display_configuration_title">ఖాతా జాబితా</string>
 </resources>

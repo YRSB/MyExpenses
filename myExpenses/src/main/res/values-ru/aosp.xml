@@ -171,4 +171,8 @@
     <string name="at_end">Sfârșit</string>
     <string name="widgets">"Виджеты"</string>
     <string name="menu_import">"Импортировать"</string>
+    <string name="already_exists">"Имя уже используется"</string>
+    <string name="flag_inactive">"Неактивна"</string>
+    <string name="count">"Количество"</string>
+    <string name="empty">"Пусто"</string>
 </resources>

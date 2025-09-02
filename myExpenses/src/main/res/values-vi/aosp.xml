@@ -164,4 +164,7 @@
     <string name="at_end">Kết thúc</string>
     <string name="widgets">"Tiện ích"</string>
     <string name="menu_import">"Nhập"</string>
+    <string name="already_exists">"Tên đã tồn tại"</string>
+    <string name="flag_inactive">"Không hoạt động"</string>
+    <string name="count">"Đếm"</string>
 </resources>

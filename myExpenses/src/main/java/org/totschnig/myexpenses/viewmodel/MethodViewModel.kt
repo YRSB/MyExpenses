@@ -14,6 +14,7 @@ class MethodViewModel(application: Application) : ContentResolvingAndroidViewMod
         repository.loadPaymentMethod(localizedContext, id)
     }
 
+
     suspend fun saveMethod(paymentMethod: PaymentMethod) {
         withContext(coroutineDispatcher) {
             if(paymentMethod.id == 0L) {

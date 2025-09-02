@@ -94,4 +94,7 @@
     <string name="at_end">დასრულება</string>
     <string name="widgets">"ვიჯეტები"</string>
     <string name="menu_import">"იმპორტი"</string>
+    <string name="already_exists">"სახელი უკვე არსებობს"</string>
+    <string name="flag_inactive">"არააქტიური"</string>
+    <string name="count">"დათვლაA"</string>
 </resources>

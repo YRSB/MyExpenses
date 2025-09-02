@@ -84,4 +84,8 @@
     <string name="menu_restore">"Үндсэн рүү сэргээх"</string>
     <string name="widgets">"Виджет"</string>
     <string name="menu_import">"Импортлох"</string>
+    <string name="already_exists">"Нэр аль хэдийн байна"</string>
+    <string name="flag_inactive">"Идэвхгүй"</string>
+    <string name="count">"Тоо"</string>
+    <string name="empty">Empty"</string>
 </resources>

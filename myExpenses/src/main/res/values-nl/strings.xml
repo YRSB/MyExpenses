@@ -18,17 +18,9 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Soorten rekeningen</string>
     <string name="account_type_asset">Vermogensrekening</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Vermogensrekeningen</string>
     <string name="account_type_bank">Bankrekening</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Bankrekeningen</string>
     <string name="account_type_cash">Geldrekening</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Geldrekeningen</string>
     <string name="account_type_ccard">Kredietkaart</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Kredietkaarten</string>
     <string name="already_defined">%1$s is reeds gedefinieerd</string>
     <string name="amount">Bedrag</string>
     <string name="app_name">Mijn Uitgaven</string>
@@ -49,7 +41,6 @@
     <string name="new_version">Nieuwe versie</string>
     <string name="contrib_feature_split_template_label" tools:ignore="UnusedResources">Onbeperkt aantal gesplitste sjablonen</string>
     <string name="account_type_liability">Schuldenrekening</string>
-    <string name="account_type_liability_plural">Schuldenrekeningen</string>
     <string name="date_format">Datumindeling</string>
     <string name="contrib_key">Bijdragen Sleutel</string>
     <string name="extended_key">Uitgebreide Sleutel</string>
@@ -369,7 +360,6 @@
     <string name="validate_error_webdav_not_compliant">De URL verwijst niet naar een WebDAV-bron.</string>
     <string name="link_account_failure_3">Het conflict kan handmatig worden opgelost vanuit het contextmenu van het item.</string>
     <string name="feature_deprecated">Verouderd</string>
-    <string name="menu_hidden_accounts">Verborgen rekeningen</string>
     <string name="progress_dialog_updating_split_parts">Gesplitste delen bijwerken</string>
     <string name="warning_change_fraction_digits_3">Als bedragen worden bijgewerkt, verlies je de informatie over hun fractionele deel.</string>
     <string name="search_payee">Zoek naar begunstigde/betaler</string>
@@ -577,7 +567,6 @@
     <string name="passphrase_for_synchronization">Voer een wachtwoordzin in als je wilt dat synchronisatiegegevens op deze backend worden gecodeerd.</string>
     <string name="sync_backend_is_not_encrypted">Externe backend is niet versleuteld.</string>
     <string name="joining_or">of</string>
-    <string name="warning_no_account">Er moet ten minste één rekening zichtbaar en geopend zijn om nieuwe transacties te kunnen aanmaken.</string>
     <string name="exchange_rate_not_supported">De geconfigureerde wisselkoersprovider biedt niet de koers %1$s : %2$s. Je kunt proberen een andere te selecteren in de instellingen.</string>
     <string name="budget_date_end_after_start">De einddatum van het budget moet na de startdatum vallen.</string>
     <string name="pref_exchange_rate_provider_title">Wisselkoers Aanbieder</string>
@@ -907,7 +896,6 @@
     <string name="dynamic_exchange_rate">Dynamische wisselkoers</string>
     <string name="progress_recalculating">Herberekenen</string>
     <string name="equivalent_amount_plural">Equivalente bedragen</string>
-    <string name="menu_recalculate">Herberekenen</string>
     <string name="recalculate_equivalent_amounts_warning">Equivalente bedragen worden (her)berekend als toepasselijke opgeslagen wisselkoersen beschikbaar zijn.</string>
     <string name="balance_sheet">Balans</string>
     <string name="balance_sheet_section_assets">Activa</string>
@@ -920,4 +908,16 @@
     <string name="warning_batch_download_quota">Bij batch-downloads van %s bestaat het risico dat je gebruikslimiet wordt overschreden.</string>
     <string name="batch_download_result">%d prijzen werden gedownload en opgeslagen in de database.</string>
     <string name="sort_direction">Sorteerrichting</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Toon nieuw saldo nadat de transactie is opgeslagen</string>
+    <string name="print_configuration_empty">Voeg minimaal één veld toe dat moet worden afgedrukt.</string>
+    <plurals name="import_prices_success_message">
+        <item quantity="one">Geldige gegevens gevonden op regel %d.</item>
+        <item quantity="other">Geldige gegevens gevonden op %d regels.</item>
+    </plurals>
+    <plurals name="import_prices_failure_message">
+        <item quantity="one">%d regel kon niet worden verwerkt.</item>
+        <item quantity="other">%d regels konden niet worden verwerkt.</item>
+    </plurals>
+    <string name="confirm_process_file_message">Weet je zeker dat je de prijzen voor \'%1$s\' wilt importeren uit \'%2$s\'? Nieuwe prijzen kunnen van invloed zijn op bestaande equivalente bedragen.</string>
+    <string name="pref_account_list_display_configuration_title">Rekeninglijst</string>
 </resources>

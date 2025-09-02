@@ -26,10 +26,12 @@ import kotlinx.coroutines.withContext
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.contract.TransactionsContract
+import org.totschnig.myexpenses.dialog.AccountListDisplayConfigurationDialogFragment
 import org.totschnig.myexpenses.dialog.CustomizeMenuDialogFragment
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_URI
 import org.totschnig.myexpenses.util.ShortcutHelper
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
@@ -71,7 +73,9 @@ class PreferenceUiFragment : BasePreferenceFragment() {
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                preferenceDataStore.handleList(requirePreference(PrefKey.CRITERION_FUTURE))
+                preferenceDataStore.handleList(requirePreference(PrefKey.CRITERION_FUTURE)) {
+                    requireContext().contentResolver.notifyChange(ACCOUNTS_URI, null, false)
+                }
             }
         }
 
@@ -210,6 +214,11 @@ class PreferenceUiFragment : BasePreferenceFragment() {
         matches(preference, PrefKey.CUSTOMIZE_MAIN_MENU) -> {
             CustomizeMenuDialogFragment()
                 .show(childFragmentManager, "CUSTOMIZE_MENU")
+            true
+        }
+
+        matches(preference, PrefKey.ACCOUNT_LIST_DISPLAY_CONFIGURATION) -> {
+            AccountListDisplayConfigurationDialogFragment().show(childFragmentManager, "ACCOUNT_LIST_DISPLAY_CONFIGURATION")
             true
         }
 

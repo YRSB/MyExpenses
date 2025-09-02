@@ -17,24 +17,26 @@ import app.cash.copper.flow.observeQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.MyApplication
-import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.compose.RenderType
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.countAccounts
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.getAccountFlags
+import org.totschnig.myexpenses.db2.getAccountTypes
 import org.totschnig.myexpenses.db2.getTransactionSum
 import org.totschnig.myexpenses.db2.loadAccountFlow
 import org.totschnig.myexpenses.db2.loadAggregateAccountFlow
 import org.totschnig.myexpenses.db2.updateTransferPeersForTransactionDelete
 import org.totschnig.myexpenses.dialog.select.SelectFromMappedTableDialogFragment
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.Template
@@ -43,20 +45,17 @@ import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.preference.dynamicExchangeRatesPerAccount
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES
-import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
 import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_HELPER
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_MINIMAL_URI
@@ -68,8 +67,6 @@ import org.totschnig.myexpenses.provider.TransactionProvider.UNCOMMITTED_URI
 import org.totschnig.myexpenses.provider.buildTransactionRowSelect
 import org.totschnig.myexpenses.provider.checkForSealedDebt
 import org.totschnig.myexpenses.provider.filter.Criterion
-import org.totschnig.myexpenses.provider.getLong
-import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.sync.GenericAccountService
 import org.totschnig.myexpenses.sync.SyncAdapter
 import org.totschnig.myexpenses.util.ResultUnit
@@ -91,7 +88,7 @@ const val KEY_ROW_IDS = "rowIds"
 
 class AccountSealedException : IllegalStateException()
 
-abstract class ContentResolvingAndroidViewModel(application: Application) :
+open class ContentResolvingAndroidViewModel(application: Application) :
     BaseViewModel(application) {
 
     @Inject
@@ -137,6 +134,10 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
         }
     }
 
+    val dynamicExchangeRatesPerAccount: Flow<Boolean> by lazy {
+        dataStore.dynamicExchangeRatesPerAccount
+    }
+
     val colorSource: Flow<ColorSource> by lazy {
         dataStore.data.map {
             enumValueOrDefault(
@@ -150,28 +151,37 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
         emit(DateInfo.load(contentResolver))
     }.flowOn(Dispatchers.IO)
 
-    fun accountsMinimal(query: String? = null, withAggregates: Boolean = true): Flow<List<AccountMinimal>> = contentResolver.observeQuery(
-        if (withAggregates) ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES else ACCOUNTS_MINIMAL_URI, null,
-        query,
-        null, null, false
+    fun accountsMinimal(
+        query: String? = null,
+        queryArgs: Array<String>? = null,
+        withAggregates: Boolean = true,
+        sortOrder: String? = null
+    ): Flow<List<AccountMinimal>> = contentResolver.observeQuery(
+        if (withAggregates) ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES else ACCOUNTS_MINIMAL_URI,
+        null, query, queryArgs, sortOrder, false
     )
-        .mapToList { cursor ->
-            val id = cursor.getLong(KEY_ROWID)
-            AccountMinimal(
-                id,
-                if (id == HOME_AGGREGATE_ID)
-                    getString(R.string.grand_total)
-                else
-                    cursor.getString(KEY_LABEL),
-                cursor.getString(KEY_CURRENCY),
-                if (id < 0) null else AccountType.valueOf(cursor.getString(KEY_TYPE))
-            )
-        }
+        .mapToList { AccountMinimal.fromCursor(localizedContext, it) }
 
     fun account(accountId: Long): Flow<Account> = if (accountId > 0)
         repository.loadAccountFlow(accountId)
     else
         repository.loadAggregateAccountFlow(accountId)
+
+    val accountTypesRaw by lazy {
+        repository.getAccountTypes()
+    }
+
+    val accountTypes by lazy {
+        accountTypesRaw.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }
+
+    val accountFlagsRaw by lazy {
+        repository.getAccountFlags()
+    }
+
+    val accountFlags by lazy {
+        repository.getAccountFlags().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }
 
     sealed class DeleteState {
         data class DeleteProgress(val count: Int, val total: Int) : DeleteState()
@@ -358,7 +368,8 @@ abstract class ContentResolvingAndroidViewModel(application: Application) :
         contentResolver.applyBatch(AUTHORITY, ops)
     }
 
-    fun childCount(transactionId : Long) = repository.count(TRANSACTIONS_URI,
+    fun childCount(transactionId: Long) = repository.count(
+        TRANSACTIONS_URI,
         "$KEY_PARENTID = ?", arrayOf(transactionId.toString())
     )
 

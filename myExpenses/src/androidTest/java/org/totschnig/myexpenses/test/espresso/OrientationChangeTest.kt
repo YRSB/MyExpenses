@@ -25,13 +25,14 @@ import org.junit.Before
 import org.junit.Test
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.ExpenseEdit
-import org.totschnig.myexpenses.adapter.IdHolder
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.findPaymentMethod
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Money
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_BANK
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
 import org.totschnig.myexpenses.model.PreDefinedPaymentMethod
 import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
@@ -41,7 +42,6 @@ import org.totschnig.myexpenses.testutils.Espresso.checkEffectiveGone
 import org.totschnig.myexpenses.testutils.Espresso.checkEffectiveVisible
 import org.totschnig.myexpenses.testutils.cleanup
 import org.totschnig.myexpenses.testutils.toolbarTitle
-import org.totschnig.myexpenses.testutils.withAccount
 import org.totschnig.myexpenses.testutils.withMethod
 import org.totschnig.myexpenses.testutils.withStatus
 import java.util.Currency
@@ -56,16 +56,19 @@ class OrientationChangeTest : BaseExpenseEditTest() {
 
     @Before
     fun fixture() {
+        val accountTypeCash = repository.findAccountType(PREDEFINED_NAME_CASH)!!
+        val accountTypeBank = repository.findAccountType(PREDEFINED_NAME_BANK)!!
         currency1 = CurrencyUnit(Currency.getInstance("USD"))
         account1 = Account(
             label = accountLabel1,
             currency = currency1.code,
-            type = AccountType.BANK,
+            type = accountTypeBank,
             ).createIn(repository)
         currency2 = CurrencyUnit(Currency.getInstance("EUR"))
         account2 = Account(
             label = accountLabel2,
-            currency = currency2.code
+            currency = currency2.code,
+            type = accountTypeCash
         ).createIn(repository)
     }
 

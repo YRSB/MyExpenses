@@ -665,7 +665,7 @@ class SyncDelegate(
 
     private fun extractMethodId(methodLabel: String): Long =
         methodToId[methodLabel] ?: (repository.findPaymentMethod(methodLabel).takeIf { it != -1L }
-            ?: repository.writePaymentMethod(methodLabel, account.type)).also {
+            ?: repository.writePaymentMethod(methodLabel, account.type.id)).also {
             methodToId[methodLabel] = it
         }
 
@@ -716,6 +716,7 @@ class SyncDelegate(
             change.parentUuid()?.let {
                 val parentId = resolver(account.id, it)
                 if (parentId == -1L) {
+                    CrashHandler.report(Exception("Could not find parent for split"))
                     return ArrayList() //if we fail to link a split part to a parent, we need to ignore it
                 }
                 t.parentId = parentId

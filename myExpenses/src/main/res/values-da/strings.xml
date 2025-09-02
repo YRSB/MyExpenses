@@ -16,20 +16,10 @@
  --><resources xmlns:tools="http://schemas.android.com/tools">
     <string name="account">Konto</string>
     <string name="account_type_asset">Aktivkonto</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Aktivkonti</string>
     <string name="account_type_bank">Bankkonto</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Bankkonti</string>
     <string name="account_type_cash">Kontantkonto</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Kontantkonti</string>
     <string name="account_type_ccard">Kreditkort</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Kreditkort</string>
     <string name="account_type_liability">Passivkonto</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Passivkonti</string>
     <string name="already_defined">%1$s allerede defineret</string>
     <string name="amount">Beløb</string>
     <string name="app_name">Mine Udgifter</string>
@@ -656,7 +646,6 @@
     <string name="warning_synced_account_cannot_be_closed">En konto, der er forbundet med en synkroniseringsbackend, kan ikke lukkes</string>
     <string name="warning_account_for_transaction_is_closed">Mindst én af de valgte transaktioner kan ikke redigeres:</string>
     <string name="onboarding_privacy_intro">Dine finansielle data sendes ikke til nogen server, hverken drevet af os eller nogen tredjepart.</string>
-    <string name="warning_no_account">Mindst én konto skal være synlig og åben for at oprette nye transaktioner.</string>
     <string name="warning_delete_budget">Budgettet \"%1$s\" slettes.</string>
     <string name="dialog_multi_tag_clear">Alle etiketter fjernes fra de valgte transaktioner.</string>
     <string name="scan_result_no_payee">Ingen modtager fundet</string>
@@ -723,7 +712,6 @@
     <string name="budget_filter_all_parties">Alle parter</string>
     <string name="contrib_feature_split_template_label">Ubegrænset antal opdelingsskabeloner</string>
     <string name="menu_reopen">Genåbn</string>
-    <string name="menu_hidden_accounts">Skjulte konti</string>
     <string name="content_description_download_exchange_rate">Hent valutakurs</string>
     <string name="no_budgets">Definer dit første budget ved at trykke på \"+\"-knappen.</string>
     <string name="budget_date_end_after_start">Budgettets slutdato skal ligge efter dets startdato.</string>
@@ -931,7 +919,6 @@
     <string name="progress_recalculating">Genberegner</string>
     <string name="recalculate_equivalent_amounts_warning">Tilsvarende beløb (gen)beregnes, hvis de relevante lagrede valutakurser er tilgængelige.</string>
     <string name="equivalent_amount_plural">Tilsvarende beløb</string>
-    <string name="menu_recalculate">Genberegn</string>
     <string name="quick_search">Hurtig søgning</string>
     <string name="complex_search">Kompleks søgning</string>
     <string name="account_closed">Kontoen er låst</string>
@@ -944,4 +931,5 @@
     <string name="pref_equivalent_amounts_automatic_update_title">Opdater automatisk de tilsvarende beløb, når priserne ændres</string>
     <string name="sort_direction">Sorteringsretning</string>
     <string name="batch_download_result">%d priser blev hentet og gemt i databasen.</string>
+    <string name="pref_account_list_display_configuration_title">Kontoliste</string>
 </resources>

@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">帳戶類型</string>
     <string name="account_type_asset">資產帳戶</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">資產帳戶</string>
     <string name="account_type_bank">銀行帳戶</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">銀行帳戶</string>
     <string name="account_type_cash">現金帳戶</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">現金帳戶</string>
     <string name="account_type_ccard">信用卡</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">信用卡</string>
     <string name="account_type_liability">負債帳戶</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">負債帳戶</string>
     <string name="already_defined">%1$s 已被定義</string>
     <string name="amount">金額</string>
     <string name="app_name">開支助手</string>
@@ -656,13 +646,10 @@
     <string name="menu_close">關閉</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">重新開啟關閉的帳戶</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">隱藏的帳戶</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">已關閉</string>
     <string name="warning_synced_account_cannot_be_closed">連接到同步後端的帳戶無法關閉</string>
     <string name="translated_by">翻譯者</string>
-    <string name="warning_no_account">為了建立新交易，請至少開設一個非隱藏性的帳戶。</string>
     <string name="content_description_dates_are_linked">帳面交易日期 (booking date) 和生效日期 (value date) 會一起更新</string>
     <string name="content_description_dates_are_not_linked">帳面交易日期 (booking date) 和生效日期 (value date) 不會一起更新</string>
     <string name="roadmap_vote">程式開發藍圖投票</string>
@@ -867,4 +854,5 @@
     <string name="balance_sheet_section_liabilities">負債</string>
     <string name="balance_sheet_net_worth">淨資產</string>
     <string name="price_history">價格歷史</string>
+    <string name="pref_account_list_display_configuration_title">帳戶清單</string>
 </resources>

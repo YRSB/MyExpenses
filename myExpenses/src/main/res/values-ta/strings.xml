@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">கணக்கு வகைகள்</string>
     <string name="account_type_asset">சொத்து கணக்கு</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">சொத்து கணக்குகள்</string>
     <string name="account_type_bank">வங்கி கணக்கு</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">வங்கி கணக்குகள்</string>
     <string name="account_type_cash">பணக் கணக்கு</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">பணக் கணக்குகள்</string>
     <string name="account_type_ccard">கடன் அட்டை</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">கடன் அட்டைகள்</string>
     <string name="account_type_liability">பொறுப்பு கணக்கு</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">பொறுப்பு கணக்குகள்</string>
     <string name="already_defined">%1$s ஏற்கனவே வரையறுக்கப்பட்டுள்ளது</string>
     <string name="amount">தொகை</string>
     <string name="app_name">எனது செலவுகள்</string>
@@ -664,13 +654,10 @@
     <string name="menu_close">மூடு</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">மீண்டும் திற</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">மறைக்கப்பட்ட கணக்குகள்</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">மூடப்பட்டது</string>
     <string name="warning_synced_account_cannot_be_closed">ஒத்திசைவு பின்தளத்துடன் இணைக்கப்பட்ட கணக்கை மூட முடியாது</string>
     <string name="translated_by">இவர்களால் மொழிபெயர்க்கப்பட்டது</string>
-    <string name="warning_no_account">புதிய பரிவர்த்தனைகளை உருவாக்க குறைந்தபட்சம் ஒரு கணக்காவது மறைக்கபடாமலோ அல்லது மூடப்படாமலோ இருக்க வேண்டும்.</string>
     <string name="content_description_dates_are_linked">பதிவு தேதி மற்றும் மதிப்பு தேதி ஒன்றாக புதுப்பிக்கப்படுகிறது</string>
     <string name="content_description_dates_are_not_linked">பதிவு தேதி மற்றும் மதிப்பு தேதி ஒன்றாக புதுப்பிக்கப்படவில்லை</string>
     <string name="roadmap_vote">திட்ட வாக்களிப்பு</string>
@@ -997,7 +984,6 @@
     <string name="initial_value">தொடக்க மதிப்பு</string>
     <string name="current_value">தற்போதைய மதிப்பு</string>
     <string name="equivalent_amount_plural">சமமான அளவு</string>
-    <string name="menu_recalculate">மறுபரிசீலனை செய்யுங்கள்</string>
     <string name="recalculate_equivalent_amounts_warning">பொருந்தக்கூடிய சேமிக்கப்பட்ட பரிமாற்ற விகிதங்கள் கிடைத்தால் சமமான தொகைகள் (மறு) கணக்கிடப்படும்.</string>
     <string name="account_closed">கணக்கு மூடப்பட்டுள்ளது</string>
     <string name="pref_sync_frequency_summary_0">தானியங்கி ஒத்திசைவை செயலிழக்க 0 என அமைக்கவும்.</string>
@@ -1011,4 +997,5 @@
     <string name="pref_equivalent_amounts_automatic_update_title">விலைகள் மாறும்போது சமமான தொகைகளை தானாகவே புதுப்பிக்கவும்</string>
     <string name="batch_download">தொகுதி பதிவிறக்கம்</string>
     <string name="warning_batch_download_quota">%s இலிருந்து தொகுதி பதிவிறக்கம் உங்கள் பயன்பாட்டு வரம்பைக் குறைக்கும் அபாயத்தை ஏற்படுத்துகிறது.</string>
+    <string name="pref_account_list_display_configuration_title">கணக்கு பட்டியல்</string>
 </resources>

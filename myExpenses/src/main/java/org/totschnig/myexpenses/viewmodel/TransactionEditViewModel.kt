@@ -36,6 +36,7 @@ import org.totschnig.myexpenses.db2.loadActiveTagsForAccount
 import org.totschnig.myexpenses.db2.loadAttachments
 import org.totschnig.myexpenses.db2.savePrice
 import org.totschnig.myexpenses.exception.UnknownPictureSaveException
+import org.totschnig.myexpenses.model.AccountFlag
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
@@ -73,18 +74,16 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TITLE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
 import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_UNCOMMITTED
 import org.totschnig.myexpenses.provider.PlannerUtils
 import org.totschnig.myexpenses.provider.ProviderUtils
 import org.totschnig.myexpenses.provider.TRANSFER_ACCOUNT_LABEL
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_FULL_URI
-import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_ACCOUNTY_TYPE_LIST
+import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_ACCOUNT_TYPE_LIST
 import org.totschnig.myexpenses.provider.fileName
 import org.totschnig.myexpenses.provider.filter.KEY_CRITERION
 import org.totschnig.myexpenses.provider.getBoolean
-import org.totschnig.myexpenses.provider.getEnum
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getLong
 import org.totschnig.myexpenses.provider.getLongIfExists
@@ -132,11 +131,7 @@ class TransactionEditViewModel(application: Application, savedStateHandle: Saved
     val accounts: Flow<List<Account>>
         get() = contentResolver.observeQuery(
             uri = ACCOUNTS_FULL_URI,
-            projection = null,
-            selection = "$KEY_SEALED = 0",
-            selectionArgs = null,
-            sortOrder = null,
-            notifyForDescendants = false
+            selection = "$KEY_SEALED = 0"
         ).mapToList {
             buildAccount(it, currencyContext)
         }
@@ -146,13 +141,11 @@ class TransactionEditViewModel(application: Application, savedStateHandle: Saved
             uri = TransactionProvider.TEMPLATES_URI.buildUpon()
                 .build(), projection = arrayOf(KEY_ROWID, KEY_TITLE),
             selection = "$KEY_PLANID is null AND $KEY_PARENTID is null AND $KEY_SEALED = 0",
-            selectionArgs = null,
             sortOrder = Sort.preferredOrderByForTemplatesWithPlans(
                 prefHandler,
                 Sort.USAGES,
                 collate
-            ),
-            notifyForDescendants = false
+            )
         ).mapToList { DataTemplate.fromCursor(it) }
 
 
@@ -162,16 +155,18 @@ class TransactionEditViewModel(application: Application, savedStateHandle: Saved
 
     fun loadMethods(isIncome: Boolean, type: AccountType) {
         loadMethodJob?.cancel()
-        viewModelScope.launch {
+        loadMethodJob = viewModelScope.launch {
             contentResolver.observeQuery(
                 TransactionProvider.METHODS_URI.buildUpon()
                     .appendPath(TransactionProvider.URI_SEGMENT_TYPE_FILTER)
                     .appendPath(if (isIncome) "1" else "-1")
-                    .appendQueryParameter(QUERY_PARAMETER_ACCOUNTY_TYPE_LIST, type.name)
+                    .appendQueryParameter(QUERY_PARAMETER_ACCOUNT_TYPE_LIST, type.id.toString())
                     .build(), null, null, null, null, false
             )
                 .mapToList { PaymentMethod.create(it) }
-                .collect { methods.postValue(it) }
+                .collect {
+                    methods.postValue(it)
+                }
         }
     }
 
@@ -183,9 +178,10 @@ class TransactionEditViewModel(application: Application, savedStateHandle: Saved
             label = cursor.getString(KEY_LABEL),
             currency,
             color = cursor.getInt(KEY_COLOR),
-            type = cursor.getEnum(KEY_TYPE, AccountType.CASH),
+            type = AccountType.fromAccountCursor(cursor),
             criterion = cursor.getLongOrNull(KEY_CRITERION),
             isDynamic = cursor.getBoolean(KEY_DYNAMIC),
+            flag = AccountFlag.fromAccountCursor(cursor),
             currentBalance = cursor.getLong(KEY_CURRENT_BALANCE)
         )
     }

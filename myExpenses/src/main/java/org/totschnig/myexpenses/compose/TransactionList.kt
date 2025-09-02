@@ -83,7 +83,6 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.absoluteValue
 
 data class ScrollCalculationResult(
@@ -161,7 +160,7 @@ fun TransactionList(
 ) {
     val listState = rememberLazyListState()
     val collapsedIds = if (expansionHandler != null)
-        expansionHandler.collapsedIds.collectAsState(initial = null).value
+        expansionHandler.state.collectAsState(initial = null).value
     else emptySet()
 
     val splitInfoCache = remember(lazyPagingItems.loadState.refresh) {

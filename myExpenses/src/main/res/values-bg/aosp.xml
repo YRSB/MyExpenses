@@ -171,4 +171,8 @@
     <string name="at_end">Край</string>
     <string name="widgets">"Приспособления"</string>
     <string name="menu_import">"Импортиране"</string>
+    <string name="already_exists">"Името вече съществува"</string>
+    <string name="flag_inactive">"Неактивна"</string>
+    <string name="count">"Брой"</string>
+    <string name="empty">"Празни"</string>
 </resources>

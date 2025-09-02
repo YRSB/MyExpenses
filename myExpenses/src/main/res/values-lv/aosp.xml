@@ -94,4 +94,8 @@
     <string name="menu_restore">"Atiestatīt noklusējuma vērtības"</string>
     <string name="widgets">"Logrīki"</string>
     <string name="menu_import">"Importēt"</string>
+    <string name="already_exists">"Nosaukums jau pastāv"</string>
+    <string name="flag_inactive">"Neaktīva"</string>
+    <string name="count">"Skaitlis"</string>
+    <string name="empty">"Tukšs"</string>
 </resources>

@@ -16,7 +16,6 @@ import androidx.preference.Preference
 import androidx.preference.Preference.SummaryProvider
 import androidx.preference.PreferenceFragmentCompat
 import kotlinx.coroutines.launch
-import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.AccountWidgetConfigure
 import org.totschnig.myexpenses.adapter.SortableItem
@@ -27,13 +26,15 @@ import org.totschnig.myexpenses.contract.TransactionsContract.Transactions.Trans
 import org.totschnig.myexpenses.dialog.SortUtilityDialogFragment
 import org.totschnig.myexpenses.fragment.AccountWidgetConfigurationFragment.Button.Companion.marshall
 import org.totschnig.myexpenses.fragment.AccountWidgetConfigurationFragment.Button.Companion.unmarshall
+import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.preference.SimpleValuePreference
 import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.viewmodel.AccountWidgetConfigurationViewModel
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
+import org.totschnig.myexpenses.viewmodel.ContentResolvingAndroidViewModel
 
 @Suppress("unused")
 class AccountWidgetConfigurationFragment : PreferenceFragmentCompat() {
-    private val viewModel: AccountWidgetConfigurationViewModel by viewModels()
+    private val viewModel: ContentResolvingAndroidViewModel by viewModels()
 
     private val accountPreference: ListPreference
         get() = preferenceScreen.getPreference(0) as ListPreference
@@ -42,7 +43,7 @@ class AccountWidgetConfigurationFragment : PreferenceFragmentCompat() {
         get() = preferenceScreen.getPreference(2) as SimpleValuePreference
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        (requireActivity().application as MyApplication).appComponent.inject(viewModel)
+        injector.inject(viewModel)
         super.onCreate(savedInstanceState)
     }
 
@@ -51,7 +52,7 @@ class AccountWidgetConfigurationFragment : PreferenceFragmentCompat() {
         with(viewLifecycleOwner) {
             lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
-                    viewModel.accountsMinimal("${DatabaseConstants.KEY_HIDDEN} = 0")
+                    viewModel.accountsMinimal("$KEY_VISIBLE = 1")
                         .collect { list ->
                             with(accountPreference) {
                                 entries =

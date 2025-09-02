@@ -13,13 +13,17 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.contract.TransactionsContract.Transactions
 import org.totschnig.myexpenses.db2.Repository
 import org.totschnig.myexpenses.db2.addAttachments
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.findCategory
 import org.totschnig.myexpenses.db2.setGrouping
-import org.totschnig.myexpenses.model.AccountType
+import org.totschnig.myexpenses.db2.storeExchangeRate
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.Money
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_BANK
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CCARD
 import org.totschnig.myexpenses.model.Plan
 import org.totschnig.myexpenses.model.SplitTransaction
 import org.totschnig.myexpenses.model.Template
@@ -48,8 +52,8 @@ import org.totschnig.myexpenses.test.R as RT
 
 @SuppressLint("InlinedApi")
 class Fixture(inst: Instrumentation) {
-    private val testContext: Context
-    private val appContext: MyApplication
+    private val testContext: Context = inst.context
+    private val appContext: MyApplication = inst.targetContext.myApplication
     lateinit var repository: Repository
     lateinit var account1: Account
         private set
@@ -60,11 +64,6 @@ class Fixture(inst: Instrumentation) {
     private lateinit var account4: Account
     private var budgetId: Long = 0L
     private var planId: Long = 0L
-
-    init {
-        testContext = inst.context
-        appContext = inst.targetContext.myApplication
-    }
 
     val syncAccount1 by lazy {
         "Drive - " + appContext.getString(R.string.encrypted)
@@ -82,16 +81,50 @@ class Fixture(inst: Instrumentation) {
         Plan.delete(contentResolver, planId)
     }
 
-    fun setup(withPicture: Boolean, repository: Repository, plannerUtils: PlannerUtils, defaultCurrency: CurrencyUnit) {
+    fun setup(
+        withPicture: Boolean,
+        repository: Repository,
+        plannerUtils: PlannerUtils,
+        defaultCurrency: CurrencyUnit
+    ) {
         this.repository = repository
         val contentResolver = repository.contentResolver
         val foreignCurrency =
             appContext.appComponent.currencyContext()[if (defaultCurrency.code == "EUR") "GBP" else "EUR"]
+        val exchangeRate = when(defaultCurrency.code) {
+            "USD" -> 1.17 //eur to usd
+            "EUR" -> 1.16 //GBP to eur
+            "SAR" -> 4.38 //EUR to SAR
+            "BRL" -> 6.31 //EUR to BRL
+            "PLN" -> 4.26 //EUR to PLN
+            "RUB" -> 94.02 //EUR to RUB
+            "BGN" -> 1.96 //EUR to BGN
+            "CZK" -> 24.56 //EUR to CZK
+            "RON" -> 5.07 //EUR to RON
+            "HUF" -> 396.63 //EUR to HUF
+            "ILS" -> 3.89 //EUR to ILS
+            "TRY" -> 47.92 //EUR to TRY
+            "TWD" -> 35.61 //EUR to TWD
+            "DKK" -> 7.46 //EUR to DKK
+            "JPY" -> 171.48 // EUR to JPY
+            "KHR" -> 4678.0 // EUR to KHR
+            "INR" -> 102.25 // EUR to INR
+            "KRW" ->  1618.06 // EUR to KRW
+            "MYR" ->  4.92 // EUR to MYR
+            "LKR" -> 352.92 // EUR to LKR
+            "VND" -> 30786.00 // EUR to VND
+            "CNY" ->  8.33 // EUR to CNY
+            else -> 1.0
+        }
+        val accountTypeCash = repository.findAccountType(PREDEFINED_NAME_CASH)!!
+        val accountTypeBank = repository.findAccountType(PREDEFINED_NAME_BANK)!!
+        val accountTypeCard = repository.findAccountType(PREDEFINED_NAME_CCARD)!!
         account1 = Account(
             label = appContext.getString(R.string.testData_account1Label),
             currency = defaultCurrency.code,
             openingBalance = 90000,
             description = appContext.getString(R.string.testData_account1Description),
+            type = accountTypeCash,
             syncAccountName = syncAccount1
         ).createIn(repository)
         repository.setGrouping(account1.id, Grouping.WEEK)
@@ -101,16 +134,22 @@ class Fixture(inst: Instrumentation) {
             currency = foreignCurrency.code,
             openingBalance = 50000,
             description = formatter.format(LocalDate.now()),
-            type = AccountType.CASH,
+            type = accountTypeCash,
             color = testContext.resources.getColor(RT.color.material_red),
             syncAccountName = syncAccount2
         ).createIn(repository)
+        repository.storeExchangeRate(
+            account2.id,
+            exchangeRate,
+            account2.currency,
+            defaultCurrency.code
+        )
         account3 = Account(
             label = appContext.getString(R.string.testData_account3Label),
             currency = defaultCurrency.code,
             openingBalance = 200000,
             description = appContext.getString(R.string.testData_account3Description),
-            type = AccountType.BANK,
+            type = accountTypeBank,
             color = testContext.resources.getColor(RT.color.material_blue),
             grouping = Grouping.DAY,
             syncAccountName = syncAccount3
@@ -118,7 +157,7 @@ class Fixture(inst: Instrumentation) {
         account4 = Account(
             label = appContext.getString(R.string.testData_account3Description),
             currency = foreignCurrency.code,
-            type = AccountType.CCARD,
+            type = accountTypeCard,
             color = testContext.resources.getColor(RT.color.material_cyan)
         ).createIn(repository)
 
@@ -145,7 +184,7 @@ class Fixture(inst: Instrumentation) {
             testContext.getString(RT.string.testData_transaction6MainCat),
             null
         )
-        for (i in 0..14) {
+        repeat(14) {
             //Transaction 1
             val builder = TransactionBuilder()
                 .accountId(account1.id)

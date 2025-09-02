@@ -17,21 +17,11 @@
     <string name="account">Compte</string>
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Types de compte</string>
-    <string name="account_type_asset">Compte d\'actif</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Comptes d\'actif</string>
-    <string name="account_type_bank">Compte bancaire</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Comptes bancaire</string>
-    <string name="account_type_cash">Compte de caisse</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Comptes de caisse</string>
+    <string name="account_type_asset">Autres actifs</string>
+    <string name="account_type_bank">Banque</string>
+    <string name="account_type_cash">Caisse</string>
     <string name="account_type_ccard">Carte de crédit</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Cartes de crédit</string>
-    <string name="account_type_liability">Compte de passif</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Comptes de passif</string>
+    <string name="account_type_liability">Autres passifs</string>
     <string name="already_defined">%1$s existe</string>
     <string name="amount">Montant</string>
     <string name="app_name">Mes dépenses</string>
@@ -672,13 +662,10 @@
     <string name="menu_close">Fermer</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Rouvrir</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Comptes cachés</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Fermé</string>
     <string name="warning_synced_account_cannot_be_closed">Un compte lié à un backend de synchronisation ne peut pas être fermé</string>
     <string name="translated_by">Traduit par</string>
-    <string name="warning_no_account">Au moins un compte doit être visible et ouvert pour créer de nouvelles opérations.</string>
     <string name="content_description_dates_are_linked">La date d\'enregistrement et la date de valeur sont mises à jour ensemble</string>
     <string name="content_description_dates_are_not_linked">La date d\'enregistrement et la date de valeur ne sont pas mises à jour ensemble</string>
     <string name="roadmap_vote">Vote sur la feuille de route</string>
@@ -1006,7 +993,6 @@
     <string name="price_history">Historique des prix</string>
     <string name="progress_recalculating">Recalculation</string>
     <string name="equivalent_amount_plural">Montants équivalents</string>
-    <string name="menu_recalculate">Recalculer</string>
     <string name="recalculate_equivalent_amounts_warning">Les montants équivalents seront (re)calculés si les taux de change stockés applicables sont disponibles.</string>
     <string name="dynamic_exchange_rate">Taux de change dynamique</string>
     <string name="current_value">Valeur actuelle</string>
@@ -1037,4 +1023,30 @@
         <item quantity="other">%d lignes n’ont pas pu être traitées.</item>
     </plurals>
     <string name="confirm_process_file_message">Voulez-vous vraiment importer les prix de « %1$s » depuis « %2$s » ? Les nouveaux prix peuvent affecter les montants équivalents existants.</string>
+    <string name="category_type_main">Catégorie principale</string>
+    <string name="category_type_sub">Sous-catégorie</string>
+    <string name="category_description_base">%1$s, niveau %2$d</string>
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, contient une sous-catégorie de niveau %2$d</item>
+        <item quantity="other">, contient %1$d sous-catégories de niveau %2$d</item>
+    </plurals>
+    <string name="account_type_investment">Investissements</string>
+    <string name="warning_expense_category_credit">Vous affectez une catégorie de dépenses à une opération de revenus. Par conséquent, l\'opération réduira la somme de vos dépenses et sera affichée par défaut en rouge.</string>
+    <string name="warning_income_category_debit">Vous affectez une catégorie de revenus à une opération de dépenses. Par conséquent, l\'opération réduira la somme de vos revenus et sera affichée par défaut en vert.</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Taux dynamiques pour tous les comptes</string>
+    <string name="pref_dynamic_exchange_rates_static">Taux statiques pour tous les comptes</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Configurer chaque compte individuellement</string>
+    <string name="edit_account_type">Modifier le type de compte</string>
+    <string name="new_account_type">Nouveau type de compte</string>
+    <string name="pref_account_list_display_configuration_title">Liste des comptes</string>
+    <string name="pref_print_layout_summary">Configurer la largeur et la composition des colonnes</string>
+    <string name="supports_reconciliation">Soutient le rapprochement</string>
+    <string name="menu_account_flags">Indicateurs</string>
+    <string name="menu_flag">Indicateur</string>
+    <string name="edit_account_flag">Modifier l’indicateur</string>
+    <string name="new_account_flag">Nouveau indicateur</string>
+    <string name="flag_unflagged">Pas d\'indicateur</string>
+    <string name="flag_favorite">Favori</string>
+    <string name="aggregate_invisible">Inclure les comptes invisibles dans les comptes agrégés et le bilan</string>
+    <string name="select_accounts_for_flag">Sélectionnez les comptes pour l\'indicateur %s</string>
 </resources>

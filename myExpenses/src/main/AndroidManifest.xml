@@ -397,6 +397,16 @@
         <activity android:name="org.totschnig.myexpenses.activity.PriceHistory" />
         <activity android:name="org.totschnig.myexpenses.activity.PrintLayoutConfiguration" android:label="Layout" />
 
+        <activity
+            android:name=".activity.ManageAccountTypes"
+            android:exported="false"
+            android:theme="@style/EditDialog"/>
+
+        <activity
+            android:name=".activity.ManageAccountFlags"
+            android:exported="false"
+            android:theme="@style/EditDialog"/>
+
         <service
             android:name=".sync.GenericAccountService"
             android:exported="false">

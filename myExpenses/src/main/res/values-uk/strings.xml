@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Типи рахунків</string>
     <string name="account_type_asset">Рахунок активу</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Рахунки активів</string>
     <string name="account_type_bank">Банківський рахунок</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Банківські рахунки</string>
     <string name="account_type_cash">Готівковий рахунок</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Готівкові рахунки</string>
     <string name="account_type_ccard">Кредитна картка</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Кредитні картки</string>
     <string name="account_type_liability">Рахунок пасиву</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Рахунки пасивів</string>
     <string name="already_defined">%1$s уже визначено</string>
     <string name="amount">Сума</string>
     <string name="app_name">Мої Витрати</string>
@@ -752,14 +742,12 @@
     <string name="debts">Борги</string>
     <string name="content_description_closed">Зачинено</string>
     <string name="translated_by">Переклали</string>
-    <string name="menu_hidden_accounts">Приховані рахунки</string>
     <string name="content_description_remove_icon">Видалити піктограму</string>
     <string name="dialog_contrib_trial_info_play">Ця безкоштовна пробна версія ніколи не буде перетворена на будь-який тип підписки.</string>
     <string name="dialog_contrib_trial_info">Ваш поточний статус ліцензії (%1$s) дозволяє пробувати %2$s протягом %3$d днів (до %4$s).</string>
     <string name="warning_delete_category_with_budget">Принаймні для однієї обраної категорії є бютжет виділення, які також будуть видалені.</string>
     <string name="pref_manage_tags_summary">Додати, редагувати, видаляти мітки.</string>
     <string name="remapping_result">Вибрані транзакції були перепризначені.</string>
-    <string name="warning_no_account">Принаймні одна рахунок має бути видимою та відкритою, щоб створювати нові транзакції.</string>
     <string name="scan_result_multiple_candidates_dialog_title">Знайдено кілька кандидатів. Будь ласка, виберіть:</string>
     <string name="scan_result_no_date">Дата не знайдена</string>
     <string name="scan_result_no_payee">Одержувача не знайдено</string>
@@ -983,4 +971,5 @@
     <string name="price_history">Історія цін</string>
     <string name="dynamic_exchange_rate">Динамічний курс валют</string>
     <string name="progress_recalculating">Перерахування</string>
+    <string name="pref_account_list_display_configuration_title">Список рахунків</string>
 </resources>

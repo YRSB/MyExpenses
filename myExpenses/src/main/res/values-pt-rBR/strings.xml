@@ -17,21 +17,11 @@
     <string name="account">Conta</string>
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Tipos de conta</string>
-    <string name="account_type_asset">Conta de ativos</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Contas de ativos</string>
-    <string name="account_type_bank">Conta bancária</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Contas bancárias</string>
-    <string name="account_type_cash">Conta de dinheiro</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Contas de dinheiro</string>
+    <string name="account_type_asset">Outros ativos</string>
+    <string name="account_type_bank">Banco</string>
+    <string name="account_type_cash">Dinheiro</string>
     <string name="account_type_ccard">Cartão de crédito</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Cartões de crédito</string>
-    <string name="account_type_liability">Conta de passivos</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Contas de passivos</string>
+    <string name="account_type_liability">Outros passivos</string>
     <string name="already_defined">%1$s já definido</string>
     <string name="amount">Quantia</string>
     <string name="app_name">Minhas Despesas</string>
@@ -672,13 +662,10 @@
     <string name="menu_close">Encerrar</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Reabrir</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Contas ocultas</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Encerrada</string>
     <string name="warning_synced_account_cannot_be_closed">Uma conta vinculada a um destino de sincronização não pode ser encerrada</string>
     <string name="translated_by">Traduzido por</string>
-    <string name="warning_no_account">Pelo menos uma conta deve estar visível e aberta para criar novas transações.</string>
     <string name="content_description_dates_are_linked">A data do pagamento e a data da contabilização são atualizadas juntas</string>
     <string name="content_description_dates_are_not_linked">A data do pagamento e a data da contabilização não são atualizadas juntas</string>
     <string name="roadmap_vote">Votar no roteiro</string>
@@ -996,7 +983,6 @@
     <string name="dynamic_exchange_rate">Taxa de câmbio dinâmica</string>
     <string name="progress_recalculating">Recalculando</string>
     <string name="equivalent_amount_plural">Quantias equivalentes</string>
-    <string name="menu_recalculate">Recalcular</string>
     <string name="recalculate_equivalent_amounts_warning">Quantias equivalentes serão (re)calculadas se estiverem disponíveis taxas de câmbio armazenadas aplicáveis.</string>
     <string name="dialog_title_warning_delete_archive">Excluir arquivo?</string>
     <string name="content_description_original_amount">Defina o valor original dessa transação selecionando uma moeda e inserindo o valor. Você também pode definir uma taxa de câmbio que será usada para calcular o valor efetivo.</string>
@@ -1024,4 +1010,7 @@
     <string name="batch_download">Download em lote</string>
     <string name="warning_batch_download_quota">O download em lote do %s incorre no risco de esgotar seu limite de uso.</string>
     <string name="batch_download_result">%d preços foram baixados e armazenados no banco de dados.</string>
+    <string name="pref_account_list_display_configuration_title">Lista de contas</string>
+    <string name="account_type_investment">Investimentos</string>
+    <string name="pref_ui_home_screen_shortcuts_show_new_balance_title">Mostrar novo saldo após a transação ser salva</string>
 </resources>

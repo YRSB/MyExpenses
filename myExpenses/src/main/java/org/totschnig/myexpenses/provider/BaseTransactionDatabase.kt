@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.os.Build
+import androidx.core.content.contentValuesOf
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
 import org.totschnig.myexpenses.R
@@ -12,8 +13,13 @@ import org.totschnig.myexpenses.db2.BankingAttribute
 import org.totschnig.myexpenses.db2.FLAG_TRANSFER
 import org.totschnig.myexpenses.db2.FinTsAttribute
 import org.totschnig.myexpenses.injector
+import org.totschnig.myexpenses.model.AccountFlag
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyEnum
+import org.totschnig.myexpenses.model.DEFAULT_FLAG_ID
 import org.totschnig.myexpenses.model.Model
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_INACTIVE
+import org.totschnig.myexpenses.model.PreDefinedPaymentMethod
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
@@ -42,8 +48,12 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_ICON
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_LABEL
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IBAN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_ASSET
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LAST_USED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
@@ -62,8 +72,10 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_REFERENCE_NUMBER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SHORT_NAME
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SOURCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUPPORTS_RECONCILIATION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_ACCOUNT_NAME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_SEQUENCE_LOCAL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
@@ -72,6 +84,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USAGES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USER_ID
@@ -79,6 +92,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE_DATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VERSION
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
 import org.totschnig.myexpenses.provider.DatabaseConstants.NULL_CHANGE_INDICATOR
 import org.totschnig.myexpenses.provider.DatabaseConstants.NULL_ROW_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
@@ -86,6 +100,9 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_ARCHIVED
 import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_UNCOMMITTED
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_ATTRIBUTES
+import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_EXCHANGE_RATES
+import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_FLAGS
+import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_TYPES
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ATTACHMENTS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ATTRIBUTES
 import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BANKS
@@ -117,7 +134,7 @@ import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import timber.log.Timber
 import kotlin.math.pow
 
-const val DATABASE_VERSION = 176
+const val DATABASE_VERSION = 180
 
 private const val RAISE_UPDATE_SEALED_DEBT = "SELECT RAISE (FAIL, 'attempt to update sealed debt');"
 private const val RAISE_INCONSISTENT_CATEGORY_HIERARCHY =
@@ -246,6 +263,26 @@ CREATE TABLE $TABLE_PAYEES (
     $KEY_PAYEE_NAME_NORMALIZED text,
     $KEY_PARENTID integer references $TABLE_PAYEES($KEY_ROWID) ON DELETE CASCADE,
     unique($KEY_PAYEE_NAME, $KEY_IBAN));
+"""
+
+const val ACCOUNT_TYPE_CREATE = """
+CREATE TABLE $TABLE_ACCOUNT_TYPES (
+    $KEY_ROWID integer primary key autoincrement,
+    $KEY_LABEL text not null,
+    $KEY_TYPE_SORT_KEY integer not null default 0,
+    $KEY_IS_ASSET boolean not null,
+    $KEY_SUPPORTS_RECONCILIATION boolean not null
+)
+"""
+
+const val ACCOUNT_FLAG_CREATE = """
+CREATE TABLE $TABLE_ACCOUNT_FLAGS (
+    $KEY_ROWID integer primary key autoincrement,
+    $KEY_FLAG_LABEL text unique not null,
+    $KEY_FLAG_SORT_KEY integer not null default 0,
+    $KEY_FLAG_ICON text,
+    $KEY_VISIBLE boolean not null
+)
 """
 
 //the unique index on ($KEY_PAYEE_NAME, $KEY_IBAN) does not prevent duplicate names when iban is null
@@ -523,6 +560,29 @@ fun parentUuidExpression(reference: String, table: String = TABLE_TRANSACTIONS) 
         )
        END"""
 
+
+const val UPDATE_ACCOUNT_SYNC_NULL_TRIGGER =
+    "CREATE TRIGGER update_account_sync_null AFTER UPDATE ON $TABLE_ACCOUNTS WHEN new.$KEY_SYNC_ACCOUNT_NAME IS NULL AND old.$KEY_SYNC_ACCOUNT_NAME IS NOT NULL BEGIN UPDATE $TABLE_ACCOUNTS SET $KEY_SYNC_SEQUENCE_LOCAL = 0 WHERE $KEY_ROWID = old.$KEY_ROWID; DELETE FROM $TABLE_CHANGES WHERE $KEY_ACCOUNTID = old.$KEY_ROWID; END;"
+
+const val ACCOUNTS_TRIGGER_CREATE =
+    "CREATE TRIGGER sort_key_default AFTER INSERT ON $TABLE_ACCOUNTS BEGIN UPDATE $TABLE_ACCOUNTS SET $KEY_SORT_KEY = (SELECT coalesce(max($KEY_SORT_KEY),0) FROM $TABLE_ACCOUNTS) + 1 WHERE $KEY_ROWID = NEW.$KEY_ROWID; END"
+
+const val UPDATE_ACCOUNT_METADATA_TRIGGER =
+    """CREATE TRIGGER update_account_metadata AFTER UPDATE OF $KEY_LABEL,$KEY_OPENING_BALANCE,$KEY_DESCRIPTION,$KEY_CURRENCY,$KEY_TYPE,$KEY_COLOR,$KEY_EXCLUDE_FROM_TOTALS,$KEY_CRITERION ON $TABLE_ACCOUNTS 
+       WHEN new.$KEY_SYNC_ACCOUNT_NAME IS NOT NULL AND new.$KEY_SYNC_SEQUENCE_LOCAL > 0 AND NOT EXISTS (SELECT 1 FROM $TABLE_SYNC_STATE)
+       BEGIN INSERT INTO $TABLE_CHANGES ($KEY_TYPE, $KEY_UUID, $KEY_ACCOUNTID, $KEY_SYNC_SEQUENCE_LOCAL) VALUES ('metadata', '_ignored_', new.$KEY_ROWID, new.$KEY_SYNC_SEQUENCE_LOCAL); END;
+"""
+
+val UPDATE_ACCOUNT_EXCHANGE_RATE_TRIGGER =
+    """CREATE TRIGGER update_account_exchange_rate AFTER UPDATE ON $TABLE_ACCOUNT_EXCHANGE_RATES
+    WHEN ${shouldWriteChangeTemplate("new")}
+    BEGIN INSERT INTO $TABLE_CHANGES ($KEY_TYPE, $KEY_UUID, $KEY_ACCOUNTID, $KEY_SYNC_SEQUENCE_LOCAL)
+    VALUES ('metadata', '_ignored_', new.$KEY_ACCOUNTID, ${sequenceNumberSelect("old")});
+    END;"""
+
+const val DEFAULT_FLAG_TRIGGER =
+    """CREATE TRIGGER protect_default_flag BEFORE DELETE ON $TABLE_ACCOUNT_FLAGS WHEN (OLD.$KEY_ROWID = 0) BEGIN SELECT RAISE (FAIL, 'default flag can not be deleted'); END;"""
+
 abstract class BaseTransactionDatabase(
     val context: Context,
     val prefHandler: PrefHandler
@@ -576,7 +636,7 @@ abstract class BaseTransactionDatabase(
 
     fun SupportSQLiteDatabase.upgradeTo122() {
         //repair transactions corrupted due to bug https://github.com/mtotschnig/MyExpenses/issues/921
-        repairWithSealedAccountsAndDebts(this) {
+        repairWithSealedAccountsAndDebts {
             execSQL(
                 "update transactions set transfer_account = (select account_id from transactions peer where _id = transactions.transfer_peer);"
             )
@@ -586,7 +646,7 @@ abstract class BaseTransactionDatabase(
     }
 
     fun SupportSQLiteDatabase.upgradeTo124() {
-        repairWithSealedAccounts(this) {
+        repairWithSealedAccounts {
             query("accounts", arrayOf("_id"), "uuid is null", null, null, null, null)
                 .use { cursor ->
                     cursor.asSequence.forEach {
@@ -910,7 +970,7 @@ abstract class BaseTransactionDatabase(
 
     fun SupportSQLiteDatabase.upgradeTo156() {
         //repair split transactions corrupted due to bug https://github.com/mtotschnig/MyExpenses/issues/1333
-        repairWithSealedAccountsAndDebts(this) {
+        repairWithSealedAccountsAndDebts {
             val affected =
                 query("select _id,account_id from transactions where cat_id = 0 and exists(select 1 from transactions parts where parts.parent_id = transactions._id and parts.account_id != transactions.account_id)").use { cursor ->
                     cursor.asSequence.map { it.getLong(0) to it.getLong(1) }.toList()
@@ -933,7 +993,7 @@ abstract class BaseTransactionDatabase(
     }
 
     fun SupportSQLiteDatabase.upgradeTo157() {
-        repairWithSealedAccountsAndDebts(this) {
+        repairWithSealedAccountsAndDebts {
             prefHandler.defaultTransferCategory?.let {
                 execSQL("UPDATE transactions SET cat_id = $it WHERE cat_id IS NULL AND transfer_peer is not null")
             }
@@ -1020,13 +1080,13 @@ abstract class BaseTransactionDatabase(
     }
 
     fun SupportSQLiteDatabase.upgradeTo169() {
-        repairWithSealedAccountsAndDebts(this) {
+        repairWithSealedAccountsAndDebts {
             execSQL("UPDATE transactions SET status = 0 WHERE status = 5 AND parent_id is null")
         }
     }
 
     fun SupportSQLiteDatabase.upgradeTo170() {
-        repairWithSealedAccountsAndDebts(this) {
+        repairWithSealedAccountsAndDebts {
             // KEY_ARCHIVED = 5, SPLIT_CAT_ID = 0
             val newStatus = ContentValues(1).apply {
                 put("status", 5)
@@ -1123,6 +1183,87 @@ abstract class BaseTransactionDatabase(
         }
     }
 
+    fun SupportSQLiteDatabase.upgradeTo177() {
+        execSQL("CREATE TABLE account_types (_id integer primary key autoincrement, label text not null, isAsset boolean not null, supportsReconciliation boolean not null)")
+        val accountTypes = insertDefaultAccountTypesForMigration()
+        val cash = accountTypes[AccountType.CASH.name]!!
+        val bank = accountTypes[AccountType.BANK.name]!!
+        val ccard = accountTypes[AccountType.CCARD.name]!!
+        val asset = accountTypes[AccountType.ASSET.name]!!
+        val liability = accountTypes[AccountType.LIABILITY.name]!!
+        val migrateTypeCaseStatement = "CASE type WHEN 'CASH' THEN $cash WHEN 'BANK' THEN $bank WHEN 'CCARD' THEN $ccard WHEN 'ASSET' THEN $asset WHEN 'LIABILITY' THEN $liability ELSE $cash END"
+
+
+        execSQL("ALTER TABLE accounts RENAME to accounts_old")
+        execSQL("CREATE TABLE accounts (_id integer primary key autoincrement, label text not null, opening_balance integer, description text, currency text not null  references currency(code), type integer references account_types(_id), color integer default -3355444, grouping text not null check (grouping in ('NONE','DAY','WEEK','MONTH','YEAR')) default 'NONE', usages integer default 0,last_used datetime, sort_key integer, sync_account_name text, sync_sequence_local integer default 0,exclude_from_totals boolean default 0, uuid text, sort_by text default 'date', sort_direction text not null check (sort_direction in ('ASC','DESC')) default 'DESC',criterion integer,hidden boolean default 0,sealed boolean default 0,dynamic boolean default 0,bank_id integer references banks(_id) ON DELETE SET NULL)")
+        execSQL("""INSERT INTO accounts (_id, label, opening_balance, description, currency, type, color, grouping, usages, last_used, sort_key, sync_account_name, sync_sequence_local, exclude_from_totals, uuid, sort_by, sort_direction, criterion, hidden, sealed, dynamic, bank_id)
+            SELECT _id, label, opening_balance, description, currency, $migrateTypeCaseStatement, color, grouping, usages, last_used, sort_key, sync_account_name, sync_sequence_local, exclude_from_totals, uuid, sort_by, sort_direction, criterion, hidden, sealed, dynamic, bank_id FROM accounts_old;
+        """)
+        execSQL("DROP TABLE accounts_old")
+        execSQL("CREATE UNIQUE INDEX accounts_uuid ON accounts(uuid)")
+        createOrRefreshAccountTriggers();
+        createOrRefreshAccountMetadataTrigger();
+
+        execSQL("ALTER TABLE accounttype_paymentmethod RENAME to accounttype_paymentmethod_old")
+        execSQL("CREATE TABLE accounttype_paymentmethod (type integer references account_types(_id), method_id integer references paymentmethods(_id), primary key (type,method_id))")
+        execSQL("""INSERT INTO accounttype_paymentmethod (type, method_id)
+            SELECT $migrateTypeCaseStatement, method_id FROM accounttype_paymentmethod_old;
+        """)
+        execSQL("DROP TABLE accounttype_paymentmethod_old")
+    }
+
+    fun SupportSQLiteDatabase.upgradeTo178() {
+        repairWithSealedAccountsAndDebts {
+            execSQL("update transactions set payee_id = null where parent_id in (select _id from transactions where cat_id = 0 and status != 4)")
+        }
+    }
+
+    fun SupportSQLiteDatabase.upgradeTo179() {
+        execSQL(
+            "CREATE TABLE account_flags (_id integer primary key autoincrement, flag_label text unique not null, flag_sort_key integer not null default 0, flag_icon text, visible boolean not null)"
+        )
+        val accountFlags = insertDefaultAccountFlagsForMigration()
+        execSQL(DEFAULT_FLAG_TRIGGER)
+        val inactive = accountFlags[PREDEFINED_NAME_INACTIVE]
+        execSQL("ALTER TABLE accounts RENAME to accounts_old")
+        execSQL("CREATE TABLE accounts (_id integer primary key autoincrement, label text not null, opening_balance integer, description text, currency text not null  references currency(code), type integer references account_types(_id), color integer default -3355444, grouping text not null check (grouping in ('NONE','DAY','WEEK','MONTH','YEAR')) default 'NONE', usages integer default 0,last_used datetime, sort_key integer, sync_account_name text, sync_sequence_local integer default 0,exclude_from_totals boolean default 0, uuid text, sort_by text default 'date', sort_direction text not null check (sort_direction in ('ASC','DESC')) default 'DESC',criterion integer,flag integer references account_flags(_id) NOT NULL default 0,sealed boolean default 0,dynamic boolean default 0,bank_id integer references banks(_id) ON DELETE SET NULL)")
+        execSQL("""INSERT INTO accounts (_id, label, opening_balance, description, currency, type, color, grouping, usages, last_used, sort_key, sync_account_name, sync_sequence_local, exclude_from_totals, uuid, sort_by, sort_direction, criterion, flag, sealed, dynamic, bank_id)
+            SELECT _id, label, opening_balance, description, currency, type, color, grouping, usages, last_used, sort_key, sync_account_name, sync_sequence_local, exclude_from_totals, uuid, sort_by, sort_direction, criterion, case when hidden then $inactive else 0 end, sealed, dynamic, bank_id FROM accounts_old;
+        """)
+        execSQL("DROP TABLE accounts_old")
+        execSQL("CREATE UNIQUE INDEX accounts_uuid ON accounts(uuid)")
+        createOrRefreshAccountTriggers();
+        createOrRefreshAccountMetadataTrigger();
+    }
+
+    fun SupportSQLiteDatabase.upgradeTo180() {
+        execSQL("ALTER TABLE account_types add column type_sort_key integer not null default 0")
+        AccountType.initialAccountTypes.filter { it.sortKey != 0 }.forEach {
+            execSQL("UPDATE account_types set type_sort_key = ? WHERE label = ?", arrayOf(it.sortKey.toString(), it.name))
+        }
+    }
+
+    protected fun SupportSQLiteDatabase.createOrRefreshAccountTriggers() {
+        execSQL("DROP TRIGGER IF EXISTS update_account_sync_null")
+        execSQL("DROP TRIGGER IF EXISTS sort_key_default")
+        execSQL(UPDATE_ACCOUNT_SYNC_NULL_TRIGGER)
+        execSQL(ACCOUNTS_TRIGGER_CREATE)
+        createOrRefreshAccountSealedTrigger()
+    }
+
+    protected fun SupportSQLiteDatabase.createOrRefreshAccountSealedTrigger() {
+        execSQL("DROP TRIGGER IF EXISTS sealed_account_update")
+        execSQL(ACCOUNTS_SEALED_TRIGGER_CREATE)
+    }
+
+    protected fun SupportSQLiteDatabase.createOrRefreshAccountMetadataTrigger() {
+        execSQL("DROP TRIGGER IF EXISTS update_account_metadata")
+        execSQL("DROP TRIGGER IF EXISTS update_account_exchange_rate")
+        execSQL(UPDATE_ACCOUNT_METADATA_TRIGGER)
+        execSQL(UPDATE_ACCOUNT_EXCHANGE_RATE_TRIGGER)
+    }
+
+
     override fun onCreate(db: SupportSQLiteDatabase) {
         prefHandler.putInt(PrefKey.FIRST_INSTALL_DB_SCHEMA_VERSION, DATABASE_VERSION)
     }
@@ -1180,18 +1321,18 @@ abstract class BaseTransactionDatabase(
         execSQL(TRANSACTIONS_SEALED_DEBT_DELETE_TRIGGER_CREATE)
     }
 
-    fun repairWithSealedAccounts(db: SupportSQLiteDatabase, run: Runnable) {
-        db.execSQL("update accounts set sealed = -1 where sealed = 1")
+    fun SupportSQLiteDatabase.repairWithSealedAccounts(run: Runnable) {
+        execSQL("update accounts set sealed = -1 where sealed = 1")
         run.run()
-        db.execSQL("update accounts set sealed = 1 where sealed = -1")
+        execSQL("update accounts set sealed = 1 where sealed = -1")
     }
 
-    fun repairWithSealedAccountsAndDebts(db: SupportSQLiteDatabase, run: Runnable) {
-        db.execSQL("update accounts set sealed = -1 where sealed = 1")
-        db.execSQL("update debts set sealed = -1 where sealed = 1")
+    fun SupportSQLiteDatabase.repairWithSealedAccountsAndDebts(run: Runnable) {
+        execSQL("update accounts set sealed = -1 where sealed = 1")
+        execSQL("update debts set sealed = -1 where sealed = 1")
         run.run()
-        db.execSQL("update accounts set sealed = 1 where sealed = -1")
-        db.execSQL("update debts set sealed = 1 where sealed = -1")
+        execSQL("update accounts set sealed = 1 where sealed = -1")
+        execSQL("update debts set sealed = 1 where sealed = -1")
     }
 
     fun SupportSQLiteDatabase.createOrRefreshCategoryHierarchyTrigger() {
@@ -1268,9 +1409,9 @@ abstract class BaseTransactionDatabase(
         append("$TABLE_METHODS.$KEY_LABEL AS $KEY_METHOD_LABEL, ")
         append("$TABLE_METHODS.$KEY_ICON AS $KEY_METHOD_ICON")
         if (tableName != TABLE_CHANGES) {
-            append(", Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $KEY_COLOR, $KEY_CURRENCY, $KEY_SEALED, $KEY_EXCLUDE_FROM_TOTALS, $KEY_DYNAMIC, ")
-            append("$TABLE_ACCOUNTS.$KEY_TYPE AS $KEY_ACCOUNT_TYPE, ")
-            append("$TABLE_ACCOUNTS.$KEY_LABEL AS $KEY_ACCOUNT_LABEL")
+            append(", Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $KEY_COLOR, $KEY_CURRENCY, $KEY_SEALED, $KEY_EXCLUDE_FROM_TOTALS, $KEY_DYNAMIC")
+            append(", $TABLE_ACCOUNTS.$KEY_TYPE AS $KEY_ACCOUNT_TYPE")
+            append(", $TABLE_ACCOUNTS.$KEY_LABEL AS $KEY_ACCOUNT_LABEL")
         }
         if (tableName == TABLE_TRANSACTIONS) {
             append(", $TABLE_PLAN_INSTANCE_STATUS.$KEY_TEMPLATEID, ")
@@ -1317,6 +1458,84 @@ abstract class BaseTransactionDatabase(
             put(KEY_ROWID, NULL_ROW_ID)
             put(KEY_LABEL, NULL_CHANGE_INDICATOR)
         })
+    }
+
+    fun SupportSQLiteDatabase.insertDefaultAccountTypes() =
+        AccountType.initialAccountTypes.associate {
+            it.name to
+                    insert(
+                        TABLE_ACCOUNT_TYPES,
+                        SQLiteDatabase.CONFLICT_NONE,
+                        it.asContentValues
+                    )
+        }
+
+    fun SupportSQLiteDatabase.insertDefaultAccountTypesForMigration() =
+        AccountType.initialAccountTypes.associate {
+            it.name to
+                    insert(
+                        "account_types",
+                        SQLiteDatabase.CONFLICT_NONE,
+                        contentValuesOf(
+                            KEY_LABEL to it.name,
+                            KEY_IS_ASSET to it.isAsset,
+                            KEY_SUPPORTS_RECONCILIATION to it.supportsReconciliation
+                        )
+                    )
+        }
+
+    fun SupportSQLiteDatabase.insertDefaultAccountFlags() =
+        AccountFlag.initialFlags.associate {
+            it.label to
+                    insert(
+                        TABLE_ACCOUNT_FLAGS,
+                        SQLiteDatabase.CONFLICT_NONE,
+                        it.asContentValues
+                    )
+        }
+
+    fun SupportSQLiteDatabase.insertDefaultAccountFlagsForMigration() =
+        AccountFlag.initialFlags.associate {
+            it.label to
+                    insert(
+                        "account_flags",
+                        SQLiteDatabase.CONFLICT_NONE,
+                        contentValuesOf(
+                            KEY_FLAG_LABEL to it.label,
+                            KEY_FLAG_SORT_KEY to it.sortKey,
+                            KEY_FLAG_ICON to it.icon,
+                            KEY_VISIBLE to it.isVisible
+                        ).apply {
+                            if (it.label == "_DEFAULT_") {
+                                put(KEY_ROWID, DEFAULT_FLAG_ID)
+                            }
+                        }
+                    )
+        }
+
+
+    fun SupportSQLiteDatabase.insertDefaultAccountTypesAndMethods() {
+        val accountTypes = insertDefaultAccountTypes()
+        val bank = accountTypes[AccountType.BANK.name]!!
+        for (pm in PreDefinedPaymentMethod.entries) {
+            val id = insert(
+                TABLE_METHODS, SQLiteDatabase.CONFLICT_NONE,
+                ContentValues().apply {
+                    put(KEY_LABEL, pm.name)
+                    put(KEY_TYPE, pm.paymentType)
+                    put(DatabaseConstants.KEY_IS_NUMBERED, pm.isNumbered)
+                    put(KEY_ICON, pm.icon)
+                }
+            )
+            insert(
+                DatabaseConstants.TABLE_ACCOUNTTYES_METHODS,
+                SQLiteDatabase.CONFLICT_NONE,
+                ContentValues().apply {
+                    put(KEY_METHODID, id)
+                    put(KEY_TYPE, bank)
+                }
+            )
+        }
     }
 }
 

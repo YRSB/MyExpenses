@@ -18,20 +18,10 @@
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Jenis akaun</string>
     <string name="account_type_asset">Akaun aset</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Akaun aset</string>
     <string name="account_type_bank">Akaun bank</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Akaun bank</string>
     <string name="account_type_cash">Akaun tunai</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Akaun tunai</string>
     <string name="account_type_ccard">Kad kredit</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Kad kredit</string>
     <string name="account_type_liability">Akaun liabiliti</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Akaun liabiliti</string>
     <string name="already_defined">%1$s sudah ditakrif</string>
     <string name="amount">Amaun</string>
     <string name="app_name">Perbelanjaan Saya</string>
@@ -640,13 +630,10 @@
     <string name="menu_close">Tutup</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Buka Semula</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Akaun tersembunyi</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Ditutup</string>
     <string name="warning_synced_account_cannot_be_closed">Satu akaun yang terpaut dengan bahagian belakang penyegerakan tidak dapat ditutup</string>
     <string name="translated_by">terjemahan</string>
-    <string name="warning_no_account">Sekurang-kurangnya satu akaun mesti kelihatan dan boleh dibuka supaya dapat mencipta transaksi baharu.</string>
     <string name="content_description_dates_are_linked">Tarikh tempahan dan tarikh nilai dikemaskini bersama-sama</string>
     <string name="content_description_dates_are_not_linked">Tarikh tempahan dan tarikh nilai tidak dikemaskini bersama-sama</string>
     <string name="warning_account_for_transaction_is_closed">Sekurang-kurangnya satu transaksi terpilih tidak boleh disunting:</string>
@@ -904,4 +891,5 @@
     <string name="balance_sheet_section_liabilities">Liabiliti</string>
     <string name="balance_sheet_net_worth">Nilai bersih</string>
     <string name="price_history">Sejarah harga</string>
+    <string name="pref_account_list_display_configuration_title">Senarai akaun</string>
 </resources>

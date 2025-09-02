@@ -42,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +52,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.core.os.BundleCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -65,9 +68,10 @@ import org.totschnig.myexpenses.compose.scrollbar.LazyColumnWithScrollbarAndBott
 import org.totschnig.myexpenses.databinding.ActivityComposeBinding
 import org.totschnig.myexpenses.dialog.BatchPriceDownloadDialogFragment
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment
-import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_TAG_POSITIVE
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_TAG_POSITIVE_BUNDLE
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
 import org.totschnig.myexpenses.provider.fileName
 import org.totschnig.myexpenses.retrofit.ExchangeRateApi
 import org.totschnig.myexpenses.retrofit.ExchangeRateSource
@@ -87,11 +91,12 @@ class PriceHistory : ProtectedFragmentActivity() {
 
     val viewModel: PriceHistoryViewModel by viewModels()
 
-    private val openCsvLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-           showImportConfirmationDialog(it)
+    private val openCsvLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            uri?.let {
+                showImportConfirmationDialog(it)
+            }
         }
-    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,10 +112,13 @@ class PriceHistory : ProtectedFragmentActivity() {
         observeImportResult()
         binding.composeView.setContent {
             AppTheme {
+                val nestedScrollInterop = rememberNestedScrollInteropConnection()
                 PriceListScreen(
                     viewModel.pricesWithMissingDates.collectAsState(initial = mapOf(LocalDate.now() to null)).value,
                     currencyContext.homeCurrencyUnit,
-                    Modifier.padding(horizontal = 8.dp),
+                    Modifier
+                        .nestedScroll(nestedScrollInterop)
+                        .padding(horizontal = 8.dp),
                     onDelete = {
                         viewModel.deletePrice(it).observe(this) {
                             if (!it) {
@@ -202,7 +210,7 @@ class PriceHistory : ProtectedFragmentActivity() {
             menu.findItem(R.id.INVERT_COMMAND)?.let {
                 val first = viewModel.inverseRate.first()
                 it.isChecked = first
-                checkMenuIcon(it)
+                checkMenuIcon(it, R.drawable.ic_menu_move)
             }
         }
         return true
@@ -300,25 +308,31 @@ class PriceHistory : ProtectedFragmentActivity() {
     }
 
     private fun showImportConfirmationDialog(fileUri: Uri) {
-        val message = getString(R.string.confirm_process_file_message,
+        val message = getString(
+            R.string.confirm_process_file_message,
             "${viewModel.commodity}:${viewModel.homeCurrency}",
-            fileUri.fileName(this))
+            fileUri.fileName(this)
+        )
 
         ConfirmationDialogFragment.newInstance(Bundle().apply {
             putString(ConfirmationDialogFragment.KEY_MESSAGE, message)
             putInt(ConfirmationDialogFragment.KEY_POSITIVE_BUTTON_LABEL, R.string.menu_import)
-            putInt(ConfirmationDialogFragment.KEY_NEGATIVE_BUTTON_LABEL, android.R.string.cancel)
             putInt(ConfirmationDialogFragment.KEY_COMMAND_POSITIVE, R.id.IMPORT_COMMAND_DO)
-            putParcelable(KEY_TAG_POSITIVE, fileUri)
+            putBundle(KEY_TAG_POSITIVE_BUNDLE, Bundle(1).apply {
+                putParcelable(KEY_URI, fileUri)
+            })
         }).show(supportFragmentManager, "ProcessFileConfirmationDialog")
     }
 
     override fun dispatchCommand(command: Int, tag: Any?): Boolean {
         return super.dispatchCommand(command, tag) || when (command) {
             R.id.IMPORT_COMMAND_DO -> {
-                viewModel.importPricesFromUri(tag as Uri)
+                BundleCompat.getParcelable(tag as Bundle, KEY_URI, Uri::class.java)?.let {
+                    viewModel.importPricesFromUri(it)
+                }
                 true
             }
+
             else -> false
         }
     }

@@ -10,6 +10,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import org.hamcrest.Matchers.allOf
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.`is`
@@ -20,9 +21,11 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.ExpenseEdit
 import org.totschnig.myexpenses.contract.TransactionsContract.Transactions
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.getTransactionSum
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyUnit
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_BANK
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
 import org.totschnig.myexpenses.model.Template
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
@@ -43,14 +46,16 @@ class ExpenseEditTest : BaseExpenseEditTest() {
 
     @Before
     fun fixture() {
+        val accountTypeCash = repository.findAccountType(PREDEFINED_NAME_CASH)!!
+        val accountTypeBank = repository.findAccountType(PREDEFINED_NAME_BANK)!!
         currency1 = CurrencyUnit(Currency.getInstance("USD"))
         currency2 = CurrencyUnit(Currency.getInstance("EUR"))
-        account1 = Account(label = "Test label 1", currency = currency1.code).createIn(repository)
+        account1 = Account(label = "Test label 1", currency = currency1.code, type = accountTypeCash).createIn(repository)
         account2 =
-            Account(label = "Test label 2", currency = currency2.code, type = AccountType.BANK)
+            Account(label = "Test label 2", currency = currency2.code, type = accountTypeBank)
                 .createIn(repository)
         yenAccount =
-            Account(label = "Japan", currency = "JPY").createIn(repository)
+            Account(label = "Japan", currency = "JPY", type = accountTypeCash).createIn(repository)
     }
 
     @After
@@ -222,8 +227,8 @@ class ExpenseEditTest : BaseExpenseEditTest() {
             setAmount(amount)
             clickFab()
             val restored = Template.getInstanceFromDb(contentResolver, template.id)!!
-            Truth.assertThat(restored.operationType()).isEqualTo(Transactions.TYPE_TRANSFER)
-            Truth.assertThat(restored.amount.amountMinor).isEqualTo(-amount * 100L)
+            assertThat(restored.operationType()).isEqualTo(Transactions.TYPE_TRANSFER)
+            assertThat(restored.amount.amountMinor).isEqualTo(-amount * 100L)
         }
     }
 

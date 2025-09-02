@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -120,9 +121,10 @@ fun BalanceSheetView(
             .asPaddingValues()
     Column(
         Modifier
+            .background(MaterialTheme.colorScheme.background)
             .padding(paddingValues)
     ) {
-
+        val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
         //Triple of asset or liability, position in section, index of account or null for Debts
         val highlight = remember { mutableStateOf<Triple<Boolean, Int, Long?>?>(null) }
         TopAppBar(
@@ -138,6 +140,7 @@ fun BalanceSheetView(
                     )
                 }
             },
+            scrollBehavior = scrollBehavior,
             actions = {
                 val expanded = rememberSaveable { mutableStateOf(false) }
                 IconButton(onClick = { expanded.value = true }) {
@@ -302,7 +305,7 @@ fun BalanceSheetView(
                     return totalIndex
                 }
                 LazyColumn(
-                    modifier = modifier,
+                    modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = PaddingValues(
                         start = horizontalPadding,
                         end = horizontalPadding,
@@ -439,7 +442,7 @@ fun LazyListScope.accountTypeSection(
                 .padding(vertical = 4.dp)
         ) {
             Text(
-                text = stringResource(section.type.toStringResPlural()), // Display the AccountType name
+                text = section.type.localizedName(LocalContext.current),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
@@ -453,7 +456,7 @@ fun LazyListScope.accountTypeSection(
         }
     }
     section.accounts
-        .filter { showAll || (!it.isHidden && it.currentBalance != 0L) }
+        .filter { showAll || (it.isVisible && it.currentBalance != 0L) }
         .forEach { account ->
             item {
                 BalanceAccountItemView(account = account, highlight == account.id, onNavigate)

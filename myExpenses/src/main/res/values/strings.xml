@@ -17,21 +17,12 @@
     <string name="account">Account</string>
     <!-- Label in form for payment method, where user checks for which account types the method is applicable -->
     <string name="account_types">Account types</string>
-    <string name="account_type_asset">Asset account</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_asset_plural">Asset accounts</string>
-    <string name="account_type_bank">Bank account</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_bank_plural">Bank accounts</string>
-    <string name="account_type_cash">Cash account</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_cash_plural">Cash accounts</string>
+    <string name="account_type_asset">Other assets</string>
+    <string name="account_type_bank">Bank</string>
+    <string name="account_type_cash">Cash</string>
     <string name="account_type_ccard">Credit card</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_ccard_plural">Credit cards</string>
-    <string name="account_type_liability">Liabilities account</string>
-    <!-- Plural form to be used in account list where accounts are grouped by type -->
-    <string name="account_type_liability_plural">Liabilities accounts</string>
+    <string name="account_type_liability">Other Liabilities</string>
+    <string name="account_type_investment">Investments</string>
     <string name="already_defined">%1$s already defined</string>
     <string name="amount">Amount</string>
     <string name="app_name">My Expenses</string>
@@ -689,13 +680,10 @@
     <string name="menu_close">Close</string>
     <!-- Action of re-opening an account that had previously been closed. A closed account does not allow any modifications on its data. -->
     <string name="menu_reopen">Reopen</string>
-    <!-- Menu entry for opening a list of all hidden accounts. -->
-    <string name="menu_hidden_accounts">Hidden accounts</string>
     <!-- Content description for icon that indicates that an account has been closed. A closed account does not allow any modifications on its data. -->
     <string name="content_description_closed">Closed</string>
     <string name="warning_synced_account_cannot_be_closed">An account that is linked to a synchronization backend cannot be closed</string>
     <string name="translated_by">Translated by</string>
-    <string name="warning_no_account">At least one account must be visible and open in order to create new transactions.</string>
     <string name="content_description_dates_are_linked">Booking date and value date are updated together</string>
     <string name="content_description_dates_are_not_linked">Booking date and value date are not updated together</string>
     <string name="roadmap_vote">Roadmap Vote</string>
@@ -1051,7 +1039,6 @@
     <string name="dynamic_exchange_rate">Dynamic exchange rate</string>
     <string name="progress_recalculating">Recalculating</string>
     <string name="equivalent_amount_plural">Equivalent amounts</string>
-    <string name="menu_recalculate">Recalculate</string>
     <string name="recalculate_equivalent_amounts_warning">Equivalent amounts will be (re)calculated if applicable stored exchange rates are available.</string>
     <string name="quick_search">Quick search</string>
     <string name="complex_search">Complex search</string>
@@ -1082,4 +1069,42 @@
     </plurals>
     <!-- Placeholder: 1 will be replaced with the description of the price pair, e.g. EUR:USD, 2 will be replaced with file name -->
     <string name="confirm_process_file_message">Are you sure you want to import prices for \'%1$s\' from \'%2$s\'? New prices may affect existing equivalent amounts.</string>
+    <string name="warning_expense_category_credit">You are assigning an expense category to an income transaction. As a consequence, the transaction will reduce the sum of your expenses, and by default will be shown in red.</string>
+    <string name="warning_income_category_debit">You are assigning an income category to an expense transaction. As a consequence, the transaction will reduce the sum of your income, and by default will be shown in green.</string>
+    <string name="pref_dynamic_exchange_rates_dynamic">Dynamic rates for all accounts</string>
+    <string name="pref_dynamic_exchange_rates_static">Static rates for all accounts</string>
+    <string name="pref_dynamic_exchange_rates_per_account">Configure each account individually</string>
+    <!-- Type of category. Used in the string "category_description_base" -->
+    <string name="category_type_main">Main category</string>
+    <!-- Type of category. Used in the string "category_description_base" -->
+    <string name="category_type_sub">Subcategory</string>
+    <!-- Base description for a category.
+        %1$s is the category type (e.g., "Main category" or "Subcategory" translated).
+        %2$d is the category's current level number.
+     Example: "Main category, level 1" -->
+    <string name="category_description_base">%1$s, level %2$d</string>
+    <!-- Suffix added to the base description if the category contains child subcategories.
+            %1$d is the NUMBER of child subcategories (e.g., 1, 5). Used for display AND quantity selection.
+            %2$d is the level NUMBER of those child subcategories (e.g., 2, 3).
+         Example for 'one' quantity in English: ", contains one subcategory of level 2"
+         Example for 'other' quantity in English: ", contains 5 subcategories of level 2"-->
+    <plurals name="category_description_children_suffix">
+        <item quantity="one">, contains one subcategory of level %2$d.</item>
+        <item quantity="other">, contains %1$d subcategories of level %2$d.</item>
+    </plurals>
+    <string name="edit_account_type">Edit Account Type</string>
+    <string name="new_account_type">New Account Type</string>
+    <string name="pref_account_list_display_configuration_title">Account list</string>
+    <string name="pref_print_layout_summary">Configure width and composition of columns</string>
+    <!-- Flags allow to define subset of accounts, e.g. Favorite accounts, archive accounts -->
+    <string name="menu_account_flags">Flags</string>
+    <string name="menu_flag">Flag</string>
+    <string name="edit_account_flag">Edit Flag</string>
+    <string name="new_account_flag">New Flag</string>
+    <string name="flag_unflagged">No flag</string>
+    <string name="flag_favorite">Favorite</string>
+    <!-- Label of checkbox in account type form, which configures if accounts of this type have the Reconciliation feature -->
+    <string name="supports_reconciliation">Supports Reconciliation</string>
+    <string name="aggregate_invisible">Include invisible accounts into aggregate accounts and balance sheet</string>
+    <string name="select_accounts_for_flag">Select accounts for flag %s</string>
 </resources>

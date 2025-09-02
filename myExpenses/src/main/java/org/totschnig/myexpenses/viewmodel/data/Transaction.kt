@@ -5,7 +5,7 @@ import android.database.Cursor
 import org.totschnig.myexpenses.adapter.SplitPartRVAdapter
 import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
 import org.totschnig.myexpenses.db2.loadTagsForTransaction
-import org.totschnig.myexpenses.db2.localizedLabelSqlColumn
+import org.totschnig.myexpenses.db2.localizedLabelForPaymentMethod
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
@@ -93,7 +93,7 @@ data class Transaction(
     val originTemplate: Template?,
     val isSealed: Boolean,
     val accountLabel: String,
-    val accountType: AccountType,
+    val accountType: AccountType?,
     override val debtLabel: String?,
     override val tagList: List<Tag>,
     override val icon: String? = null,
@@ -131,7 +131,7 @@ data class Transaction(
             KEY_CR_STATUS,
             KEY_REFERENCE_NUMBER,
             KEY_CURRENCY,
-            localizedLabelSqlColumn(
+            localizedLabelForPaymentMethod(
                 context,
                 KEY_METHOD_LABEL
             ) + " AS " + KEY_METHOD_LABEL,
@@ -157,7 +157,8 @@ data class Transaction(
         fun Cursor.readTransaction(
             context: Context,
             currencyContext: CurrencyContext,
-            homeCurrency: CurrencyUnit
+            homeCurrency: CurrencyUnit,
+            accountType: AccountType? = null
         ): Transaction {
             val currencyUnit = currencyContext[getString(KEY_CURRENCY)]
             val amountRaw = getLong(KEY_AMOUNT)
@@ -201,10 +202,7 @@ data class Transaction(
                 },
                 isSealed = getInt(KEY_SEALED) > 0,
                 accountLabel = getString(KEY_ACCOUNT_LABEL),
-                accountType = enumValueOrDefault(
-                    getStringOrNull(KEY_ACCOUNT_TYPE),
-                    AccountType.CASH
-                ),
+                accountType = accountType,
                 transferPeerIsPart = getBoolean(KEY_TRANSFER_PEER_IS_PART),
                 transferPeerIsArchived = getBoolean(KEY_TRANSFER_PEER_IS_ARCHIVED),
                 debtLabel = getStringOrNull(KEY_DEBT_LABEL),

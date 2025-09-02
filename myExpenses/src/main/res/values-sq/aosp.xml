@@ -86,4 +86,8 @@
     <string name="at_end">Fund</string>
     <string name="widgets">"Miniaplikacionet"</string>
     <string name="menu_import">"Importo"</string>
+    <string name="already_exists">"Ky emër ekziston tashmë"</string>
+    <string name="flag_inactive">"Joaktive"</string>
+    <string name="count">"Numëro"</string>
+    <string name="empty">"Bosh"</string>
 </resources>

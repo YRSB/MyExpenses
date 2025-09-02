@@ -169,4 +169,8 @@
     <string name="at_end">Λήξη</string>
     <string name="widgets">"Γραφικά στοιχεία"</string>
     <string name="menu_import">"Εισαγωγή"</string>
+    <string name="already_exists">"Το όνομα ήδη υπάρχει"</string>
+    <string name="flag_inactive">"Ανενεργή"</string>
+    <string name="count">"Πλήθος"</string>
+    <string name="empty">"Κενό"</string>
 </resources>

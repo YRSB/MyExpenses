@@ -20,6 +20,7 @@ import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -49,6 +50,7 @@ import org.totschnig.myexpenses.model2.CategoryInfo
 import org.totschnig.myexpenses.model2.ICategoryInfo
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.preference.dynamicExchangeRates
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.AGGREGATE_HOME_CURRENCY_CODE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.GROUPING_AGGREGATE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
@@ -58,6 +60,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.DAY
 import org.totschnig.myexpenses.provider.DatabaseConstants.DAY_START_JULIAN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_LABEL
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_UUID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT_HOME_EQUIVALENT
@@ -88,6 +91,7 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY_SELF
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEBT_ID
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEFAULT_ACTION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DISPLAY_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
@@ -102,6 +106,10 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TOTAL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TRANSFERS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_ICON
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_LABEL
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUP_START
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_CLEARED
@@ -109,10 +117,10 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_FUTURE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_ACCOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_ACCOUNT_WITH_TRANSFER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_DEBT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HIDDEN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IBAN
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_AGGREGATE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_ASSET
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_DEFAULT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL_NORMALIZED
@@ -124,30 +132,36 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TEMPLATES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TRANSACTIONS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAX_VALUE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHOD_LABEL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_AMOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_CURRENCY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENT_UUID
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLANID
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLAN_EXECUTION
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLAN_EXECUTION_ADVANCE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_RECONCILED_TOTAL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_REFERENCE_NUMBER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SHORT_NAME
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORTED_IDS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_BY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_DIRECTION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY_TYPE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_START
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_EXPENSES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_INCOME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_TRANSFERS
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUPPORTS_RECONCILIATION
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_ACCOUNT_NAME
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_SEQUENCE_LOCAL
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGID
@@ -161,12 +175,14 @@ import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_ARCHIVED
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_PART
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE_SORT_KEY
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USAGES
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USER_ID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VERSION
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_WEEK_START
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
 import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
@@ -217,6 +233,7 @@ import org.totschnig.myexpenses.sync.json.TransactionChange
 import org.totschnig.myexpenses.util.AppDirHelper
 import org.totschnig.myexpenses.util.ResultUnit
 import org.totschnig.myexpenses.util.Utils
+import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler.Companion.report
 import org.totschnig.myexpenses.util.enumValueOrDefault
 import org.totschnig.myexpenses.util.epoch2LocalDate
@@ -593,6 +610,10 @@ abstract class BaseTransactionProvider : ContentProvider() {
         protected const val PRICES = 79
         protected const val DYNAMIC_CURRENCIES = 80
         protected const val BUDGET_FOR_PERIOD = 81
+        protected const val ACCOUNT_TYPES = 82
+        protected const val ACCOUNT_TYPE_ID = 83
+        protected const val ACCOUNT_FLAGS = 84
+        protected const val ACCOUNT_FLAG_ID = 85
 
         const val CTE_TABLE_NAME_FULL_ACCOUNTS = "full_accounts"
     }
@@ -600,8 +621,9 @@ abstract class BaseTransactionProvider : ContentProvider() {
     val homeCurrency: String
         get() = currencyContext.homeCurrencyString
 
+
     val accountsWithExchangeRate: String
-        get() = exchangeRateJoin(TABLE_ACCOUNTS, KEY_ROWID, homeCurrency)
+        get() = exchangeRateJoin(accountWithTypeAndFlag, KEY_ROWID, homeCurrency, TABLE_ACCOUNTS)
 
     val budgetTableJoin =
         "$TABLE_BUDGETS LEFT JOIN $TABLE_ACCOUNTS ON ($KEY_ACCOUNTID = $TABLE_ACCOUNTS.$KEY_ROWID)"
@@ -611,6 +633,11 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
     val typeWithFallBack: String
         get() = typeWithFallBack(prefHandler)
+
+    val dynamicExchangeRatesDefault: String
+        get() = runBlocking {
+            dataStore.dynamicExchangeRates.first()
+        }
 
     fun buildAccountQuery(
         minimal: Boolean,
@@ -622,25 +649,35 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val date = sumsForDate ?: "now"
         val aggregateFunction = this.aggregateFunction
 
-        val endOfDay = if (date == "now") runBlocking {
-            enumValueOrDefault(
-                dataStore.data.first()[stringPreferencesKey(
-                    prefHandler.getKey(
-                        PrefKey.CRITERION_FUTURE
-                    )
-                )], FutureCriterion.EndOfDay
+        val cte = if (minimal) "" else {
+            val endOfDay = if (date == "now") runBlocking {
+                enumValueOrDefault(
+                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.CRITERION_FUTURE)], FutureCriterion.EndOfDay
+                )
+            } != FutureCriterion.Current else true
+            val aggregateInvisible = runBlocking {
+                dataStore.data.first()[prefHandler.getBooleanPreferencesKey(PrefKey.INVISIBLE_ACCOUNTS_ARE_AGGREGATED)] != false
+            }
+            accountQueryCTE(
+                context!!,
+                homeCurrency,
+                endOfDay,
+                aggregateFunction,
+                typeWithFallBack,
+                date,
+                dynamicExchangeRatesDefault,
+                aggregateInvisible
             )
-        } != FutureCriterion.Current else true
+        }
 
-        val cte = if (minimal) "" else
-            accountQueryCTE(homeCurrency, endOfDay, aggregateFunction, typeWithFallBack, date)
+        val tableName = if (minimal) accountWithTypeAndFlag else CTE_TABLE_NAME_FULL_ACCOUNTS
 
-        val tableName = if (minimal) TABLE_ACCOUNTS else CTE_TABLE_NAME_FULL_ACCOUNTS
         val query = if (mergeAggregate == null) {
             SupportSQLiteQueryBuilder.builder(tableName)
-                .columns(if (minimal) Account.PROJECTION_MINIMAL else null)
+                .columns(if (minimal) mapAccountProjection(Account.PROJECTION_MINIMAL) else null)
                 .selection(selection, emptyArray())
-                .orderBy("$KEY_HIDDEN, $sortOrder")
+                //for balance sheet, we need to respect the sort order of account types
+                .orderBy(if (sumsForDate != null) "$KEY_TYPE_SORT_KEY DESC,$sortOrder" else sortOrder)
                 .create().sql
         } else {
             val subQueries: MutableList<String> = ArrayList()
@@ -649,7 +686,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     SupportSQLiteQueryBuilder
                         .builder(tableName)
                         .columns(
-                            if (minimal) Account.PROJECTION_MINIMAL else arrayOf(
+                            if (minimal) mapAccountProjection(Account.PROJECTION_MINIMAL) else arrayOf(
                                 KEY_ROWID,
                                 KEY_LABEL,
                                 KEY_DESCRIPTION,
@@ -658,7 +695,16 @@ abstract class BaseTransactionProvider : ContentProvider() {
                                 KEY_CURRENCY,
                                 KEY_COLOR,
                                 KEY_GROUPING,
+                                KEY_ACCOUNT_TYPE_LABEL,
                                 KEY_TYPE,
+                                KEY_TYPE_SORT_KEY,
+                                KEY_IS_ASSET,
+                                KEY_SUPPORTS_RECONCILIATION,
+                                KEY_FLAG,
+                                KEY_FLAG_LABEL,
+                                KEY_VISIBLE,
+                                KEY_FLAG_SORT_KEY,
+                                KEY_FLAG_ICON,
                                 KEY_SORT_KEY,
                                 KEY_EXCLUDE_FROM_TOTALS,
                                 KEY_SYNC_ACCOUNT_NAME,
@@ -683,7 +729,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
                                 "0 AS $KEY_IS_AGGREGATE",
                                 KEY_HAS_FUTURE,
                                 KEY_HAS_CLEARED,
-                                KEY_SORT_KEY_TYPE,
                                 KEY_LAST_USED,
                                 KEY_BANK_ID,
                                 KEY_EXCHANGE_RATE,
@@ -710,7 +755,16 @@ abstract class BaseTransactionProvider : ContentProvider() {
                     rowIdColumn,
                     labelColumn,
                     KEY_CURRENCY,
-                    "'AGGREGATE' AS $KEY_TYPE",
+                    "'AGGREGATE' AS $KEY_ACCOUNT_TYPE_LABEL",
+                    "0 AS $KEY_IS_ASSET",
+                    "0 AS $KEY_SUPPORTS_RECONCILIATION",
+                    "0 AS $KEY_TYPE",
+                    "0 AS $KEY_TYPE_SORT_KEY",
+                    "0 AS $KEY_FLAG",
+                    "null AS $KEY_FLAG_LABEL",
+                    "1 AS $KEY_VISIBLE",
+                    "0 AS $KEY_FLAG_SORT_KEY",
+                    "null AS KEY_FLAG_ICON",
                     aggregateColumn
                 ) else {
                     arrayOf(
@@ -722,7 +776,16 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         KEY_CURRENCY,
                         "-1 AS $KEY_COLOR",
                         "$TABLE_CURRENCIES.$KEY_GROUPING",
-                        "'AGGREGATE' AS $KEY_TYPE",
+                        "'AGGREGATE' AS $KEY_ACCOUNT_TYPE_LABEL",
+                        "0 AS $KEY_TYPE",
+                        "0 AS $KEY_TYPE_SORT_KEY",
+                        "0 AS $KEY_IS_ASSET",
+                        "0 AS $KEY_SUPPORTS_RECONCILIATION",
+                        "0 AS $KEY_FLAG",
+                        "null AS $KEY_FLAG_LABEL",
+                        "1 AS $KEY_VISIBLE",
+                        "0 AS $KEY_FLAG_SORT_KEY",
+                        "null AS $KEY_FLAG_ICON",
                         "0 AS $KEY_SORT_KEY",
                         "0 AS $KEY_EXCLUDE_FROM_TOTALS",
                         "null AS $KEY_SYNC_ACCOUNT_NAME",
@@ -747,7 +810,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         aggregateColumn,
                         "max($KEY_HAS_FUTURE) AS $KEY_HAS_FUTURE",
                         "0 AS $KEY_HAS_CLEARED",
-                        "0 AS $KEY_SORT_KEY_TYPE",
                         "0 AS $KEY_LAST_USED",
                         "null AS $KEY_BANK_ID",
                         "null AS $KEY_EXCHANGE_RATE",
@@ -761,7 +823,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         .selection("$KEY_EXCLUDE_FROM_TOTALS = 0", emptyArray())
                         .groupBy(KEY_CURRENCY)
                         .having(
-                            if (mergeAggregate == "1") "count(*) > 1 OR (count(*) = 1 AND sum($KEY_HIDDEN) = 1)" else "$TABLE_CURRENCIES.$KEY_ROWID = " +
+                            if (mergeAggregate == "1") "count(*) > 1 OR (count(*) = 1 AND sum($KEY_VISIBLE) = 0)" else "$TABLE_CURRENCIES.$KEY_ROWID = " +
                                     mergeAggregate.substring(1)
                         ).create().sql
                 )
@@ -783,7 +845,16 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         rowIdColumn,
                         labelColumn,
                         currencyColumn,
-                        "'AGGREGATE' AS $KEY_TYPE",
+                        "'AGGREGATE' AS $KEY_ACCOUNT_TYPE_LABEL",
+                        "0 AS $KEY_IS_ASSET",
+                        "0 AS $KEY_SUPPORTS_RECONCILIATION",
+                        "0 AS $KEY_TYPE",
+                        "0 AS $KEY_TYPE_SORT_KEY",
+                        "0 AS $KEY_FLAG",
+                        "null AS $KEY_FLAG_LABEL",
+                        "1 AS $KEY_VISIBLE",
+                        "0 AS $KEY_FLAG_SORT_KEY",
+                        "null AS KEY_FLAG_ICON",
                         aggregateColumn
                     )
                 } else {
@@ -796,7 +867,16 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         currencyColumn,
                         "-1 AS $KEY_COLOR",
                         "'$grouping' AS $KEY_GROUPING",
-                        "'AGGREGATE' AS $KEY_TYPE",
+                        "'AGGREGATE' AS $KEY_ACCOUNT_TYPE_LABEL",
+                        "0 AS $KEY_TYPE",
+                        "0 AS $KEY_TYPE_SORT_KEY",
+                        "0 AS $KEY_IS_ASSET",
+                        "0 AS $KEY_SUPPORTS_RECONCILIATION",
+                        "0 AS $KEY_FLAG",
+                        "null AS $KEY_FLAG_LABEL",
+                        "1 AS $KEY_VISIBLE",
+                        "0 AS $KEY_FLAG_SORT_KEY",
+                        "null AS $KEY_FLAG_ICON",
                         "0 AS $KEY_SORT_KEY",
                         "0 AS $KEY_EXCLUDE_FROM_TOTALS",
                         "null AS $KEY_SYNC_ACCOUNT_NAME",
@@ -821,7 +901,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         aggregateColumn,
                         "max($KEY_HAS_FUTURE) AS $KEY_HAS_FUTURE",
                         "0 AS $KEY_HAS_CLEARED",
-                        "0 AS $KEY_SORT_KEY_TYPE",
                         "0 AS $KEY_LAST_USED",
                         "null AS $KEY_BANK_ID",
                         "null AS $KEY_EXCHANGE_RATE",
@@ -838,22 +917,17 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         .create().sql
                 )
             }
-            val grouping = if (!minimal) {
-                when (try {
-                    AccountGrouping.valueOf(
-                        prefHandler.getString(
-                            PrefKey.ACCOUNT_GROUPING, AccountGrouping.TYPE.name
-                        )!!
-                    )
-                } catch (_: IllegalArgumentException) {
-                    AccountGrouping.TYPE
-                }) {
-                    AccountGrouping.CURRENCY -> "$KEY_CURRENCY,$KEY_IS_AGGREGATE"
-                    AccountGrouping.TYPE -> "$KEY_IS_AGGREGATE,$KEY_SORT_KEY_TYPE"
-                    else -> KEY_IS_AGGREGATE
-                }
-            } else KEY_IS_AGGREGATE
-            buildUnionQuery(subQueries.toTypedArray(), "$grouping,$sortOrder")
+            val accountGrouping =  runBlocking {
+                enumValueOrDefault(
+                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.ACCOUNT_GROUPING)], AccountGrouping.TYPE
+                )
+            }
+            val sortByFlagFirst = runBlocking {
+                dataStore.data.first()[prefHandler.getBooleanPreferencesKey(PrefKey.SORT_ACCOUNT_LIST_BY_FLAG_FIRST)] != false
+            }
+            val sortOrderForGrouping = if (accountGrouping == AccountGrouping.TYPE) "$KEY_IS_ASSET DESC,$KEY_TYPE_SORT_KEY DESC," else ""
+            val sortByFlag = if (sortByFlagFirst) "$KEY_FLAG_SORT_KEY DESC," else ""
+            buildUnionQuery(subQueries.toTypedArray(), "$KEY_IS_AGGREGATE,$sortOrderForGrouping$sortByFlag$sortOrder")
         }
         return "$cte\n$query"
     }
@@ -1036,21 +1110,15 @@ abstract class BaseTransactionProvider : ContentProvider() {
             .use { it.takeIf { it.moveToFirst() }?.getLong(0) }
     }
 
-    fun hiddenAccountCount(db: SupportSQLiteDatabase) = Bundle(1).apply {
-        putInt(
-            KEY_COUNT,
-            db.query("select count(*) from $TABLE_ACCOUNTS where $KEY_HIDDEN = 1").use {
-                if (it.moveToFirst()) it.getInt(0) else 0
-            }
-        )
-    }
-
-    fun oldestTransactionForCurrency(db: SupportSQLiteDatabase, currency: String) =
+    fun oldestTransactionForCurrency(
+        db: SupportSQLiteDatabase,
+        currency: String
+    ) =
         Bundle(1).apply {
             db.query(
                 TABLE_TRANSACTIONS,
                 arrayOf("min($KEY_DATE)"),
-                "$KEY_ACCOUNTID IN (SELECT $KEY_ROWID FROM $TABLE_ACCOUNTS WHERE $KEY_CURRENCY = ? AND $KEY_DYNAMIC)",
+                "$KEY_ACCOUNTID IN (SELECT $KEY_ROWID FROM $TABLE_ACCOUNTS WHERE $KEY_CURRENCY = ? AND $dynamicExchangeRatesDefault)",
                 arrayOf(currency)
             ).use {
                 if (it.moveToFirst() && !it.isNull(0)) epoch2LocalDate(it.getLong(0)) else null
@@ -1278,7 +1346,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val result = try {
             block()
         } catch (e: Exception) {
-            Timber.tag(TAG).w("Query failed: ${lazyMessage()}")
+            Timber.tag(TAG).e(e,"Query failed: ${lazyMessage()}")
             throw e
         }
         val endTime = Instant.now()
@@ -1288,7 +1356,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
     } else try {
         block()
     } catch (e: Exception) {
-        Timber.tag(TAG).w("Query failed: ${lazyMessage()}")
+        Timber.tag(TAG).e(e,"Query failed: ${lazyMessage()}")
         throw e
     }
 
@@ -2078,6 +2146,45 @@ abstract class BaseTransactionProvider : ContentProvider() {
     }
 
     /**
+     * @param baseTable if not null, extended projection is calculated
+     */
+    fun templateProjection(
+        baseTable: String?
+    ): Array<String> = buildList {
+        add(KEY_ROWID)
+        add(KEY_AMOUNT)
+        add(KEY_COMMENT)
+        add(KEY_CATID)
+        add(KEY_PATH)
+        add(KEY_PAYEE_NAME)
+        add(KEY_TRANSFER_ACCOUNT)
+        add(TRANSFER_ACCOUNT_LABEL)
+        add(KEY_ACCOUNTID)
+        add(KEY_ACCOUNT_LABEL)
+        add(KEY_METHODID)
+        add(KEY_TITLE)
+        add(KEY_PLANID)
+        add(KEY_PLAN_EXECUTION)
+        add(KEY_UUID)
+        add(KEY_PARENTID)
+        add(KEY_PLAN_EXECUTION_ADVANCE)
+        add(KEY_DEFAULT_ACTION)
+        add(KEY_DEBT_ID)
+        add(KEY_ORIGINAL_CURRENCY)
+        add(KEY_ORIGINAL_AMOUNT)
+        if (baseTable != null) {
+            add(KEY_COLOR)
+            add(KEY_CURRENCY)
+            add(KEY_METHOD_LABEL)
+            add("$dynamicExchangeRatesDefault AS $KEY_DYNAMIC")
+            add("${checkForSealedAccount(baseTable, TABLE_TEMPLATES, true)} AS $KEY_SEALED")
+        }
+    }.toTypedArray()
+
+    val dynamicCurrenciesSelection
+        get() = "$dynamicExchangeRatesDefault AND $KEY_CURRENCY != ?"
+
+    /**
      * @param transactionId can be passed in as Long or String
      */
     fun SupportSQLiteDatabase.insertOrReplaceEquivalentAmount(
@@ -2088,7 +2195,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         // update trigger and we would not be able to check if value has changed
         val count = update(
             TABLE_EQUIVALENT_AMOUNTS,
-            ContentValues(1).apply<ContentValues> {
+            ContentValues(1).apply {
                 put(KEY_EQUIVALENT_AMOUNT, equivalentAmount)
             }, "$KEY_TRANSACTIONID = ? AND $KEY_CURRENCY = ?", arrayOf(transactionId, homeCurrency)
         )
@@ -2108,7 +2215,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
         val sql1 =
             """INSERT OR REPLACE INTO $TABLE_EQUIVALENT_AMOUNTS ($KEY_TRANSACTIONID, $KEY_CURRENCY, $KEY_EQUIVALENT_AMOUNT)
-          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = $VIEW_WITH_ACCOUNT.$KEY_CURRENCY and $TABLE_PRICES.$KEY_DATE <=  strftime('%Y-%m-%d', $VIEW_WITH_ACCOUNT.$KEY_DATE, 'unixepoch', 'localtime') ORDER BY $KEY_DATE DESC, ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $KEY_DYNAMIC AND $KEY_CURRENCY != ? AND $KEY_PARENTID IS NULL $accountIdClause AND new_equivalent_amount IS NOT NULL
+          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = $VIEW_WITH_ACCOUNT.$KEY_CURRENCY and $TABLE_PRICES.$KEY_DATE <=  strftime('%Y-%m-%d', $VIEW_WITH_ACCOUNT.$KEY_DATE, 'unixepoch', 'localtime') ORDER BY $KEY_DATE DESC, ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $dynamicExchangeRatesDefault AND $KEY_CURRENCY != ? AND $KEY_PARENTID IS NULL $accountIdClause AND new_equivalent_amount IS NOT NULL
         """
         val count1 = compileStatement(sql1).use {
             it.bindAllArgsAsStrings(listOf(currency, currency, currency))
@@ -2163,7 +2270,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val dateString = date.toString()
         val sql =
             """INSERT OR REPLACE INTO $TABLE_EQUIVALENT_AMOUNTS ($KEY_TRANSACTIONID, $KEY_CURRENCY, $KEY_EQUIVALENT_AMOUNT)
-          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = ? and $TABLE_PRICES.$KEY_DATE = ? ORDER BY ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $KEY_DYNAMIC AND $KEY_CURRENCY = ? AND $KEY_PARENTID IS NULL AND strftime('%Y-%m-%d', $KEY_DATE, 'unixepoch', 'localtime') = ? AND new_equivalent_amount IS NOT NULL
+          SELECT $KEY_ROWID, ?, round($KEY_AMOUNT * (SELECT $KEY_VALUE FROM $TABLE_PRICES WHERE $TABLE_PRICES.$KEY_CURRENCY = ? AND $TABLE_PRICES.$KEY_COMMODITY = ? and $TABLE_PRICES.$KEY_DATE = ? ORDER BY ${priceSort()} LIMIT 1)) AS new_equivalent_amount FROM $VIEW_WITH_ACCOUNT WHERE $dynamicExchangeRatesDefault AND $KEY_CURRENCY = ? AND $KEY_PARENTID IS NULL AND strftime('%Y-%m-%d', $KEY_DATE, 'unixepoch', 'localtime') = ? AND new_equivalent_amount IS NOT NULL
         """
         return compileStatement(sql).use {
             it.bindAllArgsAsStrings(
@@ -2178,5 +2285,85 @@ abstract class BaseTransactionProvider : ContentProvider() {
             )
             it.executeUpdateDelete()
         }
+    }
+
+    fun SupportSQLiteDatabase.setFlagSort(extras: Bundle): Bundle {
+        val sortedIds = extras.getLongArray(KEY_SORTED_IDS)!!
+        val resultBundle = Bundle()
+        var result = true
+
+        beginTransaction()
+        try {
+            val sql = """
+                UPDATE ${DatabaseConstants.TABLE_ACCOUNT_FLAGS}
+                SET $KEY_FLAG_SORT_KEY = ?
+                WHERE $KEY_ROWID = ?
+            """.trimIndent()
+            val statement = compileStatement(sql)
+            //the default flag should have sort key 0, flags that are more important have positive key,
+            //flags that are less important have negative key
+            var startIndex = sortedIds.indexOf(0).toLong()
+            sortedIds.forEach { flagId ->
+                statement.bindLong(1, startIndex--)
+                statement.bindLong(2, flagId)
+                val affectedRows = statement.executeUpdateDelete()
+                if (affectedRows != 1) {
+                    CrashHandler.throwOrReport("Update failed, expected 1 affected row, got $affectedRows")
+                    result = false
+                }
+            }
+
+            statement.close()
+
+            setTransactionSuccessful()
+
+        } catch (e: Exception) {
+            CrashHandler.throwOrReport(e)
+            result = false
+        } finally {
+            endTransaction()
+            resultBundle.putBoolean(KEY_RESULT, result)
+        }
+        return resultBundle
+    }
+
+    fun SupportSQLiteDatabase.setTypeSort(extras: Bundle): Bundle {
+        val sortedIds = extras.getLongArray(KEY_SORTED_IDS)!!
+        val resultBundle = Bundle()
+        var result = true
+
+        beginTransaction()
+        try {
+            val sql = """
+                UPDATE ${DatabaseConstants.TABLE_ACCOUNT_TYPES}
+                SET $KEY_TYPE_SORT_KEY = ?
+                WHERE $KEY_ROWID = ?
+            """.trimIndent()
+            val statement = compileStatement(sql)
+            //we use a range that ends with -1, so that new types (with default to 0) will be sorted
+            //before the last type, assuming that in many cases the last type will be the Other assetes/liabilities type
+            val startIndex = sortedIds.size.toLong() - 2
+            sortedIds.forEachIndexed { index, flagId ->
+                statement.bindLong(1, startIndex - index)
+                statement.bindLong(2, flagId)
+                val affectedRows = statement.executeUpdateDelete()
+                if (affectedRows != 1) {
+                    CrashHandler.throwOrReport("Update failed, expected 1 affected row, got $affectedRows")
+                    result = false
+                }
+            }
+
+            statement.close()
+
+            setTransactionSuccessful()
+
+        } catch (e: Exception) {
+            CrashHandler.throwOrReport(e)
+            result = false
+        } finally {
+            endTransaction()
+            resultBundle.putBoolean(KEY_RESULT, result)
+        }
+        return resultBundle
     }
 }

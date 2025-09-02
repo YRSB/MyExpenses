@@ -118,7 +118,6 @@ import org.totschnig.myexpenses.provider.DatabaseConstants
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
 import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
 import org.totschnig.myexpenses.provider.filter.FilterPersistence
-import org.totschnig.myexpenses.provider.maybeRepairRequerySchema
 import org.totschnig.myexpenses.service.PlanExecutor.Companion.enqueueSelf
 import org.totschnig.myexpenses.sync.GenericAccountService
 import org.totschnig.myexpenses.ui.AmountInput
@@ -158,6 +157,7 @@ import javax.inject.Inject
 import kotlin.math.sign
 import androidx.core.net.toUri
 import kotlinx.coroutines.flow.StateFlow
+import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
 
 abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.MessageDialogListener,
     ConfirmationDialogListener, EasyPermissions.PermissionCallbacks, AmountInput.Host, ContribIFace,
@@ -243,7 +243,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         val intent = Intent(this, CalculatorInput::class.java).apply {
             forwardDataEntryFromWidget(this)
             if (amount != null) {
-                putExtra(DatabaseConstants.KEY_AMOUNT, amount)
+                putExtra(DatabaseConstants.KEY_AMOUNT, amount.toString())
             }
             putExtra(CalculatorInput.EXTRA_KEY_INPUT_ID, id)
             putExtra(KEY_COLOR, color)
@@ -412,10 +412,6 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
             Feature.WEBUI -> activateWebUi()
             else -> {}
         }
-    }
-
-    open fun maybeRepairRequerySchema() {
-        maybeRepairRequerySchema(prefHandler)
     }
 
     fun harmonizeColors() {
@@ -790,7 +786,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
     fun trackCommand(command: Int) {
         try {
             resources.getResourceName(command)
-        } catch (e: Resources.NotFoundException) {
+        } catch (_: Resources.NotFoundException) {
             null
         }?.let { fullResourceName ->
             trackCommand(fullResourceName.substring(fullResourceName.indexOf('/') + 1))
@@ -806,7 +802,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         val command = args.getInt(ConfirmationDialogFragment.KEY_COMMAND_POSITIVE)
         dispatchCommand(
             command,
-            args.getParcelable(ConfirmationDialogFragment.KEY_TAG_POSITIVE)
+            args.getBundle(ConfirmationDialogFragment.KEY_TAG_POSITIVE_BUNDLE)
         )
     }
 
@@ -884,6 +880,9 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 }.takeIf { it.isNotEmpty() }?.let {
                     "LICENCE: $it\n"
                 }
+                val crashHandlerInfo = crashHandler.getInfo()?.let {
+                    "${it.first.uppercase(Locale.ROOT)}: ${it.second}\n"
+                }
                 val firstInstallVersion = prefHandler.getInt(PrefKey.FIRST_INSTALL_VERSION, 0)
                 val firstInstallSchema =
                     prefHandler.getInt(PrefKey.FIRST_INSTALL_DB_SCHEMA_VERSION, -1)
@@ -898,7 +897,8 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                         BRAND:${Build.BRAND}
                         MODEL:${Build.MODEL}
                         CONFIGURATION:${ConfigurationHelper.configToJson(resources.configuration)}
-                        $licenceInfo
+                        ${licenceInfo ?: ""}
+                        ${crashHandlerInfo ?: ""}
 
                     """.trimIndent()
                 )
@@ -936,12 +936,18 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 true
             }
 
+            R.id.FAQ_COMMAND -> {
+                val path = (tag as? String) ?: (tag as? Bundle)?.getString(KEY_PATH)
+                startActionView("https://faq.myexpenses.mobi/$path")
+                true
+            }
+
             else -> false
         }
     }
 
     val shareTarget: String
-        get() = prefHandler.requireString(PrefKey.SHARE_TARGET, "").trim { it <= ' ' }
+        get() = prefHandler.requireString(PrefKey.SHARE_TARGET, "").trim()
 
     protected open fun doHome() {
         setResult(RESULT_CANCELED)
@@ -1106,9 +1112,9 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
     fun startActionView(uri: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse(uri)
+                data = uri.toUri()
             })
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             showSnackBar("No activity found for opening $uri")
         }
     }
@@ -1123,7 +1129,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             )
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             showSnackBar(
                 MimeTypeMap.getSingleton()
                 .getExtensionFromMimeType(mimeType)
@@ -1308,7 +1314,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
     private fun areNotificationsEnabled(channelId: String) =
         if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                 val channel = manager.getNotificationChannel(channelId)
                 channel?.importance != NotificationManager.IMPORTANCE_NONE
             } else {
@@ -1354,7 +1360,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         } else {
             showSnackBar(
                 PermissionHelper.getRationale(
-                    this, requestCode, PermissionHelper.PermissionGroup.NOTIFICATION
+                    this, requestCode, PermissionGroup.NOTIFICATION
                 )
             )
         }
@@ -1463,8 +1469,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         } == OnboardingActivity::class.java.simpleName
 
     val bankingFeature: BankingFeature
-        get() = requireApplication().appComponent.bankingFeature() ?: object :
-            BankingFeature {}
+        get() = requireApplication().appComponent.bankingFeature() ?: BankingFeature
 
     protected open fun restartAfterRestore() {
         (application as MyApplication).invalidateHomeCurrency()
@@ -1590,14 +1595,15 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
 
     open fun startEditFromOcrResult(result: OcrResultFlat?, scanUri: Uri) {
         recordUsage(ContribFeature.OCR)
-        editIntent?.apply {
-            putExtra(KEY_OCR_RESULT, result)
-            putExtra(KEY_URI, scanUri)
-        }?.let { startEdit(it) }
+        lifecycleScope.launch {
+            getEditIntent()?.apply {
+                putExtra(KEY_OCR_RESULT, result)
+                putExtra(KEY_URI, scanUri)
+            }?.let { startEdit(it) }
+        }
     }
 
-    open val editIntent: Intent?
-        get() = Intent(this, ExpenseEdit::class.java)
+    open suspend fun getEditIntent(): Intent? = Intent(this, ExpenseEdit::class.java)
 
     open fun startEdit(intent: Intent) {
         startActivityForResult(intent, EDIT_REQUEST)

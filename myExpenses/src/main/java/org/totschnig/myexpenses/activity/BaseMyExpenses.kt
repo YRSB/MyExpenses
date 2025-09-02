@@ -74,6 +74,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -82,15 +83,12 @@ import com.google.android.material.snackbar.Snackbar
 import eltos.simpledialogfragment.SimpleDialog.OnDialogResultListener
 import eltos.simpledialogfragment.form.AmountInput
 import eltos.simpledialogfragment.form.AmountInputHostDialog
-import eltos.simpledialogfragment.list.CustomListDialog.SELECTED_SINGLE_ID
-import eltos.simpledialogfragment.list.MenuDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.totschnig.myexpenses.R
-import org.totschnig.myexpenses.adapter.SortableItem
 import org.totschnig.myexpenses.compose.AccountList
 import org.totschnig.myexpenses.compose.AppTheme
 import org.totschnig.myexpenses.compose.CompactTransactionRenderer
@@ -130,24 +128,19 @@ import org.totschnig.myexpenses.dialog.ExportDialogFragment
 import org.totschnig.myexpenses.dialog.HelpDialogFragment
 import org.totschnig.myexpenses.dialog.MessageDialogFragment
 import org.totschnig.myexpenses.dialog.ProgressDialogFragment
-import org.totschnig.myexpenses.dialog.SortUtilityDialogFragment
-import org.totschnig.myexpenses.dialog.SortUtilityDialogFragment.OnConfirmListener
 import org.totschnig.myexpenses.dialog.progress.NewProgressDialogFragment
-import org.totschnig.myexpenses.dialog.select.SelectHiddenAccountDialogFragment
 import org.totschnig.myexpenses.dialog.select.SelectTransformToTransferTargetDialogFragment
 import org.totschnig.myexpenses.dialog.select.SelectTransformToTransferTargetDialogFragment.Companion.KEY_IS_INCOME
 import org.totschnig.myexpenses.dialog.select.SelectTransformToTransferTargetDialogFragment.Companion.TRANSFORM_TO_TRANSFER_REQUEST
 import org.totschnig.myexpenses.feature.Feature
 import org.totschnig.myexpenses.injector
 import org.totschnig.myexpenses.model.AccountGrouping
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.ExportFormat
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.PreDefinedPaymentMethod.Companion.translateIfPredefined
 import org.totschnig.myexpenses.model.Sort
-import org.totschnig.myexpenses.model.Sort.Companion.fromCommandId
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.enumValueOrDefault
@@ -185,7 +178,6 @@ import org.totschnig.myexpenses.ui.DiscoveryHelper
 import org.totschnig.myexpenses.ui.IDiscoveryHelper
 import org.totschnig.myexpenses.ui.SnackbarAction
 import org.totschnig.myexpenses.util.AppDirHelper
-import org.totschnig.myexpenses.util.AppDirHelper.ensureContentUri
 import org.totschnig.myexpenses.util.ContribUtils
 import org.totschnig.myexpenses.util.TextUtils
 import org.totschnig.myexpenses.util.TextUtils.withAmountColor
@@ -237,7 +229,7 @@ const val DIALOG_TAG_OCR_DISAMBIGUATE = "DISAMBIGUATE"
 const val DIALOG_TAG_NEW_BALANCE = "NEW_BALANCE"
 
 abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, ContribIFace,
-    OnConfirmListener, NewProgressDialogFragment.Host {
+    NewProgressDialogFragment.Host {
     override val fabActionName = "CREATE_TRANSACTION"
 
     private val accountData: List<FullAccount>
@@ -287,16 +279,12 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
     lateinit var binding: ActivityMainBinding
 
-    val allAccountCount
-        get() = accountCount + viewModel.hasHiddenAccounts.value
-
     val accountCount
         get() = accountData.count { it.id > 0 }
 
-    private val accountGrouping: MutableState<AccountGrouping> =
-        mutableStateOf(AccountGrouping.TYPE)
-
-    private lateinit var accountSort: Sort
+    suspend fun getHiddenAccountCount() = withContext(Dispatchers.IO) {
+        viewModel.accountFlagsRaw.first().filter { !it.isVisible }.sumOf { it.count ?: 0 }
+    }
 
     private var actionMode: ActionMode? = null
 
@@ -377,11 +365,9 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     val hasTransfer = selectionState.any { it.isTransfer }
                     val hasSplit = selectionState.any { it.isSplit }
                     val hasVoid = selectionState.any { it.crStatus == CrStatus.VOID }
-                    val noMethods = currentAccount!!.type == AccountType.CASH ||
-                            (currentAccount!!.isAggregate && selectionState.any { it.accountType == AccountType.CASH })
                     findItem(R.id.REMAP_PAYEE_COMMAND).isVisible = !hasTransfer
                     findItem(R.id.REMAP_CATEGORY_COMMAND).isVisible = !hasSplit
-                    findItem(R.id.REMAP_METHOD_COMMAND).isVisible = !hasTransfer && !noMethods
+                    findItem(R.id.REMAP_METHOD_COMMAND).isVisible = !hasTransfer
                     findItem(R.id.SPLIT_TRANSACTION_COMMAND).isVisible = !hasSplit && !hasVoid
                     findItem(R.id.LINK_TRANSFER_COMMAND).isVisible =
                         selectionState.count() == 2 &&
@@ -545,9 +531,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initLocaleContext()
-        maybeRepairRequerySchema()
-        readAccountGroupingFromPref()
-        accountSort = readAccountSortFromPref()
         viewModel = ViewModelProvider(this)[modelClass]
         with(injector) {
             inject(viewModel)
@@ -567,27 +550,48 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
 
         binding.viewPagerMain.viewPager.setContent {
-            MainContent()
+            val upgradeInfo = upgradeHandlerViewModel.upgradeInfo.collectAsState().value
+            if (upgradeInfo == null || upgradeInfo is UpgradeHandlerViewModel.UpgradeSuccess) {
+                MainContent()
+            }
         }
         setupToolbarClickHandlers()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 upgradeHandlerViewModel.upgradeInfo.collect { info ->
-                    info?.let {
-                        showDismissibleSnackBar(
-                            message = info.info,
-                            actionLabel = getString(R.string.dialog_dismiss) +
-                                    if (info.count > 1) " (${info.index} / ${info.count})" else "",
-                            callback = object : Snackbar.Callback() {
-                                override fun onDismissed(
-                                    transientBottomBar: Snackbar,
-                                    event: Int,
-                                ) {
-                                    if (event == DISMISS_EVENT_SWIPE || event == DISMISS_EVENT_ACTION)
-                                        upgradeHandlerViewModel.messageShown()
-                                }
-                            })
+                    when (info) {
+                        is UpgradeHandlerViewModel.UpgradeError -> {
+                            showMessage(
+                                info.info,
+                                null,
+                                null,
+                                MessageDialogFragment.Button(
+                                    R.string.button_label_close,
+                                    R.id.QUIT_COMMAND,
+                                    null
+                                ),
+                                false
+                            )
+                        }
+
+                        is UpgradeHandlerViewModel.UpgradeSuccess -> {
+                            showDismissibleSnackBar(
+                                message = info.info,
+                                actionLabel = getString(R.string.dialog_dismiss) +
+                                        if (info.count > 1) " (${info.index} / ${info.count})" else "",
+                                callback = object : Snackbar.Callback() {
+                                    override fun onDismissed(
+                                        transientBottomBar: Snackbar,
+                                        event: Int,
+                                    ) {
+                                        if (event == DISMISS_EVENT_SWIPE || event == DISMISS_EVENT_ACTION)
+                                            upgradeHandlerViewModel.messageShown()
+                                    }
+                                })
+                        }
+
+                        else -> {}
                     }
                 }
             }
@@ -648,15 +652,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             }
         }
 
-
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.hasHiddenAccounts.collect { result ->
-                    navigationView.menu.findItem(R.id.HIDDEN_ACCOUNTS_COMMAND).isVisible =
-                        result > 0
-                }
-            }
-        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.bulkDeleteState.filterNotNull().collect { result ->
@@ -698,10 +693,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
 
         binding.accountPanel.accountList.setContent {
-            val banks = viewModel.banks.collectAsState()
             AppTheme {
-                viewModel.accountData.collectAsState().value.let { result ->
+                viewModel.accountData.collectAsStateWithLifecycle().value.let { result ->
                     result?.onSuccess { data ->
+                        val banks = viewModel.banks.collectAsState()
                         LaunchedEffect(Unit) {
                             toolbar.isVisible = true
                         }
@@ -720,6 +715,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                                 data.any { it.isHomeAggregate }
                         }
 
+                        val accountGrouping = viewModel.accountGrouping.collectAsState(
+                            AccountGrouping.TYPE
+                        )
+
                         AccountList(
                             accountData = data,
                             grouping = accountGrouping.value,
@@ -736,20 +735,25 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                                 closeDrawer()
                                 confirmAccountDelete(it)
                             },
-                            onHide = {
-                                viewModel.setAccountVisibility(true, it)
+                            onSetFlag = { accountId, flagId ->
+                                viewModel.setFlag(
+                                    accountId,
+                                    flagId
+                                )
                             },
-                            onToggleSealed = {
-                                toggleAccountSealed(it)
-                            },
-                            onToggleExcludeFromTotals = {
-                                toggleExcludeFromTotals(it)
-                            },
+                            onToggleSealed = { toggleAccountSealed(it) },
+                            onToggleExcludeFromTotals = { toggleExcludeFromTotals(it) },
+                            onToggleDynamicExchangeRate = if (viewModel.dynamicExchangeRatesPerAccount.collectAsState(
+                                    true
+                                ).value
+                            ) {
+                                { toggleDynamicExchangeRate(it) }
+                            } else null,
                             listState = viewModel.listState,
                             showEquivalentWorth = viewModel.showEquivalentWorth()
                                 .collectAsState(false).value,
                             expansionHandlerGroups = viewModel.expansionHandler("collapsedHeadersDrawer_${accountGrouping.value}"),
-                            expansionHandlerAccounts = viewModel.expansionHandler("collapsedAccounts"),
+                            expansionHandlerAccounts = viewModel.expansionHandler("expandedAccounts"),
                             bankIcon = { modifier, id ->
                                 banks.value.find { it.id == id }
                                     ?.let { bank ->
@@ -758,12 +762,18 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                                             bank
                                         )
                                     }
-                            }
+                            },
+                            flags = viewModel.accountFlags.collectAsState(emptyList()).value
                         )
                     }?.onFailure {
                         val (message, forceQuit) = when (it) {
                             is SQLiteDowngradeFailedException -> "Database cannot be downgraded from a newer version. Please either uninstall MyExpenses, before reinstalling, or upgrade to a new version." to true
-                            is SQLiteUpgradeFailedException -> "Database upgrade failed. Please contact support@myexpenses.mobi !" to true
+                            is SQLiteUpgradeFailedException -> "Database upgrade failed. Please contact ${
+                                getString(
+                                    R.string.support_email
+                                )
+                            } !" to true
+
                             else -> "Data loading failed" to false
                         }
                         showMessage(
@@ -849,7 +859,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     else -> 0
                 }
                 rightMargin = when {
-                    !isLtr  -> right
+                    !isLtr -> right
                     else -> 0
                 }
             }
@@ -861,8 +871,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { v, insets ->
             val accountPanelIsVisible = binding.accountPanel.root.isVisible
             val isLtr = v.layoutDirection == View.LAYOUT_DIRECTION_LTR
-            val originalNavigationBarInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-            val originalDisplayCutoutInsets = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val originalNavigationBarInsets =
+                insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val originalDisplayCutoutInsets =
+                insets.getInsets(WindowInsetsCompat.Type.displayCutout())
 
             val systemBarsInsetsForChildren = Insets.of(
                 if (accountPanelIsVisible && isLtr) 0 else originalNavigationBarInsets.left,
@@ -890,8 +902,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
         ViewCompat.setOnApplyWindowInsetsListener(binding.toolbar.root) { v, insets ->
             v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                leftMargin = insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).left
-                rightMargin = insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).right
+                leftMargin =
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).left
+                rightMargin =
+                    insets.getInsets(WindowInsetsCompat.Type.systemBars() + WindowInsetsCompat.Type.displayCutout()).right
             }
             WindowInsetsCompat.CONSUMED
         }
@@ -1092,7 +1106,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                         Text(
                             modifier = Modifier.wrapContentSize(),
                             textAlign = TextAlign.Center,
-                            text = stringResource(id = R.string.warning_no_account)
+                            text = stringResource(id = R.string.no_accounts)
                         )
                         Button(onClick = { createAccountDo() }) {
                             Text(text = stringResource(id = R.string.menu_create_account))
@@ -1110,7 +1124,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             if (account.sealed) finishActionMode()
         }
 
-        val showStatusHandle = if (account.isAggregate || account.type == AccountType.CASH)
+        val showStatusHandle = if (account.isAggregate || !account.type.supportsReconciliation)
             false
         else
             viewModel.showStatusHandle().collectAsState(initial = true).value
@@ -1141,7 +1155,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             val filter = viewModel.filterPersistence.getValue(account.id)
                 .whereFilter
                 .collectAsState(null)
-            filter.value?.let {
+            filter.value?.let { filter ->
                 if (preferredSearchType == TYPE_QUICK) {
                     FilterHandler(account, "confirmFilterDirect_${account.id}", {
                         if (it != null) {
@@ -1151,12 +1165,12 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                         }
                     }
                     ) {
-                        FilterCard(it, editFilter = { handleEdit(it) }) {
+                        FilterCard(filter, editFilter = { handleEdit(it) }) {
                             confirmClearFilter()
                         }
                     }
                 } else {
-                    FilterCard(it) {
+                    FilterCard(filter) {
                         confirmClearFilter()
                     }
                 }
@@ -1667,19 +1681,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
     }
 
-    private fun readAccountGroupingFromPref() {
-        accountGrouping.value = try {
-            AccountGrouping.valueOf(
-                prefHandler.requireString(PrefKey.ACCOUNT_GROUPING, AccountGrouping.TYPE.name)
-            )
-        } catch (_: IllegalArgumentException) {
-            AccountGrouping.TYPE
-        }
-    }
-
-    private fun readAccountSortFromPref() =
-        prefHandler.enumValueOrDefault(PrefKey.SORT_ORDER_ACCOUNTS, Sort.USAGES)
-
     private fun closeDrawer() = binding.drawer?.closeDrawers() != null
 
     override fun injectDependencies() {
@@ -1697,26 +1698,30 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
      * start ExpenseEdit Activity for a new transaction/transfer/split
      * Originally the form for transaction is rendered, user can change from spinner in toolbar
      */
-    open fun createRowIntent(type: Int, isIncome: Boolean) = editIntent?.apply {
+    suspend fun createRowIntent(type: Int, isIncome: Boolean) = getEditIntent()?.apply {
         putExtra(Transactions.OPERATION_TYPE, type)
         putExtra(ExpenseEdit.KEY_INCOME, isIncome)
     }
 
-    override val editIntent: Intent?
-        get() = accountForNewTransaction?.let {
-            super.editIntent!!.apply {
-                putExtra(KEY_ACCOUNTID, it.id)
-                putExtra(KEY_CURRENCY, it.currency)
-                putExtra(KEY_COLOR, it._color)
+    override suspend fun getEditIntent(): Intent? {
+        val candidate = accountForNewTransaction
+        return if (candidate != null || getHiddenAccountCount() > 0) {
+            super.getEditIntent()!!.apply {
+                candidate?.let {
+                    putExtra(KEY_ACCOUNTID, it.id)
+                    putExtra(KEY_CURRENCY, it.currency)
+                    putExtra(KEY_COLOR, it._color)
+                }
                 val accountId = selectedAccountId
                 if (isAggregate(accountId)) {
                     putExtra(ExpenseEdit.KEY_AUTOFILL_MAY_SET_ACCOUNT, true)
                 }
             }
-        } ?: run {
-            showSnackBar(R.string.warning_no_account)
+        } else {
+            showSnackBar(R.string.no_accounts)
             null
         }
+    }
 
     private fun createRow(type: Int, isIncome: Boolean = false) {
         if (type == TYPE_SPLIT) {
@@ -1729,7 +1734,9 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     }
 
     private fun createRowDo(type: Int, isIncome: Boolean) {
-        createRowIntent(type, isIncome)?.let { startEdit(it) }
+        lifecycleScope.launch {
+            createRowIntent(type, isIncome)?.let { startEdit(it) }
+        }
     }
 
     override fun startEdit(intent: Intent) {
@@ -1742,27 +1749,24 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         else if (which == BUTTON_POSITIVE) {
             when (dialogTag) {
 
-                DIALOG_TAG_GROUPING ->
-                    handleAccountsGrouping(extras.getLong(SELECTED_SINGLE_ID).toInt())
-
-                DIALOG_TAG_SORTING -> handleSortOption(extras.getLong(SELECTED_SINGLE_ID).toInt())
-
                 DIALOG_TAG_NEW_BALANCE -> {
-                    createRowIntent(Transactions.TYPE_TRANSACTION, false)?.apply {
-                        putExtra(
-                            KEY_AMOUNT,
-                            (BundleCompat.getSerializable(
-                                extras,
+                    lifecycleScope.launch {
+                        createRowIntent(Transactions.TYPE_TRANSACTION, false)?.apply {
+                            putExtra(
                                 KEY_AMOUNT,
-                                BigDecimal::class.java
-                            ))!! -
-                                    Money(
-                                        currentAccount!!.currencyUnit,
-                                        currentAccount!!.currentBalance
-                                    ).amountMajor
-                        )
-                    }?.let {
-                        startEdit(it)
+                                (BundleCompat.getSerializable(
+                                    extras,
+                                    KEY_AMOUNT,
+                                    BigDecimal::class.java
+                                ))!! -
+                                        Money(
+                                            currentAccount!!.currencyUnit,
+                                            currentAccount!!.currentBalance
+                                        ).amountMajor
+                            )
+                        }?.let {
+                            startEdit(it)
+                        }
                     }
                     true
                 }
@@ -1794,6 +1798,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
 
     private fun createAccountDo() {
+        closeDrawer()
         createAccount.launch(createAccountIntent)
     }
 
@@ -1819,14 +1824,25 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         if (super.dispatchCommand(command, tag)) {
             return true
         } else when (command) {
+            R.id.MANAGE_ACCOUNT_TYPES_COMMAND -> {
+                startActivity(Intent(this, ManageAccountTypes::class.java))
+            }
+
+            R.id.ACCOUNT_FLAGS_COMMAND -> {
+                startActivity(Intent(this, ManageAccountFlags::class.java))
+            }
+
             R.id.CREATE_ACCOUNT_COMMAND -> {
-                if (licenceHandler.hasAccessTo(ContribFeature.ACCOUNTS_UNLIMITED)
-                    || allAccountCount < ContribFeature.FREE_ACCOUNTS
-                ) {
-                    closeDrawer()
+                if (licenceHandler.hasAccessTo(ContribFeature.ACCOUNTS_UNLIMITED)) {
                     createAccountDo()
                 } else {
-                    showContribDialog(ContribFeature.ACCOUNTS_UNLIMITED, null)
+                    lifecycleScope.launch {
+                        if (accountCount + getHiddenAccountCount() < ContribFeature.FREE_ACCOUNTS) {
+                            createAccountDo()
+                        } else {
+                            showContribDialog(ContribFeature.ACCOUNTS_UNLIMITED, null)
+                        }
+                    }
                 }
             }
 
@@ -1852,16 +1868,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
             R.id.DISTRIBUTION_COMMAND -> contribFeatureRequested(ContribFeature.DISTRIBUTION)
 
-            R.id.RESET_COMMAND -> doReset()
-
-            R.id.GROUPING_ACCOUNTS_COMMAND -> {
-                MenuDialog.build()
-                    .menu(this, R.menu.accounts_grouping)
-                    .choiceIdPreset(accountGrouping.value.commandId.toLong())
-                    .title(R.string.menu_grouping)
-                    .show(this, DIALOG_TAG_GROUPING)
-            }
-
+            R.id.RESET_COMMAND -> checkReset()
 
             R.id.OCR_DOWNLOAD_COMMAND -> {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -1911,7 +1918,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
             R.id.PRINT_COMMAND -> AppDirHelper.checkAppDir(this)
                 .onSuccess {
-                    contribFeatureRequested(ContribFeature.PRINT, ExportViewModel.PRINT_TRANSACTION_LIST)
+                    contribFeatureRequested(
+                        ContribFeature.PRINT,
+                        ExportViewModel.PRINT_TRANSACTION_LIST
+                    )
                 }.onFailure {
                     showDismissibleSnackBar(it.safeMessage)
                 }
@@ -1954,20 +1964,21 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             }
 
             R.id.FINTS_SYNC_COMMAND -> currentAccount?.takeIf { it.bankId != null }?.let {
-                contribFeatureRequested(ContribFeature.BANKING, it.bankId to it.id)
+                contribFeatureRequested(
+                    ContribFeature.BANKING,
+                    Triple(it.bankId, it.id, it.type.id)
+                )
             }
 
             R.id.EDIT_ACCOUNT_COMMAND -> currentAccount?.let { editAccount(it) }
 
             R.id.DELETE_ACCOUNT_COMMAND -> currentAccount?.let { confirmAccountDelete(it) }
 
-            R.id.HIDE_ACCOUNT_COMMAND -> currentAccount?.let {
-                viewModel.setAccountVisibility(true, it.id)
-            }
-
             R.id.TOGGLE_SEALED_COMMAND -> currentAccount?.let { toggleAccountSealed(it) }
 
             R.id.EXCLUDE_FROM_TOTALS_COMMAND -> currentAccount?.let { toggleExcludeFromTotals(it) }
+
+            R.id.DYNAMIC_EXCHANGE_RATE_COMMAND -> currentAccount?.let { toggleDynamicExchangeRate(it) }
 
             R.id.BUDGET_COMMAND -> contribFeatureRequested(ContribFeature.BUDGET, null)
 
@@ -1992,19 +2003,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
             R.id.CANCEL_CALLBACK_COMMAND -> finishActionMode()
 
-            R.id.SORT_COMMAND -> MenuDialog.build()
-                .menu(this, R.menu.accounts_sort)
-                .choiceIdPreset(accountSort.commandId.toLong())
-                .title(R.string.display_options_sort_list_by)
-                .show(this, DIALOG_TAG_SORTING)
-
             R.id.ROADMAP_COMMAND -> startActivity(Intent(this, RoadmapVoteActivity::class.java))
-
-            R.id.HIDDEN_ACCOUNTS_COMMAND -> SelectHiddenAccountDialogFragment.newInstance().show(
-                supportFragmentManager, MANAGE_HIDDEN_FRAGMENT_TAG
-            )
-
-            R.id.OCR_FAQ_COMMAND -> startActionView("https://faq.myexpenses.mobi/OCR")
 
             R.id.BACKUP_COMMAND -> startActivity(
                 Intent(
@@ -2070,10 +2069,13 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     onSetDate = {
                         viewModel.setBalanceDate(it)
                     },
-                    onPrint= {
+                    onPrint = {
                         AppDirHelper.checkAppDir(this)
                             .onSuccess {
-                                contribFeatureRequested(ContribFeature.PRINT, ExportViewModel.PRINT_BALANCE_SHEET)
+                                contribFeatureRequested(
+                                    ContribFeature.PRINT,
+                                    ExportViewModel.PRINT_BALANCE_SHEET
+                                )
                             }.onFailure {
                                 showDismissibleSnackBar(it.safeMessage)
                             }
@@ -2097,10 +2099,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
     fun setupFabSubMenu() {
         floatingActionButton.setOnLongClickListener { fab ->
-            if (accountCount == 0) {
-                showSnackBar(R.string.warning_no_account)
-                return@setOnLongClickListener true
-            }
             discoveryHelper.markDiscovered(DiscoveryHelper.Feature.FabLongPress)
             val popup = PopupMenu(this, fab)
             val popupMenu = popup.menu
@@ -2159,20 +2157,17 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val checkedColor = currentAccount?.let {
-            if (it.isAggregate) 0 else it.color(resources)
-        }
         menu.findItem(R.id.WEB_UI_COMMAND)?.let {
             it.isChecked = isWebUiActive()
-            checkMenuIcon(it)
+            checkMenuIcon(it, R.drawable.ic_computer)
         }
         if (accountData.isNotEmpty() && currentAccount != null) {
             menu.findItem(R.id.SCAN_MODE_COMMAND)?.let {
                 it.isChecked = isScanMode()
-                checkMenuIcon(it)
+                checkMenuIcon(it, R.drawable.ic_scan)
             }
             with(currentAccount!!) {
-                val reconciliationAvailable = type != AccountType.CASH && !sealed
+                val reconciliationAvailable = type.supportsReconciliation && !sealed
                 val groupingMenu = menu.findItem(R.id.GROUPING_COMMAND)
                 val groupingEnabled = sortBy == KEY_DATE
                 groupingMenu?.setEnabledAndVisible(groupingEnabled)
@@ -2195,7 +2190,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     if (reconciliationAvailable) {
                         lifecycleScope.launch {
                             isChecked = viewModel.showStatusHandle().first()
-                            checkMenuIcon(this@apply)
+                            checkMenuIcon(this@apply, R.drawable.ic_square)
                         }
                     }
                 }
@@ -2207,26 +2202,13 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                         title = bankingFeature.syncMenuTitle(this@BaseMyExpenses)
                     }
                 }
-
-                menu.findItem(R.id.MANAGE_ACCOUNT_COMMAND)?.apply {
-                    setEnabledAndVisible(!isAggregate)
-                    if (!isAggregate) {
-                        subMenu?.findItem(R.id.TOGGLE_SEALED_COMMAND)?.setTitle(
-                            if (sealed) R.string.menu_reopen else R.string.menu_close
-                        )
-                        subMenu?.findItem(R.id.EDIT_ACCOUNT_COMMAND)
-                            ?.setEnabledAndVisible(!sealed)
-                        subMenu?.findItem(R.id.EXCLUDE_FROM_TOTALS_COMMAND)?.isChecked =
-                            excludeFromTotals
-                    }
-                }
                 menu.findItem(R.id.ARCHIVE_COMMAND)
                     ?.setEnabledAndVisible(!isAggregate && !sealed && hasItems)
             }
             menu.findItem(R.id.SEARCH_COMMAND)?.let {
                 it.setEnabledAndVisible(hasItems)
                 it.isChecked = currentFilter.whereFilter.value != null
-                checkMenuIcon(it, checkedColor)
+                checkMenuIcon(it, R.drawable.ic_menu_search)
             }
             menu.findItem(R.id.DISTRIBUTION_COMMAND)
                 ?.setEnabledAndVisible(sumInfo.value.mappedCategories)
@@ -2246,7 +2228,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                 R.id.PRINT_COMMAND,
                 R.id.GROUPING_COMMAND,
                 R.id.SHOW_STATUS_HANDLE_COMMAND,
-                R.id.MANAGE_ACCOUNT_COMMAND,
                 R.id.FINTS_SYNC_COMMAND
             )) {
                 menu.findItem(item)?.setEnabledAndVisible(false)
@@ -2326,7 +2307,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     override fun onFabClicked() {
         super.onFabClicked()
         when {
-            accountCount == 0 -> showSnackBar(R.string.warning_no_account)
             currentAccount?.sealed == true -> showSnackBar(
                 message = getString(R.string.account_closed),
                 snackBarAction = SnackbarAction(getString(R.string.menu_reopen)) {
@@ -2391,9 +2371,13 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     binding.toolbar.bankIcon.setImageResource(it)
                 }
             }
+
             ACCOUNT_VISUAL_COLOR -> {
-                (binding.toolbar.accountColorIndicator.background as GradientDrawable).setColor(account._color)
+                (binding.toolbar.accountColorIndicator.background as GradientDrawable).setColor(
+                    account._color
+                )
             }
+
             ACCOUNT_VISUAL_PROGRESS -> {
                 val (sign, progress) = progress!!
                 with(binding.toolbar.donutView) {
@@ -2447,32 +2431,42 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
     }
 
     fun updateFab() {
+        if (accountCount > 0) {
+            updateFabDo()
+        } else {
+            lifecycleScope.launch {
+                if (getHiddenAccountCount() > 0) {
+                    updateFabDo()
+                } else {
+                    floatingActionButton.hide()
+                }
+            }
+        }
+    }
+
+    fun updateFabDo() {
         val scanMode = isScanMode()
         val sealed = currentAccount?.sealed == true
         with(floatingActionButton) {
-            if (allAccountCount == 0) {
-                hide()
-            } else {
-                show()
-                alpha = if (sealed) 0.5f else 1f
-                setImageResource(
-                    when {
-                        sealed -> R.drawable.ic_lock
-                        scanMode -> R.drawable.ic_scan
-                        else -> R.drawable.ic_menu_add_fab
-                    }
-                )
-                contentDescription = when {
-                    sealed -> getString(R.string.content_description_closed)
-                    scanMode -> getString(R.string.contrib_feature_ocr_label)
-                    else -> TextUtils.concatResStrings(
-                        this@BaseMyExpenses,
-                        ". ",
-                        R.string.menu_create_transaction,
-                        R.string.menu_create_transfer,
-                        R.string.menu_create_split
-                    )
+            show()
+            alpha = if (sealed) 0.5f else 1f
+            setImageResource(
+                when {
+                    sealed -> R.drawable.ic_lock
+                    scanMode -> R.drawable.ic_scan
+                    else -> R.drawable.ic_menu_add_fab
                 }
+            )
+            contentDescription = when {
+                sealed -> getString(R.string.content_description_closed)
+                scanMode -> getString(R.string.contrib_feature_ocr_label)
+                else -> TextUtils.concatResStrings(
+                    this@BaseMyExpenses,
+                    ". ",
+                    R.string.menu_create_transaction,
+                    R.string.menu_create_transfer,
+                    R.string.menu_create_split
+                )
             }
         }
     }
@@ -2539,7 +2533,7 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                     )
                     if (tag == ExportViewModel.PRINT_TRANSACTION_LIST) {
                         viewModel.print(currentAccount, currentFilter.whereFilter.value)
-                    } else  if (tag == ExportViewModel.PRINT_BALANCE_SHEET) {
+                    } else if (tag == ExportViewModel.PRINT_BALANCE_SHEET) {
                         viewModel.printBalanceSheet()
                     }
                 }
@@ -2572,8 +2566,13 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
                 }
 
                 ContribFeature.BANKING -> {
-                    val (bankId, accountId) = tag as Pair<Long, Long>
-                    bankingFeature.startSyncFragment(bankId, accountId, supportFragmentManager)
+                    val (bankId, accountId, accountTypeId) = tag as Triple<Long, Long, Long>
+                    bankingFeature.startSyncFragment(
+                        bankId,
+                        accountId,
+                        accountTypeId,
+                        supportFragmentManager
+                    )
                 }
 
                 else -> super.contribFeatureCalled(feature, tag)
@@ -2624,6 +2623,10 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         viewModel.setExcludeFromTotals(account.id, !account.excludeFromTotals)
     }
 
+    private fun toggleDynamicExchangeRate(account: FullAccount) {
+        viewModel.setDynamicExchangeRate(account.id, !account.dynamic)
+    }
+
     val navigationView: NavigationView
         get() {
             return binding.accountPanel.expansionContent
@@ -2661,28 +2664,53 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         showSnackBar(TextUtils.concatResStrings(this, *resIds.toIntArray()))
     }
 
-    private fun doReset() {
+    private fun checkReset() {
         exportViewModel.checkAppDir().observe(this) { result ->
             result.onSuccess {
-                currentAccount?.let {
-                    with(it) {
-                        exportViewModel.hasExported(this)
-                            .observe(this@BaseMyExpenses) { hasExported ->
-                                ExportDialogFragment.newInstance(
-                                    ExportDialogFragment.AccountInfo(
-                                        id,
-                                        label,
-                                        currency,
-                                        sealed,
-                                        hasExported,
-                                        currentFilter.whereFilter.value != null
+                currentAccount?.let { account ->
+                    if (account.isAggregate) {
+                        //for aggregate account sealed is checked for each account during export
+                        showExportDialog(emptyList())
+                    } else if (account.sealed) {
+                        showExportDialog(listOf(R.string.account_closed))
+                    } else {
+                        checkSealedHandler.checkAccount(account.id) { result ->
+                            result.onSuccess {
+                                showExportDialog(
+                                    listOfNotNull(
+                                        if (!it.first) R.string.object_sealed else null,
+                                        if (!it.second) R.string.object_sealed_debt else null
                                     )
-                                ).show(supportFragmentManager, "EXPORT")
+                                )
                             }
+                                .onFailure {
+                                    showSnackBar(it.safeMessage)
+                                }
+                        }
                     }
                 }
             }.onFailure {
                 showDismissibleSnackBar(it.safeMessage)
+            }
+        }
+    }
+
+    private fun showExportDialog(cannotResetConditions: List<Int>) {
+        currentAccount?.let {
+            with(it) {
+                exportViewModel.hasExported(this)
+                    .observe(this@BaseMyExpenses) { hasExported ->
+                        ExportDialogFragment.newInstance(
+                            ExportDialogFragment.AccountInfo(
+                                id,
+                                label,
+                                currency,
+                                cannotResetConditions,
+                                hasExported,
+                                currentFilter.whereFilter.value != null
+                            )
+                        ).show(supportFragmentManager, "EXPORT")
+                    }
             }
         }
     }
@@ -2761,44 +2789,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
             )
             .commitNow()
         exportViewModel.startExport(args)
-    }
-
-    private fun handleAccountsGrouping(itemId: Int): Boolean {
-        val newGrouping: AccountGrouping? = when (itemId) {
-            R.id.GROUPING_ACCOUNTS_CURRENCY_COMMAND -> AccountGrouping.CURRENCY
-            R.id.GROUPING_ACCOUNTS_TYPE_COMMAND -> AccountGrouping.TYPE
-            R.id.GROUPING_ACCOUNTS_NONE_COMMAND -> AccountGrouping.NONE
-            else -> null
-        }
-        return if (newGrouping != null && newGrouping != accountGrouping.value) {
-            accountGrouping.value = newGrouping
-            prefHandler.putString(PrefKey.ACCOUNT_GROUPING, newGrouping.name)
-            viewModel.triggerAccountListRefresh()
-            true
-        } else false
-    }
-
-    private fun handleSortOption(itemId: Int): Boolean {
-        val newSort = fromCommandId(itemId)
-        var result = false
-        if (newSort != null) {
-            if (newSort != accountSort) {
-                accountSort = newSort
-                prefHandler.putString(PrefKey.SORT_ORDER_ACCOUNTS, newSort.name)
-            }
-            viewModel.triggerAccountListRefresh()
-            result = true
-            if (itemId == R.id.SORT_CUSTOM_COMMAND) {
-                SortUtilityDialogFragment.newInstance(
-                    ArrayList(
-                        accountData
-                            .filter { it.id > 0 }
-                            .map { SortableItem(it.id, it.label) }
-                    ))
-                    .show(supportFragmentManager, "SORT_ACCOUNTS")
-            }
-        }
-        return result
     }
 
     fun addFilterCriterion(c: SimpleCriterion<*>) {
@@ -2932,10 +2922,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
         }
     }
 
-    override fun onSortOrderConfirmed(sortedIds: LongArray) {
-        viewModel.sortAccounts(sortedIds)
-    }
-
     fun showTransactionFromIntent(extras: Bundle) {
         val idFromNotification = extras.getLong(KEY_TRANSACTIONID, 0)
         if (idFromNotification != 0L) {
@@ -2955,8 +2941,6 @@ abstract class BaseMyExpenses : LaunchActivity(), OnDialogResultListener, Contri
 
     companion object {
         const val MANAGE_HIDDEN_FRAGMENT_TAG = "MANAGE_HIDDEN"
-        const val DIALOG_TAG_GROUPING = "GROUPING"
-        const val DIALOG_TAG_SORTING = "SORTING"
         const val ACCOUNT_VISUAL_NONE = 0
         const val ACCOUNT_VISUAL_PROGRESS = 1
         const val ACCOUNT_VISUAL_ICON = 2
