@@ -25,9 +25,12 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.*
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.testutils.BaseUiTest
+import org.totschnig.myexpenses.testutils.TestShard4
+import org.totschnig.myexpenses.testutils.TestShard5
 import org.totschnig.myexpenses.testutils.childAtPosition
 import kotlin.reflect.KClass
 
+@TestShard5
 class SettingsTest : BaseUiTest<PreferenceActivity>() {
     @JvmField
     @Rule

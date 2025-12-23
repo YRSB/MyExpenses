@@ -5,7 +5,6 @@ import android.app.Application
 import android.content.ContentProviderOperation
 import android.content.ContentResolver
 import android.database.sqlite.SQLiteConstraintException
-import android.os.Build
 import android.text.TextUtils
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -28,42 +27,48 @@ import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.compose.RenderType
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.asContentValues
 import org.totschnig.myexpenses.db2.countAccounts
+import org.totschnig.myexpenses.db2.createParty
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.deleteTemplate
+import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.getAccountFlags
 import org.totschnig.myexpenses.db2.getAccountTypes
 import org.totschnig.myexpenses.db2.getTransactionSum
 import org.totschnig.myexpenses.db2.loadAccountFlow
 import org.totschnig.myexpenses.db2.loadAggregateAccountFlow
+import org.totschnig.myexpenses.db2.saveParty
+import org.totschnig.myexpenses.db2.updateNewPlanEnabled
 import org.totschnig.myexpenses.db2.updateTransferPeersForTransactionDelete
 import org.totschnig.myexpenses.dialog.select.SelectFromMappedTableDialogFragment
 import org.totschnig.myexpenses.model.CurrencyContext
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Template
-import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.dynamicExchangeRatesPerAccount
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_HELPER
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_OPENING_BALANCE
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SEALED
+import org.totschnig.myexpenses.provider.KEY_STATUS
+import org.totschnig.myexpenses.provider.KEY_SUM
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER
+import org.totschnig.myexpenses.provider.STATUS_HELPER
+import org.totschnig.myexpenses.provider.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_MINIMAL_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.AUTHORITY
 import org.totschnig.myexpenses.provider.TransactionProvider.DEBTS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
-import org.totschnig.myexpenses.provider.TransactionProvider.UNCOMMITTED_URI
 import org.totschnig.myexpenses.provider.buildTransactionRowSelect
 import org.totschnig.myexpenses.provider.checkForSealedDebt
 import org.totschnig.myexpenses.provider.filter.Criterion
@@ -155,7 +160,7 @@ open class ContentResolvingAndroidViewModel(application: Application) :
         query: String? = null,
         queryArgs: Array<String>? = null,
         withAggregates: Boolean = true,
-        sortOrder: String? = null
+        sortOrder: String? = null,
     ): Flow<List<AccountMinimal>> = contentResolver.observeQuery(
         if (withAggregates) ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES else ACCOUNTS_MINIMAL_URI,
         null, query, queryArgs, sortOrder, false
@@ -194,13 +199,14 @@ open class ContentResolvingAndroidViewModel(application: Application) :
             var failure = 0
             ids.forEach {
                 try {
-                    Template.delete(contentResolver, it, deletePlan)
+                    repository.deleteTemplate(it, deletePlan)
                     success++
                 } catch (e: SQLiteConstraintException) {
                     CrashHandler.reportWithDbSchema(contentResolver, e)
                     failure++
                 }
             }
+            repository.updateNewPlanEnabled(licenceHandler)
             emit(DeleteState.DeleteComplete(success, failure))
         }
 
@@ -224,7 +230,6 @@ open class ContentResolvingAndroidViewModel(application: Application) :
             contentResolver.notifyChange(TRANSACTIONS_URI, null, true)
             contentResolver.notifyChange(ACCOUNTS_URI, null, false)
             contentResolver.notifyChange(DEBTS_URI, null, false)
-            contentResolver.notifyChange(UNCOMMITTED_URI, null, false)
             bulkDeleteStateInternal.update {
                 DeleteState.DeleteComplete(success, failure)
             }
@@ -274,12 +279,10 @@ open class ContentResolvingAndroidViewModel(application: Application) :
         }
 
     open fun updateTransferShortcut() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
-            ShortcutHelper.configureTransferShortcut(
-                getApplication(),
-                isTransferEnabled
-            )
-        }
+        ShortcutHelper.configureTransferShortcut(
+            getApplication(),
+            isTransferEnabled
+        )
     }
 
     val isTransferEnabled
@@ -294,7 +297,7 @@ open class ContentResolvingAndroidViewModel(application: Application) :
         date: LocalDate? = null,
         showSealed: Boolean = false,
         showZero: Boolean = true,
-        sortOrder: String? = null
+        sortOrder: String? = null,
     ) =
         contentResolver.observeQuery(
             uri = with(DEBTS_URI.buildUpon()) {
@@ -328,7 +331,7 @@ open class ContentResolvingAndroidViewModel(application: Application) :
         account: Account,
         filter: Criterion?,
         handleDelete: Int,
-        helperComment: String?
+        helperComment: String?,
     ) {
         val ops = ArrayList<ContentProviderOperation>()
         var handleDeleteOperation: ContentProviderOperation? = null
@@ -341,21 +344,30 @@ open class ContentResolvingAndroidViewModel(application: Application) :
                 .withValue(KEY_OPENING_BALANCE, currentBalance)
                 .build()
         } else if (handleDelete == EXPORT_HANDLE_DELETED_CREATE_HELPER) {
-            val helper = Transaction(account.id, Money(currencyContext[account.currency], sum))
-            helper.comment = helperComment
-            helper.status = STATUS_HELPER
-            handleDeleteOperation = ContentProviderOperation.newInsert(Transaction.CONTENT_URI)
-                .withValues(helper.buildInitialValues(contentResolver)).build()
+            val helper = Transaction(
+                accountId = account.id,
+                amount = Money(currencyContext[account.currency], sum).amountMinor,
+                comment = helperComment,
+                uuid = generateUuid()
+            )
+            handleDeleteOperation = ContentProviderOperation.newInsert(TRANSACTIONS_URI)
+                .withValues(helper.asContentValues(true).apply {
+                    put(KEY_STATUS, STATUS_HELPER)
+                }).build()
         }
         val rowSelect = buildTransactionRowSelect(filter)
         var selectionArgs: Array<String>? = arrayOf(account.id.toString())
         if (filter != null) {
             selectionArgs = joinArrays(selectionArgs, filter.getSelectionArgs(false))
         }
-        updateTransferPeersForTransactionDelete(ops, rowSelect, selectionArgs)
+        updateTransferPeersForTransactionDelete(
+            ops,
+            "$KEY_TRANSFER_PEER IN ($rowSelect)",
+            selectionArgs
+        )
         ops.add(
             ContentProviderOperation.newDelete(
-                Transaction.CONTENT_URI
+                TRANSACTIONS_URI
             )
                 .withSelection(
                     "$KEY_ROWID IN ($rowSelect)",
@@ -406,6 +418,24 @@ open class ContentResolvingAndroidViewModel(application: Application) :
         }.takeIf { it.isNotEmpty() }
         return selection to joinArrays(filterSelectionArgs, accountSelectionArgs)
     }
+
+    fun saveParty(id: Long, name: String, shortName: String?): LiveData<Boolean> =
+        liveData(context = coroutineContext()) {
+            val party = org.totschnig.myexpenses.model2.Party.create(
+                id = id,
+                name = name,
+                shortName = shortName
+            )
+            emit(
+                if (party == null) false else
+                    try {
+                        if (id == 0L) repository.createParty(party) else repository.saveParty(party)
+                        true
+                    } catch (_: SQLiteConstraintException) {
+                        false
+                    }
+            )
+        }
 
     /*    fun loadDebugDebts(count: Int = 10) {
             debts.postValue(List(

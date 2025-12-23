@@ -5,37 +5,42 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.insertTransfer
 import org.totschnig.myexpenses.model.CurrencyUnit
-import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.model2.Account
-import org.totschnig.myexpenses.provider.DatabaseConstants
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.testutils.ACCOUNT_LABEL_1
+import org.totschnig.myexpenses.testutils.ACCOUNT_LABEL_2
 import org.totschnig.myexpenses.testutils.BaseExpenseEditTest
-import org.totschnig.myexpenses.testutils.Espresso
+import org.totschnig.myexpenses.testutils.TestShard2
 import org.totschnig.myexpenses.testutils.cleanup
 import java.util.Currency
 
+@TestShard2
 class ForeignTransferEditTest : BaseExpenseEditTest() {
-    private var transfer: Transfer? = null
+    private var transfer: Long = 0
     lateinit var account2: Account
+    private var peer: Long = 0
     @Before
     fun fixture() {
         val currency1 = CurrencyUnit(Currency.getInstance("USD"))
         val currency2 = CurrencyUnit(Currency.getInstance("EUR"))
-        val accountLabel1 = "Test label 1"
         account1 = buildAccount(
-            accountLabel1,
+            ACCOUNT_LABEL_1,
             currency = currency1.code
         )
-        val accountLabel2 = "Test label 2"
         account2 = buildAccount(
-            accountLabel2,
+            ACCOUNT_LABEL_2,
             currency = currency2.code
         )
-        transfer = Transfer.getNewInstance(account1.id, currency1, account2.id).apply {
-            setAmountAndTransferAmount(Money(currency1, -2000L), Money(currency2, -3000L))
-            save(contentResolver)
-        }
+        val transaction = repository.insertTransfer(
+            accountId = account1.id,
+            transferAccountId = account2.id,
+            amount = -2000L,
+            transferAmount = 3000L,
+        )
+        transfer = transaction.data.id
+        peer = transaction.transferPeer!!.id
     }
 
     @After
@@ -49,10 +54,18 @@ class ForeignTransferEditTest : BaseExpenseEditTest() {
     @Test
     fun shouldSaveForeignTransfer() {
         val i = intent
-        i.putExtra(DatabaseConstants.KEY_ROWID, transfer!!.id)
+        i.putExtra(KEY_ROWID, transfer)
         testScenario = ActivityScenario.launchActivityForResult(i)
         androidx.test.espresso.Espresso.onIdle()
         closeKeyboardAndSave()
         assertFinishing()
+        assertTransfer(
+            id = transfer,
+            expectedAccount = account1.id,
+            expectedAmount = -2000L,
+            expectedTransferAccount = account2.id,
+            expectedTransferAmount = 3000L,
+            expectedPeer = peer
+        )
     }
 }

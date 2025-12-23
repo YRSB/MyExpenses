@@ -22,7 +22,7 @@ import org.totschnig.myexpenses.fragment.OnBoardingPrivacyFragment
 import org.totschnig.myexpenses.fragment.OnboardingDataFragment
 import org.totschnig.myexpenses.fragment.OnboardingUiFragment
 import org.totschnig.myexpenses.preference.PrefKey
-import org.totschnig.myexpenses.provider.DatabaseConstants
+import org.totschnig.myexpenses.provider.KEY_SYNC_ACCOUNT_NAME
 import org.totschnig.myexpenses.sync.json.AccountMetaData
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.distrib.DistributionHelper.versionNumber
@@ -152,7 +152,7 @@ class OnboardingActivity : SyncBackendSetupActivity() {
 
     fun setupFromBackup(backup: String?, password: String?) {
         doRestore(Bundle(4).apply {
-            putString(DatabaseConstants.KEY_SYNC_ACCOUNT_NAME, accountName)
+            putString(KEY_SYNC_ACCOUNT_NAME, accountName)
             putString(KEY_BACKUP_FROM_SYNC, backup)
             putString(KEY_PASSWORD, password)
         })
@@ -161,7 +161,7 @@ class OnboardingActivity : SyncBackendSetupActivity() {
     fun setupFromSyncAccounts(syncAccounts: List<AccountMetaData>) {
         doWithEncryptionCheck {
             showSnackBarIndefinite(R.string.progress_dialog_fetching_data_from_sync_backend)
-            syncViewModel.setupFromSyncAccounts(syncAccounts.map { it.uuid() }, accountName!!)
+            syncViewModel.setupFromSyncAccounts(syncAccounts.map { it.uuid }, accountName!!)
                 .observe(this) { result ->
                     dismissSnackBar()
                     result.onSuccess {
@@ -173,7 +173,7 @@ class OnboardingActivity : SyncBackendSetupActivity() {
         }
     }
 
-    private inner class MyPagerAdapter(activity: FragmentActivity) :
+    private class MyPagerAdapter(activity: FragmentActivity) :
         FragmentStateAdapter(activity) {
         fun getFragmentName(currentPosition: Int): String {
             //https://stackoverflow.com/a/61178226/1199911
@@ -198,7 +198,11 @@ class OnboardingActivity : SyncBackendSetupActivity() {
     }
 
     override fun startBanking() {
-        startBanking.launch(Intent(this, bankingFeature.bankingActivityClass))
+        bankingFeature.bankingActivityClass?.let {
+            startBanking.launch(Intent(this, bankingFeature.bankingActivityClass))
+        } ?: run {
+            showSnackBar("BankingFeature not installed")
+        }
     }
 
     override val snackBarContainerId: Int

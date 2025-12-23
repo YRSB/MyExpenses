@@ -17,6 +17,8 @@ package org.totschnig.myexpenses.provider;
 
 import static android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE;
 import static android.database.sqlite.SQLiteDatabase.CONFLICT_NONE;
+import static org.totschnig.myexpenses.db2.RepositoryPlanKt.updateCustomAppUri;
+import static org.totschnig.myexpenses.model.UuidKt.generateUuid;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_EXPENSE;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_INCOME;
 import static org.totschnig.myexpenses.model2.PaymentMethodKt.PAYMENT_METHOD_NEUTRAL;
@@ -45,18 +47,16 @@ import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSA
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSACTIONS_SEALED_UPDATE_TRIGGER_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSACTIONS_UUID_INDEX_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSACTION_ATTRIBUTES_CREATE;
+import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSFER_PEER_TRIGGER;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.TRANSFER_SEALED_UPDATE_TRIGGER_CREATE;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.VIEW_WITH_ACCOUNT_DEFINITION;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.createOrRefreshTransactionLinkedTableTriggers;
 import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.getPRIORITIZED_PRICES_CREATE;
-import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.sequenceNumberSelect;
-import static org.totschnig.myexpenses.provider.BaseTransactionDatabaseKt.shouldWriteChangeTemplate;
 import static org.totschnig.myexpenses.provider.ChangeLogTriggersKt.createOrRefreshChangeLogTriggers;
 import static org.totschnig.myexpenses.provider.ChangeLogTriggersKt.createOrRefreshEquivalentAmountTriggers;
+import static org.totschnig.myexpenses.provider.ConstantsKt.*;
 import static org.totschnig.myexpenses.provider.DataBaseAccount.HOME_AGGREGATE_ID;
-import static org.totschnig.myexpenses.provider.DatabaseConstants.*;
 import static org.totschnig.myexpenses.provider.DbConstantsKt.buildViewDefinition;
-import static org.totschnig.myexpenses.provider.DbConstantsKt.tagGroupBy;
 import static org.totschnig.myexpenses.util.ColorUtils.MAIN_COLORS;
 import static org.totschnig.myexpenses.util.PermissionHelper.PermissionGroup.CALENDAR;
 
@@ -78,14 +78,12 @@ import androidx.sqlite.db.SupportSQLiteQueryBuilder;
 
 import org.totschnig.myexpenses.MyApplication;
 import org.totschnig.myexpenses.R;
+import org.totschnig.myexpenses.db2.entities.Template;
 import org.totschnig.myexpenses.model.CrStatus;
 import org.totschnig.myexpenses.model.CurrencyContext;
 import org.totschnig.myexpenses.model.CurrencyEnum;
 import org.totschnig.myexpenses.model.Grouping;
-import org.totschnig.myexpenses.model.Model;
-import org.totschnig.myexpenses.model.Plan;
 import org.totschnig.myexpenses.model.PreDefinedPaymentMethod;
-import org.totschnig.myexpenses.model.Template;
 import org.totschnig.myexpenses.preference.PrefHandler;
 import org.totschnig.myexpenses.preference.PrefKey;
 import org.totschnig.myexpenses.sync.json.TransactionChange;
@@ -99,8 +97,6 @@ import java.util.Locale;
 import timber.log.Timber;
 
 public class TransactionDatabase extends BaseTransactionDatabase {
-  protected boolean shouldInsertDefaultTransferCategory;
-
   /**
    * SQL statement for expenses TABLE
    * both transactions and transfers are stored in this table
@@ -134,9 +130,8 @@ public class TransactionDatabase extends BaseTransactionDatabase {
           + KEY_ORIGINAL_CURRENCY + " text, "
           + KEY_DEBT_ID + " integer references " + TABLE_DEBTS + "(" + KEY_ROWID + ") ON DELETE SET NULL);";
 
-  public TransactionDatabase(@NonNull Context context, @NonNull PrefHandler prefHandler, boolean shouldInsertDefaultTransferCategory) {
+  public TransactionDatabase(@NonNull Context context, @NonNull PrefHandler prefHandler) {
     super(context, prefHandler);
-    this.shouldInsertDefaultTransferCategory = shouldInsertDefaultTransferCategory;
   }
 
   /**
@@ -409,19 +404,9 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     if (!db.isReadOnly()) {
       db.execSQL("PRAGMA foreign_keys=ON;");
       db.execSQL("PRAGMA recursive_triggers = ON;");
+      checkDefaultTransferCategory(db);
     }
-    try {
-      String uncommitedSelect = String.format(Locale.ROOT, "(SELECT %s from %s where %s = %d)",
-          KEY_ROWID, TABLE_TRANSACTIONS, KEY_STATUS, STATUS_UNCOMMITTED);
-      String uncommitedParentSelect = String.format(Locale.ROOT, "%s IN %s", KEY_PARENTID, uncommitedSelect);
-      final String whereClause = String.format(Locale.ROOT,
-          "%1$s IN %2$s OR %3$s OR %4$s IN (SELECT %5$s FROM %6$s WHERE %3$s)",
-          KEY_ROWID, uncommitedSelect, uncommitedParentSelect, KEY_TRANSFER_PEER, KEY_ROWID, TABLE_TRANSACTIONS);
-      Timber.d(whereClause);
-      MoreDbUtilsKt.safeUpdateWithSealed(db, () -> db.delete(TABLE_TRANSACTIONS, whereClause, null));
-    } catch (SQLiteException e) {
-      CrashHandler.report(e);
-    }
+
   }
 
   @Override
@@ -456,9 +441,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     initialValues.put(KEY_PARENTID, SPLIT_CATID);
     initialValues.put(KEY_LABEL, "__SPLIT_TRANSACTION__");
     db.insert(TABLE_CATEGORIES, CONFLICT_NONE, initialValues);
-    if (shouldInsertDefaultTransferCategory) {
-      insertDefaultTransferCategory(db, getContext().getString(R.string.transfer));
-    }
+    insertDefaultTransferCategory(db, getContext().getString(R.string.transfer));
     insertCurrencies(db);
     db.execSQL(EVENT_CACHE_CREATE);
     db.execSQL(CHANGES_CREATE);
@@ -488,6 +471,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     createOrRefreshAccountTriggers(db);
     createCategoryTypeTriggers(db);
     createOrRefreshEquivalentAmountTriggers(db);
+    db.execSQL(TRANSFER_PEER_TRIGGER);
 
     db.execSQL(SETTINGS_CREATE);
     //TODO evaluate if we should get rid of the split transaction category id
@@ -1078,7 +1062,7 @@ public class TransactionDatabase extends BaseTransactionDatabase {
             if (c.moveToFirst()) {
               ContentValues templateValues = new ContentValues();
               while (c.getPosition() < c.getCount()) {
-                templateValues.put("uuid", Model.generateUuid());
+                templateValues.put("uuid", generateUuid());
                 long templateId = c.getLong(c.getColumnIndexOrThrow("_id"));
                 db.update("templates", CONFLICT_NONE, templateValues, "_id = " + templateId, null);
                 c.moveToNext();
@@ -1234,10 +1218,10 @@ public class TransactionDatabase extends BaseTransactionDatabase {
             Cursor c = MoreDbUtilsKt.query(db,"templates", new String[]{"_id", "plan_id"}, "plan_id IS NOT null", null, null, null, null, null);
             if (c.moveToFirst()) {
               while (!c.isAfterLast()) {
-                Plan.updateCustomAppUri(
-                        MyApplication.Companion.getInstance().getContentResolver(),
+                updateCustomAppUri(
+                        getContext(),
                         c.getLong(1),
-                        Template.buildCustomAppUri(c.getLong(0))
+                        c.getLong(0)
                 );
                 c.moveToNext();
               }
@@ -2117,6 +2101,18 @@ public class TransactionDatabase extends BaseTransactionDatabase {
         upgradeTo180(db);
       }
 
+      if (oldVersion < 181) {
+        createOrRefreshViews(db);
+      }
+
+      if (oldVersion < 182) {
+        upgradeTo182(db);
+      }
+
+      if (oldVersion < 183) {
+        upgradeTo183(db);
+      }
+
       TransactionProvider.resumeChangeTrigger(db);
     } catch (SQLException e) {
       throw new SQLiteUpgradeFailedException(oldVersion, newVersion, e);
@@ -2154,7 +2150,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
 
   private void createOrRefreshViews(SupportSQLiteDatabase db) {
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_COMMITTED);
-    db.execSQL("DROP VIEW IF EXISTS " + VIEW_UNCOMMITTED);
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_ALL);
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_EXTENDED);
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_CHANGES_EXTENDED);
@@ -2164,8 +2159,6 @@ public class TransactionDatabase extends BaseTransactionDatabase {
     String tagGroupBy = DbConstantsKt.tagGroupBy(TABLE_TRANSACTIONS);
     String viewDefinition = buildViewDefinition(TABLE_TRANSACTIONS);
     db.execSQL("CREATE VIEW " + VIEW_COMMITTED + viewDefinition + " WHERE " + KEY_STATUS + " != " + STATUS_UNCOMMITTED  + tagGroupBy + ";");
-    db.execSQL("CREATE VIEW " + VIEW_UNCOMMITTED + viewDefinition + " WHERE " + KEY_STATUS + " = " + STATUS_UNCOMMITTED + tagGroupBy + ";");
-    db.execSQL("CREATE VIEW " + VIEW_ALL + viewExtended);
     db.execSQL("CREATE VIEW " + VIEW_EXTENDED + viewExtended + " WHERE " + KEY_STATUS + " != " + STATUS_UNCOMMITTED);
 
     db.execSQL("CREATE VIEW " + VIEW_CHANGES_EXTENDED + buildViewDefinitionExtended(TABLE_CHANGES));
@@ -2177,11 +2170,8 @@ public class TransactionDatabase extends BaseTransactionDatabase {
   private void createOrRefreshTemplateViews(SupportSQLiteDatabase db) {
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_TEMPLATES_ALL);
     db.execSQL("DROP VIEW IF EXISTS " + VIEW_TEMPLATES_EXTENDED);
-    db.execSQL("DROP VIEW IF EXISTS " + VIEW_TEMPLATES_UNCOMMITTED);
 
-    String viewTemplates = buildViewDefinition(TABLE_TEMPLATES);
     String viewTemplatesExtended = buildViewDefinitionExtended(TABLE_TEMPLATES);
-    db.execSQL("CREATE VIEW " + VIEW_TEMPLATES_UNCOMMITTED + viewTemplates + " WHERE " + KEY_STATUS + " = " + STATUS_UNCOMMITTED + tagGroupBy(TABLE_TEMPLATES) + ";");
     db.execSQL("CREATE VIEW " + VIEW_TEMPLATES_ALL + viewTemplatesExtended);
     db.execSQL("CREATE VIEW " + VIEW_TEMPLATES_EXTENDED + viewTemplatesExtended + " WHERE " + KEY_STATUS + " != " + STATUS_UNCOMMITTED + ";");
   }

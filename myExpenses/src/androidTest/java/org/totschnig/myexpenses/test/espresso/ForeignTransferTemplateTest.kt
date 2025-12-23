@@ -15,13 +15,17 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.ExpenseEdit
 import org.totschnig.myexpenses.contract.TransactionsContract
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.entities.Template.Action
 import org.totschnig.myexpenses.model.CurrencyUnit
-import org.totschnig.myexpenses.model.Template.Action
 import org.totschnig.myexpenses.model2.Account
+import org.totschnig.myexpenses.testutils.ACCOUNT_LABEL_1
+import org.totschnig.myexpenses.testutils.ACCOUNT_LABEL_2
 import org.totschnig.myexpenses.testutils.BaseExpenseEditTest
+import org.totschnig.myexpenses.testutils.TestShard2
 import org.totschnig.myexpenses.testutils.cleanup
 import java.util.Currency
 
+@TestShard2
 class ForeignTransferTemplateTest : BaseExpenseEditTest() {
     lateinit var account2: Account
 
@@ -29,14 +33,12 @@ class ForeignTransferTemplateTest : BaseExpenseEditTest() {
     fun fixture() {
         val currency1 = CurrencyUnit(Currency.getInstance("USD"))
         val currency2 = CurrencyUnit(Currency.getInstance("EUR"))
-        val accountLabel1 = "Test label 1"
         account1 = buildAccount(
-            accountLabel1,
+            ACCOUNT_LABEL_1,
             currency = currency1.code
         )
-        val accountLabel2 = "Test label 2"
         account2 = buildAccount(
-            accountLabel2,
+            ACCOUNT_LABEL_2,
             currency = currency2.code
         )
     }
@@ -88,35 +90,35 @@ class ForeignTransferTemplateTest : BaseExpenseEditTest() {
     @Test
     fun withAmountOnFirstAccountSave() {
         runTheTest(Action.SAVE) {
-            assertTemplate(account1.id, -300000)
+            assertTemplate(expectedAccount = account1.id, expectedAmount = -300000, expectedCategory = transferCategoryId)
         }
     }
 
     @Test
     fun withAmountOnFirstAccountEdit() {
         runTheTest(Action.EDIT) {
-            assertTemplate(account1.id, -300000)
+            assertTemplate(expectedAccount = account1.id, expectedAmount = -300000, expectedCategory = transferCategoryId)
         }
     }
 
     @Test
     fun withAmountOnSecondAccountSave() {
         runTheTest(Action.SAVE, R.id.TransferAmount) {
-            assertTemplate(account2.id, 300000)
+            assertTemplate(expectedAccount = account2.id, expectedAmount = 300000, expectedCategory = transferCategoryId)
         }
     }
 
     @Test
     fun withAmountOnSecondAccountEdit() {
         runTheTest(Action.EDIT, R.id.TransferAmount) {
-            assertTemplate(account2.id, 300000)
+            assertTemplate(expectedAccount = account2.id, expectedAmount = 300000, expectedCategory = transferCategoryId)
         }
     }
 
     @Test
     fun withoutAmountEdit() {
         runTheTest(Action.EDIT, null) {
-            assertTemplate(account1.id, 0)
+            assertTemplate(expectedAccount = account1.id, expectedAmount = 0, expectedCategory = transferCategoryId)
         }
     }
 

@@ -1,5 +1,6 @@
 package org.totschnig.myexpenses.test.espresso
 
+import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -23,17 +24,18 @@ import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.deleteAccount
 import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.getTransactionSum
+import org.totschnig.myexpenses.db2.insertTransaction
 import org.totschnig.myexpenses.db2.loadAccount
-import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
 import org.totschnig.myexpenses.model.PreferencesCurrencyContext
-import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.testutils.BaseUiTest
+import org.totschnig.myexpenses.testutils.TestShard3
 import org.totschnig.myexpenses.testutils.cleanup
 import org.totschnig.myexpenses.viewmodel.data.Currency.Companion.create
 
 
+@TestShard3
 class ManageCurrenciesTest : BaseUiTest<ManageCurrencies>() {
 
     @get:Rule
@@ -69,9 +71,6 @@ class ManageCurrenciesTest : BaseUiTest<ManageCurrencies>() {
         repository.loadAccount(account.id)!!.openingBalance + repository.getTransactionSum(account)
 
     private fun testHelper(withUpdate: Boolean) {
-        val appComponent = app.appComponent
-        val currencyContext = appComponent.currencyContext()
-        val currencyUnit = currencyContext[CURRENCY_CODE]
         account = repository.createAccount(
             Account(
                 label = "TEST ACCOUNT",
@@ -80,9 +79,10 @@ class ManageCurrenciesTest : BaseUiTest<ManageCurrencies>() {
                 type = repository.findAccountType(PREDEFINED_NAME_CASH)!!
             )
         )
-        val op = Transaction.getNewInstance(account.id, currencyUnit)
-        op.amount = Money(currencyUnit, -1200L)
-        op.save(contentResolver)
+        repository.insertTransaction(
+            accountId = account.id,
+            amount = -1200L
+        )
         val before = getTotalAccountBalance(account)
         assertThat(before).isEqualTo(3800)
         val currency = create(CURRENCY_CODE, targetContext)
@@ -96,6 +96,7 @@ class ManageCurrenciesTest : BaseUiTest<ManageCurrencies>() {
         } else {
             BaristaCheckboxInteractions.uncheck(R.id.checkBox)
         }
+        Espresso.closeSoftKeyboard()
         onView(withId(android.R.id.button1)).perform(click())
         onData(Matchers.`is`(currency))
             .inAdapterView(withId(android.R.id.list)).check(matches(withText(containsString("3"))))

@@ -83,7 +83,6 @@
     <string name="form_date_time_help_text">Entrez la date et l\'heure auxquelles l\'opération a eu lieu.</string>
     <string name="form_date_time_help_text_configuration">Dans les paramètres, vous pouvez désactiver la saisie de l\'heure et activer la différenciation entre la date d\'enregistrement et la date de valeur.</string>
     <string name="form_date_time_help_text_link"><![CDATA[Si la bascule <img src=\"ic_hchain\">/<img src=\"ic_hchain_broken\"> est dans son état lié, définir la date de valeur ou la date de réservation mettra également à jour l’autre date.]]></string>
-    <string name="form_payer_or_payee_help_text">Ce champ se souvient des valeurs que vous avez entré et vous les proposera à l\'avenir.</string>
     <string name="form_amount_switch_help_text">Utilisez le commutateur pour basculer entre dépenses et revenus.</string>
     <string name="form_calculator_help_text"><![CDATA[Le <img src=\"?calcIcon\"> bouton permettant d\'ouvrir la calculatrice.]]></string>
     <string name="form_crstatus_help_text">Pour les opérations de comptes bancaires, vous pouvez modifier le statut de l\'opération à pointée. Pour mettre à rapproché, vous devez utiliser la commande \"Rapprocher le compte\" de la liste des transactions. Si le statut n\'est pas défini, l\'opération n\'est pas prise en compte.</string>
@@ -226,4 +225,7 @@
     <string name="account_flags_help_v2">Les indicateurs vous permettent de configurer la visibilité et la priorité d’un compte : \n• Masquez les comptes rarement utilisés, tout en choisissant si les comptes invisibles sont inclus dans les comptes agrégés et le bilan. \n• Priorisez les comptes favoris dans la sélection de compte sur le formulaire de transaction. \nVous pouvez également utiliser des indicateurs pour indiquer les comptes appartenant à un objectif spécifique, comme les comptes familiaux et personnels, puis afficher uniquement l’un ou l’autre.</string>
     <string name="menu_balance_sheet_help_text">Le bilan présente la valeur nette de tous vos comptes, correspondant à la différence entre vos actifs (ce que vous possédez) et vos passifs (ce que vous devez). Il reflète votre situation financière à un moment précis, que ce soit dans le passé, le présent ou même le futur. La présentation du bilan est également influencée par des indicateurs (qui peuvent modifier l\'inclusion des comptes dans les totaux).</string>
     <string name="cab_flag_help_text">Attribuez un indicateur au compte sélectionné, par exemple Favori ou Inactif.</string>
+    <string name="form_payer_or_payee_help_text"><![CDATA[Ce champ vous permet de sélectionner ou de créer un payeur/bénéficiaire. Commencez à taper le nom, et des suggestions apparaîtront. Si aucune suggestion n’est sélectionnée, un nouveau tiers est créé. Si une suggestion est sélectionnée, elle est affichée sous forme de puce. 
+        <br><img src="ic_menu_edit"> Modifier les détails du tiers sélectionné.
+<br><img src="ic_menu_close_clear_cancel"> Supprimez la sélection actuelle. Le champ texte réapparaîtra alors.]]></string>
 </resources>

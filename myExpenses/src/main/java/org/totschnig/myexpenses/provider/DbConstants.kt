@@ -1,6 +1,5 @@
 package org.totschnig.myexpenses.provider
 
-import android.content.Context
 import android.net.Uri
 import android.text.TextUtils
 import androidx.core.text.isDigitsOnly
@@ -9,128 +8,11 @@ import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.FLAG_INCOME
 import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
 import org.totschnig.myexpenses.db2.FLAG_TRANSFER
+import org.totschnig.myexpenses.db2.Repository.Companion.RECORD_SEPARATOR
 import org.totschnig.myexpenses.db2.asCategoryType
-import org.totschnig.myexpenses.db2.localizedLabelForAccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.CTE_TABLE_NAME_FULL_ACCOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BANK_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGETID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_NEXT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_PREVIOUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CLEARED_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMODITY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CRITERION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CR_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY_OTHER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY_SELF
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEBT_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DISPLAY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_EXPENSES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_INCOME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_OPENING_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TRANSFERS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_CLEARED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_DESCENDANTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_FUTURE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_TRANSFERS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_ASSET
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LAST_USED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LATEST_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LATEST_EXCHANGE_RATE_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LEVEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_BUDGETS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_METHODS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_PAYEES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TAGS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TEMPLATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TRANSACTIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MATCHES_FILTER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHOD_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHOD_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_RECONCILED_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SECOND_GROUP
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_BY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_DIRECTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_EXPENSES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_INCOME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_TRANSFERS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUPPORTS_RECONCILIATION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_ACCOUNT_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TEMPLATEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USAGES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
-import org.totschnig.myexpenses.provider.DatabaseConstants.NULL_ROW_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_UNCOMMITTED
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_EXCHANGE_RATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_FLAGS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_TYPES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BUDGET_ALLOCATIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_DEBTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_EQUIVALENT_AMOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_METHODS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_PAYEES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_PLAN_INSTANCE_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_PRICES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TAGS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TEMPLATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TEMPLATES_TAGS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS_TAGS
 import org.totschnig.myexpenses.provider.DatabaseConstants.TREE_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_PRIORITIZED_PRICES
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_WITH_ACCOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_ARCHIVE
 import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_ARCHIVED
 import org.totschnig.myexpenses.provider.DatabaseConstants.WHERE_NOT_SPLIT
@@ -544,9 +426,11 @@ fun categoryPathFromLeave(rowId: String): String {
 const val TRANSFER_ACCOUNT_LABEL =
     "CASE WHEN $KEY_TRANSFER_ACCOUNT THEN (SELECT $KEY_LABEL FROM $TABLE_ACCOUNTS WHERE $KEY_ROWID = $KEY_TRANSFER_ACCOUNT) END AS $KEY_TRANSFER_ACCOUNT_LABEL"
 
+const val TRANSFER_ACCOUNT_CURRENCY =
+    "CASE WHEN $KEY_TRANSFER_ACCOUNT THEN (SELECT $KEY_CURRENCY FROM $TABLE_ACCOUNTS WHERE $KEY_ROWID = $KEY_TRANSFER_ACCOUNT) END AS $KEY_TRANSFER_ACCOUNT_CURRENCY"
+
 
 fun accountQueryCTE(
-    context: Context,
     homeCurrency: String,
     endOfDay: Boolean,
     aggregateFunction: String,
@@ -578,7 +462,7 @@ fun accountQueryCTE(
         "$TABLE_ACCOUNTS.$KEY_CURRENCY AS $KEY_CURRENCY",
         KEY_COLOR,
         "$TABLE_ACCOUNTS.$KEY_GROUPING AS $KEY_GROUPING",
-        "${localizedLabelForAccountType(context, "$TABLE_ACCOUNT_TYPES.$KEY_LABEL")} AS $KEY_ACCOUNT_TYPE_LABEL",
+        "$TABLE_ACCOUNT_TYPES.$KEY_LABEL AS $KEY_ACCOUNT_TYPE_LABEL",
         KEY_IS_ASSET,
         KEY_SUPPORTS_RECONCILIATION,
         KEY_TYPE,
@@ -705,7 +589,7 @@ with data as
        exists(select 1 from data where $KEY_TAGID is not null) AS $KEY_MAPPED_TAGS
 """.trimIndent()
 
-const val TAG_LIST_EXPRESSION = "group_concat($KEY_TAGID,'') AS $KEY_TAGLIST"
+const val TAG_LIST_EXPRESSION = "group_concat($KEY_TAGID,'$RECORD_SEPARATOR') AS $KEY_TAGLIST"
 
 fun tagJoin(mainTable: String): String {
     val (joinTable, referenceColumn) = when (mainTable) {
@@ -738,12 +622,11 @@ fun transactionListAsCTE(catId: String, forHome: String?) =
     getCategoryTreeForView("$KEY_ROWID = $catId", false) +
             ", $CTE_SEARCH AS (" +
             transactionsJoin(withDisplayAmount = true, forHome = forHome) +
-            " WHERE $KEY_STATUS != $STATUS_UNCOMMITTED " +
             tagGroupBy(TABLE_TRANSACTIONS) +
             ")"
 
 fun buildViewDefinition(tableName: String) =
-    " AS ${getCategoryTreeForView()} ${transactionsJoin(tableName, false)}"
+    " AS ${getCategoryTreeForView()} ${transactionsJoin(tableName, withPlanInstance = false)}"
 
 private fun transactionsJoin(
     tableName: String = TABLE_TRANSACTIONS,
@@ -751,7 +634,7 @@ private fun transactionsJoin(
     withDisplayAmount: Boolean = false,
     forHome: String? = null,
 ) = buildString {
-    append(" SELECT $tableName.*, Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $TABLE_PAYEES.$KEY_PAYEE_NAME, $TABLE_METHODS.$KEY_LABEL AS $KEY_METHOD_LABEL, $TABLE_METHODS.$KEY_ICON AS $KEY_METHOD_ICON")
+    append(" SELECT $tableName.*, Tree.$KEY_PATH, Tree.$KEY_ICON, Tree.$KEY_TYPE, $TABLE_PAYEES.$KEY_PAYEE_NAME, $TABLE_PAYEES.$KEY_SHORT_NAME, $TABLE_METHODS.$KEY_LABEL AS $KEY_METHOD_LABEL, $TABLE_METHODS.$KEY_ICON AS $KEY_METHOD_ICON")
     if (withPlanInstance) {
         append(", $TABLE_PLAN_INSTANCE_STATUS.$KEY_TEMPLATEID")
     }

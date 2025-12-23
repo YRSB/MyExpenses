@@ -29,8 +29,9 @@ import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.preference.PrefKey
-import org.totschnig.myexpenses.provider.DatabaseConstants
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
 import org.totschnig.myexpenses.sync.GenericAccountService.Companion.getAccountNames
+import org.totschnig.myexpenses.ui.SpinnerHelper
 import org.totschnig.myexpenses.ui.bindListener
 import org.totschnig.myexpenses.ui.setColor
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
@@ -46,6 +47,7 @@ class OnboardingDataFragment : OnboardingFragment(), AdapterView.OnItemSelectedL
     OnDialogResultListener {
     private var _binding: OnboardingWizzardDataBinding? = null
     private val binding get() = _binding!!
+    private lateinit var accountTypeSpinner: SpinnerHelper
 
     @Inject
     lateinit var currencyContext: CurrencyContext
@@ -74,7 +76,7 @@ class OnboardingDataFragment : OnboardingFragment(), AdapterView.OnItemSelectedL
         super.onSaveInstanceState(outState)
         val selectedItem = binding.Currency.selectedItem as? Currency
         if (selectedItem != null) {
-            outState.putString(DatabaseConstants.KEY_CURRENCY, selectedItem.code)
+            outState.putString(KEY_CURRENCY, selectedItem.code)
         }
         val label = binding.Label.text.toString()
         outState.putBoolean(
@@ -137,6 +139,9 @@ class OnboardingDataFragment : OnboardingFragment(), AdapterView.OnItemSelectedL
             viewModel.moreOptionsShown = true
             showMoreOptions()
         }
+        accountTypeSpinner = SpinnerHelper(binding.AccountType).also {
+            it.setOnItemSelectedListener(null)
+        }
     }
 
     override fun onDestroyView() {
@@ -155,7 +160,7 @@ class OnboardingDataFragment : OnboardingFragment(), AdapterView.OnItemSelectedL
 
         //currency
         val currencyAdapter = binding.Currency.configureCurrencySpinner(this)
-        val code = savedInstanceState?.getString(DatabaseConstants.KEY_CURRENCY)
+        val code = savedInstanceState?.getString(KEY_CURRENCY)
         val currency =
             if (code != null) create(code, requireActivity()) else currencyViewModel.default
         currencyAdapter.clear()
@@ -230,7 +235,7 @@ class OnboardingDataFragment : OnboardingFragment(), AdapterView.OnItemSelectedL
                 currency = currency.code,
                 openingBalance = money.amountMinor,
                 description = binding.Description.text.toString(),
-                type = (binding.AccountType.selectedItem as SpinnerItem.Item<AccountType>).data,
+                type = (accountTypeSpinner.selectedItem as SpinnerItem.Item<AccountType>).data,
                 color = viewModel.accountColor
             )
         }

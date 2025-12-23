@@ -8,11 +8,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.totschnig.myexpenses.BaseTestWithRepository
 import org.totschnig.myexpenses.compose.FutureCriterion
+import org.totschnig.myexpenses.db2.insertTransaction
 import org.totschnig.myexpenses.preference.PrefKey
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_EXPENSES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_INCOME
 import org.totschnig.shared_test.CursorSubject.Companion.useAndAssert
 import java.time.LocalDateTime
 
@@ -35,8 +32,8 @@ class AccountFutureCriterionTest: BaseTestWithRepository() {
             FutureCriterion.EndOfDay -> expenseLater
         }
 
-        insertTransaction(testAccountId, incomeNow)
-        insertTransaction(testAccountId, expenseLater, date = LocalDateTime.now().plusSeconds(2))
+        repository.insertTransaction(testAccountId, incomeNow)
+        repository.insertTransaction(testAccountId, expenseLater, date = LocalDateTime.now().plusSeconds(2))
 
         contentResolver.query(
             TransactionProvider.ACCOUNTS_FULL_URI,

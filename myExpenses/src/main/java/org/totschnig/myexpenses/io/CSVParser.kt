@@ -5,16 +5,16 @@ import org.apache.commons.csv.CSVRecord
 import org.apache.commons.text.StringTokenizer
 import org.apache.commons.text.matcher.StringMatcherFactory
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.export.CSV_INDICATOR
+import org.totschnig.myexpenses.export.CSV_PART_INDICATOR
 import org.totschnig.myexpenses.export.CategoryInfo
 import org.totschnig.myexpenses.export.qif.QifDateFormat
 import org.totschnig.myexpenses.export.qif.QifUtils
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CurrencyUnit
-import org.totschnig.myexpenses.model.SplitTransaction
+import org.totschnig.myexpenses.util.timeFormatter
 import java.math.BigDecimal
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.util.Calendar
 
 class CSVParser(
@@ -71,8 +71,8 @@ class CSVParser(
             val transaction = ImportTransaction.Builder()
             if (columnIndexSplit != -1) {
                 val split = saveGetFromRecord(record, columnIndexSplit)
-                isSplitPart = split == SplitTransaction.CSV_PART_INDICATOR
-                isSplitParent = split == SplitTransaction.CSV_INDICATOR
+                isSplitPart = split == CSV_PART_INDICATOR
+                isSplitParent = split == CSV_INDICATOR
             }
 
             transaction.amount(
@@ -143,7 +143,7 @@ class CSVParser(
                 try {
                     LocalTime.parse(
                         timeRecord,
-                        DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+                        context.timeFormatter
                     )
                 } catch (_: Exception) {
                     null

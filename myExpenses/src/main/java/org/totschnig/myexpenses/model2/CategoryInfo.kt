@@ -5,12 +5,12 @@ import android.os.Parcelable
 import androidx.annotation.Keep
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
+import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_ICON
+import org.totschnig.myexpenses.provider.KEY_LABEL
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_TYPE
+import org.totschnig.myexpenses.provider.KEY_UUID
 import org.totschnig.myexpenses.provider.asSequence
 import org.totschnig.myexpenses.provider.getInt
 import org.totschnig.myexpenses.provider.getIntOrNull
@@ -65,8 +65,8 @@ data class CategoryInfo(
 
 typealias CategoryPath = List<CategoryInfo>
 
-@Keep
 @Parcelize
+@Serializable
 data class CategoryExport(
     override val uuid: String,
     override val label: String,

@@ -15,10 +15,9 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.totschnig.myexpenses.BuildConfig
-import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.preference.PrefHandler
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_PARENTID
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.asSequence
 import org.totschnig.myexpenses.provider.filter.Criterion
@@ -26,6 +25,7 @@ import org.totschnig.myexpenses.provider.withLimit
 import org.totschnig.myexpenses.viewmodel.data.PageAccount
 import org.totschnig.myexpenses.viewmodel.data.Transaction2
 import org.totschnig.myexpenses.viewmodel.data.mergeTransfers
+import org.totschnig.myexpenses.viewmodel.data.pickForMerge
 import timber.log.Timber
 import java.time.Duration
 import java.time.Instant
@@ -88,9 +88,9 @@ open class TransactionPagingSource(
 
     override fun getRefreshKey(state: PagingState<Int, Transaction2>) =
         if (hasNewCriterion) null
-        else state.anchorPosition?.let<Int, Int> { anchorPosition ->
+        else state.anchorPosition?.let { anchorPosition ->
             (anchorPosition - state.config.pageSize / 2).coerceAtLeast(0)
-        }.also<Int?> {
+        }.also {
             Timber.i("Calculating refreshKey for anchorPosition %d: %d", state.anchorPosition, it)
         }
 
@@ -101,8 +101,9 @@ open class TransactionPagingSource(
             //if the previous page was loaded from an offset between 0 and loadSize,
             //we must take care to load only the missing items before the offset
             val loadSize = if (position < 0) params.loadSize + position else params.loadSize
+            val fetchSize = if (account.isAggregate) loadSize + 1 else loadSize // We'll fetch one more item as a lookahead.
             Timber.i("Requesting data for account %d at position %d", account.id, position)
-            var selection = "$KEY_PARENTID is null"
+            var selection = "$KEY_PARENTID IS NULL"
             var selectionArgs: Array<String>? = null
             whereFilter.value?.let { filter ->
                 val selectionForParents = filter.getSelectionForParents()
@@ -112,9 +113,9 @@ open class TransactionPagingSource(
                 }
             }
             val startTime = if (BuildConfig.DEBUG) Instant.now() else null
-            val origList = withContext(Dispatchers.IO) {
+            val fullList = withContext(Dispatchers.IO) {
                 contentResolver.query(
-                    uri.withLimit(loadSize, position.coerceAtLeast(0)),
+                    uri.withLimit(fetchSize, position.coerceAtLeast(0)),
                     projection,
                     selection,
                     selectionArgs,
@@ -136,20 +137,28 @@ open class TransactionPagingSource(
                     }.toList()
                 }
             } ?: emptyList()
-            val (dropHalfTransfer, mergedList) = if (account.isAggregate) {
-                val mergeResult =
-                    origList.mergeTransfers(account, currencyContext.homeCurrencyString)
-                //if the two halves of a transfer are split between two pages, we
-                //drop the half at the end of the list, and reduce the offset for the next load by 1
-                val dropHalfTransfer = mergeResult.lastOrNull()?.let {
-                    it.transferPeer != null && it.type != FLAG_NEUTRAL
-                } == true
-                dropHalfTransfer to if (dropHalfTransfer) mergeResult.dropLast(1) else mergeResult
-            } else false to origList
+
+            val itemsForThisPage = fullList.take(loadSize) // The items that actually belong to this page.
+            val lookaheadItem = if (account.isAggregate) fullList.getOrNull(loadSize) else null // The (N+1)th item.
+
+            var includeNextHalfTransfer = false
+            val mergedList = if (account.isAggregate) {
+                itemsForThisPage.mergeTransfers(account, currencyContext.homeCurrencyString).let { merged ->
+                    val lastItem = merged.lastOrNull()
+                    val lookAheadItemId = lookaheadItem?.id
+                    if (lastItem?.transferPeer != null && lookAheadItemId != null && lastItem.transferPeer == lookAheadItemId ) {
+                        includeNextHalfTransfer = true
+                        // We pull the half transfer in and advance nextKey by one more
+                        merged.toMutableList().also {
+                            it[it.lastIndex] = listOf(lastItem, lookaheadItem).pickForMerge(account, currencyContext.homeCurrencyString)
+                        }
+                    } else merged
+                }
+            } else itemsForThisPage
 
             val prevKey = if (position > 0) (position - params.loadSize) else null
-            val nextKey = if (origList.size < params.loadSize) null else
-                position + params.loadSize - if (dropHalfTransfer) 1 else 0
+            val nextKey = if (fullList.size < fetchSize) null else
+                position + params.loadSize + if (includeNextHalfTransfer) 1 else 0
             Timber.i("Setting prevKey %d, nextKey %d", prevKey, nextKey)
             return LoadResult.Page(
                 data = mergedList,

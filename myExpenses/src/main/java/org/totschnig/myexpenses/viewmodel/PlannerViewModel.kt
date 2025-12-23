@@ -20,11 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.totschnig.myexpenses.db2.instantiateTemplate
 import org.totschnig.myexpenses.injector
-import org.totschnig.myexpenses.model.instantiateTemplate
 import org.totschnig.myexpenses.provider.CalendarProviderProxy
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.PlannerUtils
 import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.util.ExchangeRateHandler
@@ -51,7 +51,7 @@ class PlannerViewModel(application: Application) : ContentResolvingAndroidViewMo
 
     data class Month(val year: Int, val month: Int, val startDay: Int = 1) {
         init {
-            if (month < 0 || month > 12) throw IllegalArgumentException()
+            if (month !in 0..12) throw IllegalArgumentException()
         }
 
         fun next(): Month {
@@ -133,7 +133,7 @@ class PlannerViewModel(application: Application) : ContentResolvingAndroidViewMo
             contentResolver.observeQuery( builder.build(), null,
                 CalendarContract.Events.CALENDAR_ID + " = " + plannerCalendarId,
                 null, CalendarContract.Instances.BEGIN + " ASC", false)
-                .mapToList { PlanInstance.fromEventCursor(it, contentResolver, currencyContext) }
+                .mapToList { PlanInstance.fromEventCursor(it, repository) }
                 .collect {
                     val start = SpannableString(first.startDate().format(formatter))
                     val end = SpannableString(last.endDate().format(formatter))
@@ -182,9 +182,9 @@ class PlannerViewModel(application: Application) : ContentResolvingAndroidViewMo
                         null
                     ),
                     mapper = mapper
-                ).also {
+                ).also { flow ->
                     viewModelScope.launch {
-                        it.collect {
+                        flow.collect {
                             updates.value = it
                         }
                     }
@@ -196,15 +196,14 @@ class PlannerViewModel(application: Application) : ContentResolvingAndroidViewMo
         viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 selectedInstances.forEach { planInstance ->
-                    instantiateTemplate(
-                        repository,
+                    repository.instantiateTemplate(
                         exchangeRateHandler,
                         PlanInstanceInfo(
                             planInstance.templateId,
                             planInstance.instanceId,
                             planInstance.date
                         ),
-                        currencyContext.homeCurrencyUnit,
+                        currencyContext,
                         ifOpen = true
                     )
                 }

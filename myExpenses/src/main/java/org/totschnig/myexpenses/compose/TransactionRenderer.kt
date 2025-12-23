@@ -36,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,22 +67,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.preference.ColorSource
-import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_ARCHIVE
+import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.STATUS_ARCHIVE
+import org.totschnig.myexpenses.ui.DisplayParty
 import org.totschnig.myexpenses.viewmodel.data.Transaction2
+import org.totschnig.myexpenses.viewmodel.data.getIndicatorCharForLabel
+import org.totschnig.myexpenses.viewmodel.data.getIndicatorPrefixForLabel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.text.Typography.ellipsis
 
 val inlineIconSize = 13.sp
-
-
 
 abstract class ItemRenderer(
     private val withCategoryIcon: Boolean,
@@ -112,7 +110,7 @@ abstract class ItemRenderer(
                 if (categoryPath != null) append(" (")
                 accountLabel?.let { append("$it ") }
                 if (forLegacy || accountLabel != null) {
-                    append(Transfer.getIndicatorPrefixForLabel(displayAmount.amountMinor))
+                    append(getIndicatorPrefixForLabel(displayAmount.amountMinor))
                 }
                 transferAccountLabel?.let { append(it) }
                 if (categoryPath != null) append(")")
@@ -144,7 +142,7 @@ abstract class ItemRenderer(
                     )
                 }
             }
-            payee?.takeIf { it.isNotEmpty() }?.let {
+            party?.displayName?.let {
                 if (length > 0) {
                     append(COMMENT_SEPARATOR)
                 }
@@ -303,7 +301,7 @@ abstract class ItemRenderer(
                     icon != null -> Icon(icon)
 
                     isTransfer -> CharIcon(
-                        char = if (accountLabel != null) '⬧' else Transfer.getIndicatorCharForLabel(
+                        char = if (accountLabel != null) '⬧' else getIndicatorCharForLabel(
                             displayAmount.amountMinor > 0
                         )
                     )
@@ -584,7 +582,7 @@ class SampleProvider : PreviewParameterProvider<Transaction2> {
             originalAmount = Money(originalCurrency, 2345600),
             accountId = -1,
             catId = SPLIT_CATID,
-            payee = "Erika Musterfrau",
+            party = DisplayParty(0, "Erika Musterfrau"),
             year = 2022,
             month = 1,
             day = 1,

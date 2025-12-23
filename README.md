@@ -46,10 +46,6 @@ Credits
 - [Phrase](https://github.com/square/phrase)
 - [Dagger](https://google.github.io/dagger/)
 - [Gson](https://github.com/google/gson)
-- [AutoValue](https://github.com/google/auto/tree/master/value)
-- [AutoValue: Gson Extension](https://github.com/rharter/auto-value-gson)
-- [AutoValue: Cursor Extension](https://github.com/gabrielittner/auto-value-cursor)
-- [AutoValue: Parcel Extension](https://github.com/rharter/auto-value-parcel)
 - [OkHttp](http://square.github.io/okhttp/)
 - [Timber](https://github.com/JakeWharton/timber)
 - [SLF4J](https://www.slf4j.org/)
@@ -81,6 +77,7 @@ Code has also been contributed by:
 - [Ayman Abdelghany](https://github.com/AymanDF) (Applying Sonar code quality checks)
 - [eltos](https://github.com/eltos) (Improved Input Dialogs and Color Pickers)
 - [tillgraeger](https://github.com/tillgraeger) implemented several tickets ([#640](https://github.com/mtotschnig/MyExpenses/issues/640), [#704](https://github.com/mtotschnig/MyExpenses/issues/704), [#638](https://github.com/mtotschnig/MyExpenses/issues/638)) in the context of his internship.
+- [arnaldotecadm](https://github.com/arnaldotecadm) implemented JSON export
 
 Build
 =====

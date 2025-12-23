@@ -22,51 +22,13 @@ import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.FLAG_INCOME
 import org.totschnig.myexpenses.db2.localizedLabelForPaymentMethod
 import org.totschnig.myexpenses.model.CurrencyUnit
-import org.totschnig.myexpenses.model.Model
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Template
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.myApplication
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LIST
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL_NORMALIZED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLANID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_REFERENCE_NUMBER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_ACCOUNT_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_SEQUENCE_LOCAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTTYES_METHODS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_TYPES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CHANGES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_DEBTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_METHODS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
 import org.totschnig.myexpenses.provider.PlannerUtils.Companion.copyEventData
+import org.totschnig.myexpenses.provider.TransactionProvider.TEMPLATES_URI
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.sync.GenericAccountService.Companion.getAccount
 import org.totschnig.myexpenses.sync.GenericAccountService.Companion.getAccountNames
@@ -117,7 +79,7 @@ fun unlinkTransfers(
         val result1 = db.update(TABLE_TRANSACTIONS, ContentValues().apply {
             putNull(KEY_TRANSFER_PEER)
             putNull(KEY_TRANSFER_ACCOUNT)
-            put(KEY_UUID, Model.generateUuid())
+            put(KEY_UUID, generateUuid())
         }, "$KEY_ROWID = ?", arrayOf(id))
         check(result1 == 1) {
             "Update by rowId yielded $result1 affected rows"
@@ -125,7 +87,7 @@ fun unlinkTransfers(
         val result2 = db.update(TABLE_TRANSACTIONS, ContentValues().apply {
             putNull(KEY_TRANSFER_PEER)
             putNull(KEY_TRANSFER_ACCOUNT)
-            put(KEY_UUID, Model.generateUuid())
+            put(KEY_UUID, generateUuid())
         }, "$KEY_TRANSFER_PEER = ?", arrayOf(id))
         check(result2 == 1) {
             "Update by transferPeer yielded $result2 affected rows"
@@ -199,8 +161,11 @@ fun transformToTransfer(
     return try {
         //insert transfer peer into transfer account
         val transferPeer = db.compileStatement(
-            """INSERT INTO $TABLE_TRANSACTIONS ($KEY_ACCOUNTID, $KEY_TRANSFER_ACCOUNT, $KEY_UUID, $KEY_TRANSFER_PEER, $KEY_COMMENT, $KEY_DATE, $KEY_VALUE_DATE, $KEY_AMOUNT, $KEY_CATID)
-            SELECT $transferAccountId, $KEY_ACCOUNTID, $KEY_UUID, $transactionId, $KEY_COMMENT, $KEY_DATE, $KEY_VALUE_DATE, -$KEY_AMOUNT, coalesce($KEY_CATID, ?) FROM $TABLE_TRANSACTIONS WHERE $KEY_ROWID = ?
+            """INSERT INTO $TABLE_TRANSACTIONS (
+                   $KEY_ACCOUNTID,     $KEY_TRANSFER_ACCOUNT, $KEY_UUID, $KEY_TRANSFER_PEER, $KEY_COMMENT, $KEY_DATE, $KEY_VALUE_DATE, $KEY_AMOUNT,  $KEY_CATID)
+            SELECT $transferAccountId, $KEY_ACCOUNTID,        $KEY_UUID, $transactionId,     $KEY_COMMENT, $KEY_DATE, $KEY_VALUE_DATE, -$KEY_AMOUNT, coalesce($KEY_CATID, ?)
+            FROM $TABLE_TRANSACTIONS
+            WHERE $KEY_ROWID = ?
             """
         ).use {
             if (defaultTransferCategory != null) {
@@ -568,7 +533,7 @@ fun cacheEventData(context: Context, prefHandler: PrefHandler) {
         TransactionProvider.EVENT_CACHE_URI, null, null
     )
     cr.query(
-        Template.CONTENT_URI, arrayOf(
+        TEMPLATES_URI, arrayOf(
             KEY_PLANID
         ),
         "$KEY_PLANID IS NOT null", null, null
@@ -716,40 +681,31 @@ fun insertEventAndUpdatePlan(
     val planValues = ContentValues()
     planValues.put(KEY_PLANID, planId)
     val updated = contentResolver.update(
-        ContentUris.withAppendedId(Template.CONTENT_URI, templateId),
+        ContentUris.withAppendedId(TEMPLATES_URI, templateId),
         planValues, null, null
     )
     return updated > 0
 }
 
 fun Cursor.calculateEquivalentAmount(homeCurrency: CurrencyUnit, baseAmount: Money) =
-    getLongOrNull(KEY_EQUIVALENT_AMOUNT)?.let { Money(homeCurrency, it) } ?: Money(
-        homeCurrency, baseAmount.amountMajor.multiply(
-            calculateRealExchangeRate(
-                getDouble(KEY_EXCHANGE_RATE),
-                baseAmount.currencyUnit, homeCurrency
-            )
-        )
-    )
+    getLongOrNull(KEY_AMOUNT_HOME_EQUIVALENT)?.let { Money(homeCurrency, it) }?.amountMajor
 
-fun SupportSQLiteDatabase.uuidForTransaction(id: Long): String = query(
+fun SupportSQLiteDatabase.uuidForTransaction(id: Long): String? = query(
     table = TABLE_TRANSACTIONS,
     columns = arrayOf(KEY_UUID),
     selection = "$KEY_ROWID = ?",
     selectionArgs = arrayOf(id)
 ).use {
-    it.moveToFirst()
-    it.getString(0)
+    if (it.moveToFirst()) it.getString(0) else null
 }
 
-fun SupportSQLiteDatabase.findTransactionByUuid(uuid: String) = query(
+fun SupportSQLiteDatabase.findTransactionByUuid(uuid: String): Long? = query(
     table = TABLE_TRANSACTIONS,
     columns = arrayOf(KEY_ROWID),
     selection = "$KEY_UUID = ?",
     selectionArgs = arrayOf(uuid)
 ).use {
-    it.moveToFirst()
-    it.getLong(0)
+    if (it.moveToFirst()) it.getLong(0) else null
 }
 
 fun SupportSQLiteDatabase.getForeignKeyInfoAsString(tableName: String) =

@@ -4,13 +4,13 @@ import android.app.Activity
 import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.view.View
 import androidx.annotation.IdRes
 import androidx.appcompat.widget.MenuPopupWindow.MenuDropDownListView
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.core.app.ActivityScenario
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
@@ -35,36 +35,51 @@ import com.adevinta.android.barista.interaction.BaristaEditTextInteractions
 import com.adevinta.android.barista.interaction.BaristaScrollInteractions
 import com.adevinta.android.barista.internal.matcher.HelperMatchers.menuIdMatcher
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.Assume
 import org.junit.Before
-import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.TestApp
 import org.totschnig.myexpenses.activity.ProtectedFragmentActivity
 import org.totschnig.myexpenses.db2.FLAG_EXPENSE
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.RepositoryTemplate
+import org.totschnig.myexpenses.db2.createSplitTemplate
+import org.totschnig.myexpenses.db2.createSplitTransaction
 import org.totschnig.myexpenses.db2.deleteAccount
+import org.totschnig.myexpenses.db2.entities.Recurrence
+import org.totschnig.myexpenses.db2.entities.Template
+import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.findAccountType
+import org.totschnig.myexpenses.db2.loadTemplate
+import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveCategory
+import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
-import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
-import org.totschnig.myexpenses.model.SplitTransaction
-import org.totschnig.myexpenses.model.Transaction
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model2.Account
+import org.totschnig.myexpenses.model2.Account.Companion.DEFAULT_COLOR
 import org.totschnig.myexpenses.model2.Category
 import org.totschnig.myexpenses.preference.PrefHandler
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_NONE
+import org.totschnig.myexpenses.provider.CalendarProviderProxy
+import org.totschnig.myexpenses.provider.KEY_LABEL
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_TITLE
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
 import org.totschnig.myexpenses.provider.PlannerUtils
+import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.TABLE_ACCOUNTS
 import org.totschnig.myexpenses.provider.TransactionProvider
-import org.totschnig.myexpenses.util.DebugCurrencyFormatter
+import org.totschnig.myexpenses.provider.TransactionProvider.TEMPLATES_URI
 import org.totschnig.myexpenses.util.distrib.DistributionHelper
+import org.totschnig.shared_test.CursorSubject.Companion.useAndAssert
+import org.totschnig.shared_test.TransactionData
+import org.totschnig.shared_test.assertTransaction
+import java.time.LocalDate
 import java.util.concurrent.TimeoutException
 import org.totschnig.myexpenses.test.R as RT
 
@@ -89,9 +104,14 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
     val plannerUtils: PlannerUtils
         get() = app.appComponent.plannerUtils()
 
-    private val currencyContext: CurrencyContext
+    val currencyContext: CurrencyContext
         get() = app.appComponent.currencyContext()
 
+    protected val repository: Repository
+        get() = app.appComponent.repository()
+
+    val transferCategoryId
+        get() = prefHandler.defaultTransferCategory
 
     val homeCurrency: CurrencyUnit by lazy { currencyContext.homeCurrencyUnit }
 
@@ -101,7 +121,9 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
         openingBalance: Long = 0L,
         currency: String = homeCurrency.code,
         excludeFromTotals: Boolean = false,
-        dynamicExchangeRates: Boolean = false
+        dynamicExchangeRates: Boolean = false,
+        type: AccountType = AccountType.CASH,
+        color: Int = DEFAULT_COLOR,
     ) =
         Account(
             label = label,
@@ -109,14 +131,15 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
             currency = currency,
             excludeFromTotals = excludeFromTotals,
             dynamicExchangeRates = dynamicExchangeRates,
-            type = repository.findAccountType(PREDEFINED_NAME_CASH)!!
+            type = repository.findAccountType(type.name)!!,
+            color = color
         ).createIn(repository)
 
     fun deleteAccount(label: String) {
         val accountId = contentResolver.query(
             TransactionProvider.ACCOUNTS_URI,
             arrayOf(KEY_ROWID),
-            "$KEY_LABEL = ?",
+            "${TABLE_ACCOUNTS}.$KEY_LABEL = ?",
             arrayOf(label),
             null
         )!!.use {
@@ -126,8 +149,7 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
         repository.deleteAccount(accountId)
     }
 
-    fun getTransactionFromDb(id: Long): Transaction =
-        Transaction.getInstanceFromDb(contentResolver, id, homeCurrency)
+    fun getTransactionFromDb(id: Long): Transaction = repository.loadTransaction(id).data
 
     @Before
     fun setUp() {
@@ -229,7 +251,6 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
 
     lateinit var testScenario: ActivityScenario<A>
 
-
     protected fun doWithRotation(actions: () -> Unit) {
         val device = UiDevice.getInstance(getInstrumentation())
         Assume.assumeTrue(device.isNaturalOrientation)
@@ -272,15 +293,6 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
         return result!!
     }
 
-    protected val repository: Repository
-        get() = Repository(
-            ApplicationProvider.getApplicationContext<MyApplication>(),
-            currencyContext,
-            DebugCurrencyFormatter,
-            prefHandler,
-            dataStore
-        )
-
     val contentResolver: ContentResolver = repository.contentResolver
 
     @Throws(TimeoutException::class)
@@ -302,39 +314,157 @@ abstract class BaseUiTest<A : ProtectedFragmentActivity> {
         }
     }
 
-    protected fun writeCategory(label: String, parentId: Long? = null, type: Byte = FLAG_EXPENSE) =
-        repository.saveCategory(Category(label = label, parentId = parentId, type = type))!!
+    protected fun writeCategory(label: String, parentId: Long? = null, type: Byte = FLAG_EXPENSE, icon: String? = null) =
+        repository.saveCategory(Category(label = label, parentId = parentId, type = type, icon = icon))!!
 
     fun unlock() {
         (app.appComponent.licenceHandler() as MockLicenceHandler).setLockState(false)
     }
 
-    protected fun prepareSplit(accountId: Long): Long {
-        val currencyUnit = homeCurrency
-        return with(SplitTransaction.getNewInstance(contentResolver, accountId, currencyUnit)) {
-            amount = Money(currencyUnit, 10000)
-            status = STATUS_NONE
-            save(contentResolver, true)
-            val part = Transaction.getNewInstance(accountId, currencyUnit, id)
-            part.amount = Money(currencyUnit, 5000)
-            part.save(contentResolver)
-            part.amount = Money(currencyUnit, 5000)
-            part.saveAsNew(contentResolver)
-            id
-        }
-    }
+    protected fun prepareSplit(accountId: Long) = repository.createSplitTransaction(
+        Transaction(accountId = accountId, amount = 10000, categoryId = SPLIT_CATID, uuid = generateUuid()),
+        listOf(
+            Transaction(accountId = accountId, amount = 5000, uuid = generateUuid()),
+            Transaction(accountId = accountId, amount = 5000, uuid = generateUuid())
+        )
+    ).id
+
+    protected fun prepareSplitTemplate(accountId: Long)  = repository.createSplitTemplate(
+        Template(title = TEMPLATE_TITLE, accountId = accountId, amount = 10000, categoryId = SPLIT_CATID, uuid = generateUuid()),
+        listOf(
+            Template(accountId = accountId, amount = 5000, title = "", uuid = generateUuid()),
+            Template(accountId = accountId, amount = 5000, title = "", uuid = generateUuid())
+        )
+    ).id
 
     fun clickFab() {
         onView(withId(R.id.fab)).perform(click())
     }
 
-    fun checkAccount(label: String) {
-        onView(withId(R.id.Account)).check(matches(withSpinnerText(containsString(label))))
+    fun checkAccount(label: String, spinnerId: Int = R.id.Account) {
+        onView(withId(spinnerId)).check(matches(withSpinnerText(containsString(label))))
     }
 
     fun setAccount(label: String) {
         onView(withId(R.id.Account)).perform(scrollTo(), click())
         onData(withAccountGrouped(label))
             .perform(click())
+    }
+
+    protected fun assertTransaction(
+        id: Long,
+        expectedTransaction: TransactionData
+    ) {
+        repository.assertTransaction(id, expectedTransaction)
+    }
+
+    protected fun assertTransfer(
+        id: Long,
+        expectedAccount: Long,
+        expectedAmount: Long,
+        expectedTransferAccount: Long,
+        expectedPeer: Long,
+        expectedTransferAmount: Long ?= null,
+        expectedAttachments: List<Uri> = emptyList()
+    ) {
+        repository.assertTransaction(id, TransactionData(
+            amount = expectedAmount,
+            accountId = expectedAccount,
+            transferAccount = expectedTransferAccount,
+            _transferAmount = expectedTransferAmount,
+            transferPeer = expectedPeer,
+            category = transferCategoryId,
+            attachments = expectedAttachments
+        ))
+    }
+
+    protected fun assertTemplate(
+        expectedAccount: Long,
+        expectedAmount: Long,
+        templateTitle: String = TEMPLATE_TITLE,
+        expectedTags: List<String> = emptyList(),
+        expectedSplitParts: List<TransactionData>? = null,
+        expectedCategory: Long? = null,
+        expectedParty: Long? = null,
+        expectedMethod: Long? = null,
+        expectedPlanRecurrence: Recurrence = Recurrence.NONE,
+        expectedPlanExecutionAutomatic: Boolean = false,
+        expectedPlanExecutionAdvance: Int = 0,
+        checkPlanInstance: Boolean = false,
+        expectedPlan: Long? = null,
+        expectedDebt: Long? = null,
+    ): RepositoryTemplate {
+        val templateId = contentResolver.query(
+            TEMPLATES_URI,
+            arrayOf(KEY_ROWID),
+            "$KEY_TITLE = ?",
+            arrayOf(templateTitle),
+            null
+        )!!.use {
+            assertWithMessage("No template with title $templateTitle").that(it.moveToFirst())
+                .isTrue()
+            it.getLong(0)
+        }
+        val template = repository.loadTemplate(templateId, withTags = true)!!
+        with(template.data) {
+            assertThat(amount).isEqualTo(expectedAmount)
+            assertThat(title).isEqualTo(templateTitle)
+            assertThat(accountId).isEqualTo(expectedAccount)
+            assertThat(categoryId).isEqualTo(expectedCategory)
+            assertThat(payeeId).isEqualTo(expectedParty)
+            assertThat(methodId).isEqualTo(expectedMethod)
+            assertThat(planExecutionAutomatic).isEqualTo(expectedPlanExecutionAutomatic)
+            assertThat(planExecutionAdvance).isEqualTo(expectedPlanExecutionAdvance)
+            assertThat(debtId).isEqualTo(expectedDebt)
+        }
+        assertThat(template.tags?.map { it.label }).containsExactlyElementsIn(expectedTags)
+
+        if (expectedSplitParts == null) {
+            assertThat(template.splitParts).isNull()
+        } else {
+            val parts = template.splitParts!!
+            assertThat(parts.size).isEqualTo(expectedSplitParts.size)
+            val actualSplitPartsAsInfo = parts.map { actualPart ->
+                TransactionData(
+                    accountId = actualPart.data.accountId,
+                    amount = actualPart.data.amount,
+                    category = actualPart.data.categoryId,
+                    tags = actualPart.data.tagList,
+                    debtId = actualPart.data.debtId,
+                    transferAccount = actualPart.data.transferAccountId
+                )
+            }
+            assertThat(actualSplitPartsAsInfo).containsExactlyElementsIn(expectedSplitParts)
+        }
+
+        if (expectedPlanRecurrence != Recurrence.NONE) {
+            if (expectedPlanRecurrence != Recurrence.CUSTOM) {
+                val today = LocalDate.now()
+                assertThat(template.plan!!.rRule).isEqualTo(expectedPlanRecurrence.toRule(today))
+            }
+            if (expectedPlan != null) {
+                assertThat(template.data.planId).isEqualTo(expectedPlan)
+            } else {
+                assertThat(template.data.planId).isGreaterThan(0)
+            }
+
+        } else {
+            assertThat(template.data.planId).isNull()
+            assertThat(template.plan).isNull()
+        }
+        if (checkPlanInstance) {
+            contentResolver.query(
+                TransactionProvider.PLAN_INSTANCE_SINGLE_URI(
+                    template.id,
+                    CalendarProviderProxy.calculateId(template.plan!!.dtStart)
+                ),
+                null, null, null, null
+            ).useAndAssert {
+                hasCount(1)
+                movesToFirst()
+                hasLong(KEY_TRANSACTIONID) { isGreaterThan(0) }
+            }
+        }
+        return template
     }
 }

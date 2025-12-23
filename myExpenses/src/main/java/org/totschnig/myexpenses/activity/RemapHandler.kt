@@ -20,9 +20,14 @@ import org.totschnig.myexpenses.dialog.ProgressDialogFragment
 import org.totschnig.myexpenses.dialog.select.SelectSingleAccountDialogFragment
 import org.totschnig.myexpenses.dialog.select.SelectSingleMethodDialogFragment
 import org.totschnig.myexpenses.provider.CheckTransferAccountOfSplitPartsHandler
-import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_LABEL
+import org.totschnig.myexpenses.provider.KEY_METHODID
+import org.totschnig.myexpenses.provider.KEY_PAYEEID
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.filter.NULL_ITEM_ID
 import org.totschnig.myexpenses.util.epochMillis2LocalDate
 import org.totschnig.myexpenses.util.getDateTimeFormatter
 import org.totschnig.myexpenses.util.safeMessage
@@ -31,7 +36,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
+class RemapHandler(val activity: MyExpenses) : FragmentResultListener {
 
     init {
         for (requestKey in listOf(MAP_ACCOUNT_REQUEST, MAP_METHOD_REQUEST)) {
@@ -48,13 +53,19 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
         if (this is MaterialDatePicker<*>) {
             addOnPositiveButtonClickListener {
                 val localDate = epochMillis2LocalDate(it as Long, ZoneId.of("UTC"))
-                val dateFormatted = getDateTimeFormatter(this@RemapHandler.activity).format(localDate)
+                val dateFormatted =
+                    getDateTimeFormatter(this@RemapHandler.activity).format(localDate)
                 val persistedValue = ZonedDateTime.of(
                     localDate,
                     LocalTime.NOON,
                     ZoneId.systemDefault()
                 ).toEpochSecond()
-                showConfirmationDialog(getString(R.string.remap_date, dateFormatted), KEY_DATE, R.string.date, persistedValue)
+                showConfirmationDialog(
+                    getString(R.string.remap_date, dateFormatted),
+                    KEY_DATE,
+                    R.string.date,
+                    persistedValue
+                )
             }
         }
     }
@@ -68,7 +79,7 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
         activity.getString(resId, *formatArgs)
 
     private fun parseResult(result: Bundle) =
-        result.getLong(KEY_ROWID) to result.getString(DatabaseConstants.KEY_LABEL)!!
+        result.getLong(KEY_ROWID) to result.getString(KEY_LABEL)!!
 
     override fun onFragmentResult(requestKey: String, result: Bundle) {
         onResult(requestKey, parseResult(result))
@@ -81,25 +92,25 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
         val column: String
         when (requestKey) {
             MAP_CATEGORY_REQUEST -> {
-                column = DatabaseConstants.KEY_CATID
+                column = KEY_CATID
                 columnStringResId = R.string.category
                 confirmationStringResId = R.string.remap_category
             }
 
             MAP_PAYEE_REQUEST -> {
-                column = DatabaseConstants.KEY_PAYEEID
+                column = KEY_PAYEEID
                 columnStringResId = R.string.payer_or_payee
-                confirmationStringResId = R.string.remap_payee
+                confirmationStringResId = if (rowId == NULL_ITEM_ID) R.string.remap_payee_null else R.string.remap_payee
             }
 
             MAP_METHOD_REQUEST -> {
-                column = DatabaseConstants.KEY_METHODID
+                column = KEY_METHODID
                 columnStringResId = R.string.method
                 confirmationStringResId = R.string.remap_method
             }
 
             MAP_ACCOUNT_REQUEST -> {
-                column = DatabaseConstants.KEY_ACCOUNTID
+                column = KEY_ACCOUNTID
                 columnStringResId = R.string.account
                 confirmationStringResId = R.string.remap_account
             }
@@ -107,7 +118,7 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
             else -> throw IllegalStateException("Unexpected value: $requestKey")
         }
         showConfirmationDialog(
-            message = getString(confirmationStringResId, label),
+            message = if (rowId == NULL_ITEM_ID) getString(confirmationStringResId) else getString(confirmationStringResId, label),
             column = column,
             columnStringResId = columnStringResId,
             value = rowId
@@ -121,10 +132,10 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
         value: Long
     ) {
         activity.showConfirmationDialog(
-            "dialogRemap",
-            message + " " + getString(R.string.continue_confirmation),
-            R.id.REMAP_COMMAND,
-            R.string.menu_remap,
+            tag = "dialogRemap",
+            message = message + " " + getString(R.string.continue_confirmation),
+            commandPositive = R.id.REMAP_COMMAND,
+            commandPositiveLabel = R.string.menu_remap,
             commandNegative = null
         ) {
             putString(KEY_COLUMN, column)
@@ -190,7 +201,7 @@ class RemapHandler(val activity: BaseMyExpenses) : FragmentResultListener {
 
     private fun onResult(requestKey: String, result: Bundle) {
         val rowId = result.getLong(KEY_ROWID)
-        val label = result.getString(DatabaseConstants.KEY_LABEL)
+        val label = result.getString(KEY_LABEL)
         if (rowId != 0L && label != null) {
             onResult(requestKey, rowId to label)
         }

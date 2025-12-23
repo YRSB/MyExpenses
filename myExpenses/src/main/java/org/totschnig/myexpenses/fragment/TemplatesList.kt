@@ -65,39 +65,39 @@ import org.totschnig.myexpenses.activity.ProtectedFragmentActivity
 import org.totschnig.myexpenses.compose.COMMENT_SEPARATOR
 import org.totschnig.myexpenses.databinding.TemplatesListBinding
 import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.entities.Template
 import org.totschnig.myexpenses.db2.getCurrencyForAccount
 import org.totschnig.myexpenses.dialog.MessageDialogFragment
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Sort
 import org.totschnig.myexpenses.model.Sort.Companion.preferredOrderByForTemplatesWithPlans
-import org.totschnig.myexpenses.model.Template
-import org.totschnig.myexpenses.model.Transfer.RIGHT_ARROW
 import org.totschnig.myexpenses.preference.PrefKey
-import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEFAULT_ACTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_INSTANCEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLANID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLAN_INFO
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TEMPLATEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TITLE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
+import org.totschnig.myexpenses.provider.KEY_ACCOUNT_LABEL
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_COMMENT
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_DEFAULT_ACTION
+import org.totschnig.myexpenses.provider.KEY_INSTANCEID
+import org.totschnig.myexpenses.provider.KEY_ORIGINAL_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_ORIGINAL_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_PATH
+import org.totschnig.myexpenses.provider.KEY_PAYEE_NAME
+import org.totschnig.myexpenses.provider.KEY_PLANID
+import org.totschnig.myexpenses.provider.KEY_PLAN_INFO
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SEALED
+import org.totschnig.myexpenses.provider.KEY_TEMPLATEID
+import org.totschnig.myexpenses.provider.KEY_TITLE
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT_LABEL
+import org.totschnig.myexpenses.provider.KEY_UUID
+import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.appendBooleanQueryParameter
 import org.totschnig.myexpenses.provider.getInt
@@ -118,6 +118,7 @@ import org.totschnig.myexpenses.util.setEnabledAndVisible
 import org.totschnig.myexpenses.util.ui.UiUtils
 import org.totschnig.myexpenses.viewmodel.PlanInstanceInfo
 import org.totschnig.myexpenses.viewmodel.TemplatesListViewModel
+import org.totschnig.myexpenses.viewmodel.data.RIGHT_ARROW
 import timber.log.Timber
 import java.io.Serializable
 import java.lang.ref.WeakReference
@@ -436,7 +437,7 @@ class TemplatesList : SortableListFragment(), LoaderManager.LoaderCallbacks<Curs
                     .appendBooleanQueryParameter(TransactionProvider.QUERY_PARAMETER_WITH_PLAN_INFO)
                     .build(),
                 null,
-                DatabaseConstants.KEY_PARENTID + " IS NULL",
+                "$KEY_PARENTID IS NULL",
                 null,
                 preferredOrderByForTemplatesWithPlans(prefHandler, Sort.USAGES, prefHandler.collate)
             )
@@ -489,14 +490,14 @@ class TemplatesList : SortableListFragment(), LoaderManager.LoaderCallbacks<Curs
                             missingUuids.add(
                                 templatesCursor.getString(
                                     templatesCursor.getColumnIndexOrThrow(
-                                        DatabaseConstants.KEY_UUID
+                                        KEY_UUID
                                     )
                                 )
                             )
                         }
                         templatesCursor.moveToNext()
                     }
-                    if (missingUuids.size > 0) {
+                    if (missingUuids.isNotEmpty()) {
                         RepairHandler(this).obtainMessage(
                             0, missingUuids.toTypedArray()
                         )

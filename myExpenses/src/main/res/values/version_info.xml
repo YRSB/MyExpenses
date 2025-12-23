@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="versions">
+        <item>826;4.0.5.3</item>
+        <item>825;4.0.5.2</item>
+        <item>824;4.0.5.1</item>
+        <item>823;4.0.5</item>
+        <item>813;4.0.4</item>
         <item>811;4.0.3</item>
         <item>805;4.0.2</item>
         <item>802;4.0.1</item>
@@ -92,6 +97,8 @@
     <string name="version_more_info_401">114779558620418016</string>
     <string name="version_more_info_402">115033555938780143</string>
     <string name="version_more_info_403">115099447789262389</string>
+    <string name="version_more_info_404">115162955035521599</string>
+    <string name="version_more_info_405">115661336364646450</string>
 
     <!-- Github -->
     <!-- Legacy -->
@@ -140,6 +147,11 @@
     <string name="project_board_401">164</string>
     <string name="project_board_402">165</string>
     <string name="project_board_403">166</string>
+    <string name="project_board_404">168</string>
+    <string name="project_board_405">173</string>
+    <string name="project_board_4051">174</string>
+    <string name="project_board_4052">175</string>
+    <string name="project_board_4053">176</string>
 
     <string-array name="whats_new_361">
         <item>@string/whats_new_361_1</item>
@@ -200,5 +212,17 @@
     </string-array>
     <string-array name="whats_new_403">
         <item>@string/whats_new_403</item>
+    </string-array>
+    <string-array name="whats_new_405">
+        <item>FinTS: HKCAZ (camt)</item>
+    </string-array>
+    <string-array name="whats_new_4051">
+        <item>@string/bug_fixes</item>
+    </string-array>
+    <string-array name="whats_new_4052">
+        <item>@string/bug_fixes</item>
+    </string-array>
+    <string-array name="whats_new_4053">
+        <item>@string/bug_fixes</item>
     </string-array>
 </resources>

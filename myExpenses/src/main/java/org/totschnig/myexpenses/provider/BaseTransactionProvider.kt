@@ -7,11 +7,9 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.database.CursorWrapper
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import androidx.core.database.getIntOrNull
 import androidx.core.database.getLongOrNull
@@ -20,8 +18,6 @@ import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -29,6 +25,7 @@ import androidx.sqlite.db.SupportSQLiteQueryBuilder
 import arrow.core.Tuple6
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.compose.FutureCriterion
@@ -42,7 +39,7 @@ import org.totschnig.myexpenses.di.DataModule
 import org.totschnig.myexpenses.model.AccountGrouping
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.Grouping
-import org.totschnig.myexpenses.model.Model
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.model2.Category
 import org.totschnig.myexpenses.model2.CategoryExport
@@ -58,164 +55,13 @@ import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.SORT_BY_AGGRE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.SORT_DIRECTION_AGGREGATE
 import org.totschnig.myexpenses.provider.DatabaseConstants.DAY
 import org.totschnig.myexpenses.provider.DatabaseConstants.DAY_START_JULIAN
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT_HOME_EQUIVALENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ATTACHMENT_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ATTRIBUTE_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ATTRIBUTE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BANK_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BANK_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BIC
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BLZ
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGETID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_NEXT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_PREVIOUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CLEARED_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CODE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMODITY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CONTEXT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CRITERION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CR_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY_OTHER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY_SELF
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEBT_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DEFAULT_ACTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DESCRIPTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DISPLAY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_END
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_CURRENT_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_EXPENSES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_INCOME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_OPENING_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_SUM
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_TRANSFERS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUP_START
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_CLEARED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_FUTURE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_ACCOUNT_WITH_TRANSFER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_HAS_SEALED_DEBT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IBAN
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_AGGREGATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_ASSET
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_DEFAULT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL_NORMALIZED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LAST_USED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LATEST_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LATEST_EXCHANGE_RATE_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_DEBTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TEMPLATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAPPED_TRANSACTIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_MAX_VALUE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHOD_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_OPENING_BALANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENT_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLANID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLAN_EXECUTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLAN_EXECUTION_ADVANCE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_RECONCILED_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_REFERENCE_NUMBER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SECOND_GROUP
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SHORT_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORTED_IDS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_BY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_DIRECTION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_START
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_EXPENSES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_INCOME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUM_TRANSFERS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SUPPORTS_RECONCILIATION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_ACCOUNT_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SYNC_SEQUENCE_LOCAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TITLE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TOTAL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_ARCHIVED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_PART
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE_SORT_KEY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USAGES
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_USER_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VERSION
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_WEEK_START
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
-import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_ARCHIVED
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_ATTRIBUTES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ACCOUNT_EXCHANGE_RATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ATTACHMENTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ATTRIBUTES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BANKS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BUDGETS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BUDGET_ALLOCATIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CATEGORIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CHANGES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CURRENCIES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_DEBTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_EQUIVALENT_AMOUNTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_PAYEES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_PRICES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TEMPLATES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTIONS_TAGS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTION_ATTACHMENTS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTION_ATTRIBUTES
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_EXTENDED
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_WITH_ACCOUNT
 import org.totschnig.myexpenses.provider.DatabaseConstants.YEAR
-import org.totschnig.myexpenses.provider.DatabaseConstants.getMonth
-import org.totschnig.myexpenses.provider.DatabaseConstants.getWeek
-import org.totschnig.myexpenses.provider.DatabaseConstants.getWeekStart
-import org.totschnig.myexpenses.provider.DatabaseConstants.getWeekStartJulian
-import org.totschnig.myexpenses.provider.DatabaseConstants.getYearOfMonthStart
-import org.totschnig.myexpenses.provider.DatabaseConstants.getYearOfWeekStart
+import org.totschnig.myexpenses.provider.DatabaseConstants.month
+import org.totschnig.myexpenses.provider.DatabaseConstants.week
+import org.totschnig.myexpenses.provider.DatabaseConstants.weekStart
+import org.totschnig.myexpenses.provider.DatabaseConstants.weekStartJulian
+import org.totschnig.myexpenses.provider.DatabaseConstants.yearOfMonthStart
+import org.totschnig.myexpenses.provider.DatabaseConstants.yearOfWeekStart
 import org.totschnig.myexpenses.provider.DbUtils.aggregateFunction
 import org.totschnig.myexpenses.provider.DbUtils.typeWithFallBack
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
@@ -227,7 +73,11 @@ import org.totschnig.myexpenses.provider.TransactionProvider.KEY_MERGE_TARGET
 import org.totschnig.myexpenses.provider.TransactionProvider.KEY_REPLACE
 import org.totschnig.myexpenses.provider.TransactionProvider.KEY_RESULT
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_CALLER_IS_IN_BULK
+import org.totschnig.myexpenses.provider.TransactionProvider.TEMPLATES_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_BUDGET_ALLOCATIONS
+import org.totschnig.myexpenses.provider.TransactionProvider.pauseChangeTrigger
+import org.totschnig.myexpenses.provider.TransactionProvider.resumeChangeTrigger
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.sync.json.TransactionChange
 import org.totschnig.myexpenses.util.AppDirHelper
@@ -254,6 +104,14 @@ import kotlin.math.pow
 
 fun Uri.Builder.appendBooleanQueryParameter(key: String): Uri.Builder =
     appendQueryParameter(key, "1")
+
+object SyncContract {
+    const val METHOD_APPLY_CHANGES = "applyChangesFromFile"
+    private const val FILE_NAME = "pending_sync.json"
+    fun getSyncFile(context: Context) = File(context.cacheDir, FILE_NAME)
+    const val KEY_RESULT = "result";
+    const val KEY_EXCEPTION = "exception"
+}
 
 abstract class BaseTransactionProvider : ContentProvider() {
     var dirty = false
@@ -302,6 +160,9 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
     @Inject
     lateinit var openHelperProvider: Provider<SupportSQLiteOpenHelper>
+
+    @Inject
+    lateinit var repository: Repository
 
     val collate: String
         get() = prefHandler.collate
@@ -450,6 +311,21 @@ abstract class BaseTransactionProvider : ContentProvider() {
     )
 
     companion object {
+
+        fun balanceUri(date: String?, forBalanceSheet: Boolean) =
+            TransactionProvider.ACCOUNTS_URI.buildUpon()
+                .appendQueryParameter(
+                    TransactionProvider.QUERY_PARAMETER_FULL_PROJECTION_WITH_SUMS,
+                    date
+                )
+                .apply {
+                    if (forBalanceSheet)
+                        appendBooleanQueryParameter(
+                            TransactionProvider.QUERY_PARAMETER_BALANCE_SHEET
+                        )
+                }
+                .build()
+
         val CATEGORY_TREE_URI: Uri
             get() = TransactionProvider.CATEGORIES_URI.buildUpon()
                 .appendBooleanQueryParameter(TransactionProvider.QUERY_PARAMETER_HIERARCHICAL)
@@ -515,6 +391,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
         fun budgetUri(budgetId: Long) = ContentUris.withAppendedId(BUDGETS_URI, budgetId)
 
+        fun templateUri(templateId: Long) = ContentUris.withAppendedId(TEMPLATES_URI, templateId)
+
         fun budgetAllocationUri(budgetId: Long, categoryId: Long): Uri =
             appendId(
                 appendId(BUDGETS_URI.buildUpon(), budgetId),
@@ -531,7 +409,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 .build()
 
         fun groupingUriBuilder(grouping: Grouping): Uri.Builder =
-            TransactionProvider.TRANSACTIONS_URI
+            TRANSACTIONS_URI
                 .buildUpon()
                 .appendPath(URI_SEGMENT_GROUPS)
                 .appendPath(grouping.name)
@@ -554,7 +432,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
         protected const val TEMPLATES_INCREASE_USAGE = 17
         protected const val SQLITE_SEQUENCE_TABLE = 19
         protected const val AGGREGATE_ID = 20
-        protected const val UNCOMMITTED = 21
         protected const val TRANSACTIONS_GROUPS = 22
         protected const val TRANSACTIONS_SUMS = 24
         protected const val TRANSACTION_MOVE = 25
@@ -572,7 +449,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
         protected const val MAPPED_TRANSFER_ACCOUNTS = 41
         protected const val CHANGES = 42
         protected const val SETTINGS = 43
-        protected const val TEMPLATES_UNCOMMITTED = 44
         protected const val ACCOUNT_ID_GROUPING = 45
         protected const val ACCOUNT_ID_SORT = 46
         protected const val AUTOFILL = 47
@@ -587,7 +463,6 @@ abstract class BaseTransactionProvider : ContentProvider() {
         protected const val TRANSACTIONS_TAGS = 56
         protected const val TAG_ID = 57
         protected const val TEMPLATES_TAGS = 58
-        protected const val UNCOMMITTED_ID = 59
         protected const val PLANINSTANCE_STATUS_SINGLE = 60
         protected const val TRANSACTION_LINK_TRANSFER = 61
         protected const val ACCOUNTS_TAGS = 62
@@ -616,6 +491,39 @@ abstract class BaseTransactionProvider : ContentProvider() {
         protected const val ACCOUNT_FLAG_ID = 85
 
         const val CTE_TABLE_NAME_FULL_ACCOUNTS = "full_accounts"
+
+        const val COUNT_UNUSED_PAYEE_QUERY = """
+        WITH
+            DirectlyUsedPayees AS (
+                SELECT DISTINCT $KEY_PAYEEID AS id
+                FROM $TABLE_TRANSACTIONS
+                WHERE $KEY_PAYEEID IS NOT NULL
+                UNION
+                SELECT DISTINCT $KEY_PAYEEID AS id
+                FROM $TABLE_TEMPLATES
+                WHERE $KEY_PAYEEID IS NOT NULL
+                UNION
+                SELECT DISTINCT $KEY_PAYEEID AS id
+                FROM $TABLE_DEBTS
+                WHERE $KEY_PAYEEID IS NOT NULL
+            ),
+            ParentsOfUsedPayees AS (
+                SELECT DISTINCT p.$KEY_PARENTID AS id
+                FROM $TABLE_PAYEES p
+                JOIN DirectlyUsedPayees dup ON p.$KEY_ROWID = dup.id
+                WHERE p.$KEY_PARENTID IS NOT NULL
+            ),
+            AllActivePayees AS (
+                SELECT id FROM DirectlyUsedPayees
+                UNION
+                SELECT id FROM ParentsOfUsedPayees
+                WHERE id IS NOT NULL
+            )
+        SELECT COUNT(p_all.$KEY_ROWID)
+        FROM $TABLE_PAYEES p_all
+        LEFT JOIN AllActivePayees aap ON p_all.$KEY_ROWID = aap.id
+    WHERE aap.id IS NULL AND $KEY_ROWID != $NULL_ROW_ID;
+    """
     }
 
     val homeCurrency: String
@@ -652,14 +560,14 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val cte = if (minimal) "" else {
             val endOfDay = if (date == "now") runBlocking {
                 enumValueOrDefault(
-                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.CRITERION_FUTURE)], FutureCriterion.EndOfDay
+                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.CRITERION_FUTURE)],
+                    FutureCriterion.EndOfDay
                 )
             } != FutureCriterion.Current else true
             val aggregateInvisible = runBlocking {
                 dataStore.data.first()[prefHandler.getBooleanPreferencesKey(PrefKey.INVISIBLE_ACCOUNTS_ARE_AGGREGATED)] != false
             }
             accountQueryCTE(
-                context!!,
                 homeCurrency,
                 endOfDay,
                 aggregateFunction,
@@ -677,7 +585,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 .columns(if (minimal) mapAccountProjection(Account.PROJECTION_MINIMAL) else null)
                 .selection(selection, emptyArray())
                 //for balance sheet, we need to respect the sort order of account types
-                .orderBy(if (sumsForDate != null) "$KEY_TYPE_SORT_KEY DESC,$sortOrder" else sortOrder)
+                .orderBy(sortOrder)
                 .create().sql
         } else {
             val subQueries: MutableList<String> = ArrayList()
@@ -917,17 +825,22 @@ abstract class BaseTransactionProvider : ContentProvider() {
                         .create().sql
                 )
             }
-            val accountGrouping =  runBlocking {
+            val accountGrouping = runBlocking {
                 enumValueOrDefault(
-                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.ACCOUNT_GROUPING)], AccountGrouping.TYPE
+                    dataStore.data.first()[prefHandler.getStringPreferencesKey(PrefKey.ACCOUNT_GROUPING)],
+                    AccountGrouping.TYPE
                 )
             }
             val sortByFlagFirst = runBlocking {
                 dataStore.data.first()[prefHandler.getBooleanPreferencesKey(PrefKey.SORT_ACCOUNT_LIST_BY_FLAG_FIRST)] != false
             }
-            val sortOrderForGrouping = if (accountGrouping == AccountGrouping.TYPE) "$KEY_IS_ASSET DESC,$KEY_TYPE_SORT_KEY DESC," else ""
+            val sortOrderForGrouping =
+                if (accountGrouping == AccountGrouping.TYPE) "$KEY_IS_ASSET DESC,$KEY_TYPE_SORT_KEY DESC," else ""
             val sortByFlag = if (sortByFlagFirst) "$KEY_FLAG_SORT_KEY DESC," else ""
-            buildUnionQuery(subQueries.toTypedArray(), "$KEY_IS_AGGREGATE,$sortOrderForGrouping$sortByFlag$sortOrder")
+            buildUnionQuery(
+                subQueries.toTypedArray(),
+                "$KEY_IS_AGGREGATE,$sortOrderForGrouping$sortByFlag$sortOrder"
+            )
         }
         return "$cte\n$query"
     }
@@ -1112,7 +1025,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
     fun oldestTransactionForCurrency(
         db: SupportSQLiteDatabase,
-        currency: String
+        currency: String,
     ) =
         Bundle(1).apply {
             db.query(
@@ -1194,7 +1107,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 KEY_SEALED -> "max($KEY_SEALED)"
                 KEY_SORT_BY -> "'${prefHandler.getString(SORT_BY_AGGREGATE, KEY_DATE)}'"
                 KEY_SORT_DIRECTION -> "'${prefHandler.getString(SORT_DIRECTION_AGGREGATE, "DESC")}'"
-                else -> throw java.lang.IllegalArgumentException("unknown column $it")
+                else -> throw IllegalArgumentException("unknown column $it")
             } + " AS $it"
         }.toTypedArray()
 
@@ -1218,7 +1131,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 KEY_SEALED -> "(select max($KEY_SEALED) from $TABLE_ACCOUNTS where $KEY_CURRENCY = $KEY_CODE)"
                 KEY_SORT_BY, KEY_SORT_DIRECTION -> it
 
-                else -> throw java.lang.IllegalArgumentException("unknown column $it")
+                else -> throw IllegalArgumentException("unknown column $it")
             } + " AS $it"
         }.toTypedArray()
     }
@@ -1346,7 +1259,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val result = try {
             block()
         } catch (e: Exception) {
-            Timber.tag(TAG).e(e,"Query failed: ${lazyMessage()}")
+            Timber.tag(TAG).e(e, "Query failed: ${lazyMessage()}")
             throw e
         }
         val endTime = Instant.now()
@@ -1356,7 +1269,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
     } else try {
         block()
     } catch (e: Exception) {
-        Timber.tag(TAG).e(e,"Query failed: ${lazyMessage()}")
+        Timber.tag(TAG).e(e, "Query failed: ${lazyMessage()}")
         throw e
     }
 
@@ -1370,15 +1283,9 @@ abstract class BaseTransactionProvider : ContentProvider() {
         return true
     }
 
-    fun wrapWithResultCompat(cursor: Cursor, extras: Bundle) = when {
-        extras.isEmpty -> cursor
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> cursor.apply {
-            setExtras(extras)
-        }
-
-        else -> object : CursorWrapper(cursor) {
-            override fun getExtras() = extras
-        }
+    fun wrapWithResultCompat(cursor: Cursor, extras: Bundle) = if (extras.isEmpty) cursor
+    else cursor.apply {
+        setExtras(extras)
     }
 
     fun handleAccountProperty(
@@ -1461,8 +1368,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
         val yearExpression = when (group) {
             Grouping.NONE -> "1"
-            Grouping.WEEK -> getYearOfWeekStart()
-            Grouping.MONTH -> getYearOfMonthStart()
+            Grouping.WEEK -> yearOfWeekStart
+            Grouping.MONTH -> yearOfMonthStart
             else -> YEAR
         }
         val groupBy = when (group) {
@@ -1474,8 +1381,8 @@ abstract class BaseTransactionProvider : ContentProvider() {
         val secondDef = when (group) {
             Grouping.NONE -> "1"
             Grouping.DAY -> DAY
-            Grouping.WEEK -> getWeek()
-            Grouping.MONTH -> getMonth()
+            Grouping.WEEK -> week
+            Grouping.MONTH -> month
             Grouping.YEAR -> "0"
         }
 
@@ -1504,12 +1411,12 @@ abstract class BaseTransactionProvider : ContentProvider() {
             //MAPPED_CATEGORIES;
             if (withJulianStart) {
                 add(
-                    (if (group === Grouping.WEEK) getWeekStartJulian() else DAY_START_JULIAN)
+                    (if (group === Grouping.WEEK) weekStartJulian else DAY_START_JULIAN)
                             + " AS " + KEY_GROUP_START
                 )
             }
             if (group === Grouping.WEEK) {
-                add("${getWeekStart()} AS $KEY_WEEK_START")
+                add("$weekStart AS $KEY_WEEK_START")
             }
         }.toTypedArray()
 
@@ -1612,7 +1519,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
     fun deleteAttachment(db: SupportSQLiteDatabase, attachmentId: Long, uriString: String?) {
 
-        val uri = Uri.parse(uriString ?: findAttachment(db, attachmentId))
+        val uri = (uriString ?: findAttachment(db, attachmentId)!!).toUri()
         if (uri.authority != AppDirHelper.getFileProviderAuthority(context!!)) {
             Timber.d("External, releasePersistableUriPermission")
             if (try {
@@ -1661,7 +1568,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
             TABLE_ATTACHMENTS,
             ContentValues(2).apply {
                 put(KEY_URI, uriString)
-                put(KEY_UUID, uuid ?: Model.generateUuid())
+                put(KEY_UUID, uuid ?: generateUuid())
             }
         )
         val uri = uriString.toUri()
@@ -1921,42 +1828,78 @@ abstract class BaseTransactionProvider : ContentProvider() {
         }
     }
 
-    fun saveTransactionTags(db: SupportSQLiteDatabase, extras: Bundle) {
-        val transactionId = extras.getLong(KEY_TRANSACTIONID)
-        val tagIds = extras.getLongArray(KEY_TAGLIST)!!.toSet()
-        val selection = "$KEY_TRANSACTIONID = ?"
+    fun SupportSQLiteDatabase.saveTransactionTags(
+        transactionId: Long,
+        tagIds: Set<Long>,
+        replace: Boolean,
+        forTemplate: Boolean = false,
+    ) {
+        val table = if (forTemplate) TABLE_TEMPLATES_TAGS else TABLE_TRANSACTIONS_TAGS
+        val column = if (forTemplate) KEY_TEMPLATEID else KEY_TRANSACTIONID
+        val selection = "$column = ?"
         val selectionArgs: Array<Any> = arrayOf(transactionId)
-        val currentTags = db.query(
-            TABLE_TRANSACTIONS_TAGS,
+        val currentTags = query(
+            table,
             arrayOf(KEY_TAGID),
             selection,
             selectionArgs
         ).useAndMapToSet { it.getLong(0) }
         val new = tagIds - currentTags
-        val deleted = if (extras.getBoolean(KEY_REPLACE, true)) currentTags - tagIds else emptySet()
+        val deleted = if (replace) currentTags - tagIds else emptySet()
         if (new.isNotEmpty() || deleted.isNotEmpty()) {
-            db.beginTransaction()
+            beginTransaction()
             try {
                 if (deleted.isNotEmpty()) {
-                    db.delete(
-                        TABLE_TRANSACTIONS_TAGS,
+                    delete(
+                        table,
                         "$selection AND $KEY_TAGID IN (${deleted.joinToString()})",
                         selectionArgs
                     )
                 }
                 if (new.isNotEmpty()) {
                     val values = ContentValues(2)
-                    values.put(KEY_TRANSACTIONID, transactionId)
+                    values.put(column, transactionId)
                     new.forEach {
                         values.put(KEY_TAGID, it)
-                        db.insert(TABLE_TRANSACTIONS_TAGS, CONFLICT_IGNORE, values)
+                        insert(table, CONFLICT_IGNORE, values)
                     }
                 }
-                db.setTransactionSuccessful()
+                setTransactionSuccessful()
             } finally {
-                db.endTransaction()
+                endTransaction()
             }
         }
+    }
+
+    fun SupportSQLiteDatabase.saveTransactionTags(extras: Bundle) {
+        saveTransactionTags(
+            extras.getLong(KEY_TRANSACTIONID),
+            extras.getLongArray(KEY_TAGLIST)!!.toSet(),
+            extras.getBoolean(KEY_REPLACE, true)
+        )
+    }
+
+    @JvmOverloads
+    fun SupportSQLiteDatabase.saveTransactionTags(
+        transactionId: Long,
+        tagList: String?,
+        replace: Boolean,
+        forTemplate: Boolean = false,
+    ) {
+        if (tagList == null) return
+        saveTransactionTags(
+            transactionId,
+            if (tagList.isEmpty()) {
+                emptySet()
+            } else {
+                tagList.split(Repository.RECORD_SEPARATOR)
+                    .filter { it.isNotEmpty() } // This prevents the crash
+                    .map { it.toLong() }
+                    .toSet()
+            },
+            replace,
+            forTemplate
+        )
     }
 
     fun mergeCategories(db: SupportSQLiteDatabase, extras: Bundle) {
@@ -2031,7 +1974,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
                             val idString: String = it.getString(0)
                             db.execSQL(
                                 "UPDATE $TABLE_TRANSACTIONS SET $KEY_UUID = ? WHERE $KEY_ROWID = ? OR $KEY_TRANSFER_PEER = ?",
-                                arrayOf(Model.generateUuid(), idString, idString)
+                                arrayOf(generateUuid(), idString, idString)
                             )
                             it.moveToNext()
                         }
@@ -2081,11 +2024,19 @@ abstract class BaseTransactionProvider : ContentProvider() {
     private fun subSelectTemplate(colum: String) =
         "(SELECT %1\$s FROM $TABLE_TRANSACTIONS WHERE $KEY_UUID = ?)".format(Locale.ROOT, colum)
 
+    /**
+     * @return number of split parts + 1 (for parent)
+     */
     fun SupportSQLiteDatabase.unsplit(values: ContentValues, callerIsNotSyncAdapter: Boolean): Int {
-        val uuid =
-            values.getAsString(KEY_UUID) ?: uuidForTransaction(values.getAsLong(KEY_ROWID))
-        val transactionId = values.getAsLong(KEY_ROWID) ?: findTransactionByUuid(KEY_UUID)
-
+        val passedInUuid = values.getAsString(KEY_UUID)
+        val passedInRowId = values.getAsLong(KEY_ROWID)
+        require(passedInUuid != null || passedInRowId != null)
+        val uuid = passedInUuid
+            ?: uuidForTransaction(passedInRowId)
+            ?: throw Exception("Missing uuid")
+        val transactionId = passedInRowId
+            ?: findTransactionByUuid(passedInUuid)
+            ?: throw Exception("Missing transaction id")
 
         val crStatusSubSelect = subSelectTemplate(KEY_CR_STATUS)
         val payeeIdSubSelect = subSelectTemplate(KEY_PAYEEID)
@@ -2094,7 +2045,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
 
         return try {
             beginTransaction()
-            TransactionProvider.pauseChangeTrigger(this)
+            pauseChangeTrigger(this)
             //set equivalent amounts based on parents rate
             execSQL(
                 """WITH parent AS (SELECT 1.0 * $KEY_EQUIVALENT_AMOUNT / $KEY_AMOUNT AS rate FROM $TABLE_TRANSACTIONS ${
@@ -2109,10 +2060,12 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 """.trimMargin()
             )
             //parts are promoted to independence
-            execSQL(
-                "UPDATE $TABLE_TRANSACTIONS SET $KEY_PARENTID = null, $KEY_CR_STATUS = $crStatusSubSelect, $KEY_PAYEEID = $payeeIdSubSelect WHERE $KEY_PARENTID = ?",
-                arrayOf(uuid, uuid, transactionId)
-            )
+            val partUpdateCount = compileStatement("UPDATE $TABLE_TRANSACTIONS SET $KEY_PARENTID = null, $KEY_CR_STATUS = $crStatusSubSelect, $KEY_PAYEEID = $payeeIdSubSelect WHERE $KEY_PARENTID = ?").use {
+                it.bindString(1, uuid)
+                it.bindString(2, uuid)
+                it.bindLong(3, transactionId)
+                it.executeUpdateDelete()
+            }
             //Change is recorded
             if (callerIsNotSyncAdapter) {
                 execSQL(
@@ -2125,10 +2078,10 @@ abstract class BaseTransactionProvider : ContentProvider() {
                 )
             }
             //parent is deleted
-            val count = delete(TABLE_TRANSACTIONS, "$KEY_UUID = ?", arrayOf(uuid))
-            TransactionProvider.resumeChangeTrigger(this)
+            val parentDeleteCount = delete(TABLE_TRANSACTIONS, "$KEY_UUID = ?", arrayOf(uuid))
+            resumeChangeTrigger(this)
             setTransactionSuccessful()
-            count
+            partUpdateCount + parentDeleteCount
         } finally {
             endTransaction()
         }
@@ -2149,16 +2102,20 @@ abstract class BaseTransactionProvider : ContentProvider() {
      * @param baseTable if not null, extended projection is calculated
      */
     fun templateProjection(
-        baseTable: String?
+        baseTable: String?,
     ): Array<String> = buildList {
         add(KEY_ROWID)
         add(KEY_AMOUNT)
         add(KEY_COMMENT)
         add(KEY_CATID)
         add(KEY_PATH)
+        add(KEY_ICON)
+        add(KEY_PAYEEID)
         add(KEY_PAYEE_NAME)
+        add(KEY_SHORT_NAME)
         add(KEY_TRANSFER_ACCOUNT)
         add(TRANSFER_ACCOUNT_LABEL)
+        add(TRANSFER_ACCOUNT_CURRENCY)
         add(KEY_ACCOUNTID)
         add(KEY_ACCOUNT_LABEL)
         add(KEY_METHODID)
@@ -2295,7 +2252,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         beginTransaction()
         try {
             val sql = """
-                UPDATE ${DatabaseConstants.TABLE_ACCOUNT_FLAGS}
+                UPDATE $TABLE_ACCOUNT_FLAGS
                 SET $KEY_FLAG_SORT_KEY = ?
                 WHERE $KEY_ROWID = ?
             """.trimIndent()
@@ -2335,7 +2292,7 @@ abstract class BaseTransactionProvider : ContentProvider() {
         beginTransaction()
         try {
             val sql = """
-                UPDATE ${DatabaseConstants.TABLE_ACCOUNT_TYPES}
+                UPDATE $TABLE_ACCOUNT_TYPES
                 SET $KEY_TYPE_SORT_KEY = ?
                 WHERE $KEY_ROWID = ?
             """.trimIndent()
@@ -2365,5 +2322,76 @@ abstract class BaseTransactionProvider : ContentProvider() {
             resultBundle.putBoolean(KEY_RESULT, result)
         }
         return resultBundle
+    }
+
+    fun SupportSQLiteDatabase.cleanupUnusedPayees() {
+        beginTransaction()
+        try {
+            val deleteUnusedChildrenSql = """
+            DELETE FROM $TABLE_PAYEES
+            WHERE $KEY_PARENTID IS NOT NULL
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_TRANSACTIONS WHERE $KEY_PAYEEID IS NOT NULL)
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_TEMPLATES WHERE $KEY_PAYEEID IS NOT NULL)
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_DEBTS WHERE $KEY_PAYEEID IS NOT NULL)
+              AND $KEY_ROWID != $NULL_ROW_ID
+        """
+            execSQL(deleteUnusedChildrenSql)
+
+            val deleteUnusedRootsSql = """
+            DELETE FROM $TABLE_PAYEES
+            WHERE $KEY_PARENTID IS NULL -- This identifies it as a root
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_TRANSACTIONS WHERE $KEY_PAYEEID IS NOT NULL)
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_TEMPLATES WHERE $KEY_PAYEEID IS NOT NULL)
+              AND $KEY_ROWID NOT IN (SELECT DISTINCT $KEY_PAYEEID FROM $TABLE_DEBTS WHERE $KEY_PAYEEID IS NOT NULL)
+              AND NOT EXISTS (
+                  SELECT 1 FROM $TABLE_PAYEES p_child
+                  WHERE p_child.$KEY_PARENTID = $TABLE_PAYEES.$KEY_ROWID
+              )
+               AND $KEY_ROWID != $NULL_ROW_ID
+        """
+            execSQL(deleteUnusedRootsSql)
+
+            setTransactionSuccessful()
+        } finally {
+            endTransaction()
+        }
+    }
+
+    fun applyChangesFromSync(extras: Bundle): Bundle {
+        val db = helper.writableDatabase
+        val accountId = extras.getLong(KEY_ACCOUNTID)
+        val currency = currencyContext[extras.getString(KEY_CURRENCY)!!]
+        val accountTypeId = extras.getLong(KEY_TYPE)
+        val changes = SyncContract.getSyncFile(context!!).reader().use {
+            Json.decodeFromString<List<TransactionChange>>(it.readText())
+        }
+
+        val handler = SyncHandler(
+            accountId,
+            currency,
+            accountTypeId,
+            repository,
+            currencyContext = currencyContext,
+        )
+
+        db.beginTransaction()
+        return try {
+            pauseChangeTrigger(db)
+            changes.forEach {
+                applyBatch(handler.collectOperations(it))
+            }
+            resumeChangeTrigger(db)
+            db.setTransactionSuccessful()
+            Bundle().apply {
+                putBoolean(SyncContract.KEY_RESULT, true)
+            }
+        } catch (e: Throwable) {
+            Bundle().apply {
+                putBoolean(SyncContract.KEY_RESULT, false)
+                putString(SyncContract.KEY_EXCEPTION, e.message)
+            }
+        } finally {
+            db.endTransaction()
+        }
     }
 }

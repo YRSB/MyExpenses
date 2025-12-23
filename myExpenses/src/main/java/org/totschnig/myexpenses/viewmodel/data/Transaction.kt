@@ -1,58 +1,63 @@
 package org.totschnig.myexpenses.viewmodel.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.database.Cursor
-import org.totschnig.myexpenses.adapter.SplitPartRVAdapter
+import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
+import org.totschnig.myexpenses.db2.Repository
+import org.totschnig.myexpenses.db2.entities.prettyTimeInfo
 import org.totschnig.myexpenses.db2.loadTagsForTransaction
+import org.totschnig.myexpenses.db2.loadTemplate
 import org.totschnig.myexpenses.db2.localizedLabelForPaymentMethod
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Template
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.DEBT_LABEL_EXPRESSION
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.KEY_DEBT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNT_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT_HOME_EQUIVALENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COMMENT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CR_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCHANGE_RATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IBAN
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHODID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_METHOD_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ORIGINAL_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_REFERENCE_NUMBER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TEMPLATEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_ACCOUNT_LABEL
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_ARCHIVED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER_IS_PART
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TYPE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.SPLIT_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_ARCHIVE
-import org.totschnig.myexpenses.provider.DatabaseConstants.STATUS_NONE
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_ACCOUNT_LABEL
+import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_AMOUNT_HOME_EQUIVALENT
+import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_COMMENT
+import org.totschnig.myexpenses.provider.KEY_CR_STATUS
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_EXCHANGE_RATE
+import org.totschnig.myexpenses.provider.KEY_IBAN
+import org.totschnig.myexpenses.provider.KEY_ICON
+import org.totschnig.myexpenses.provider.KEY_METHODID
+import org.totschnig.myexpenses.provider.KEY_METHOD_LABEL
+import org.totschnig.myexpenses.provider.KEY_ORIGINAL_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_ORIGINAL_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_PATH
+import org.totschnig.myexpenses.provider.KEY_PAYEEID
+import org.totschnig.myexpenses.provider.KEY_PAYEE_NAME
+import org.totschnig.myexpenses.provider.KEY_REFERENCE_NUMBER
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SEALED
+import org.totschnig.myexpenses.provider.KEY_SHORT_NAME
+import org.totschnig.myexpenses.provider.KEY_STATUS
+import org.totschnig.myexpenses.provider.KEY_TEMPLATEID
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_ACCOUNT_LABEL
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER_IS_ARCHIVED
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER_IS_PART
+import org.totschnig.myexpenses.provider.KEY_TYPE
+import org.totschnig.myexpenses.provider.KEY_UUID
+import org.totschnig.myexpenses.provider.KEY_VALUE_DATE
+import org.totschnig.myexpenses.provider.SPLIT_CATID
+import org.totschnig.myexpenses.provider.STATUS_ARCHIVE
+import org.totschnig.myexpenses.provider.STATUS_NONE
 import org.totschnig.myexpenses.provider.DatabaseConstants.TRANSFER_CURRENCY
 import org.totschnig.myexpenses.provider.DbUtils.typeWithFallBack
 import org.totschnig.myexpenses.provider.TRANSFER_ACCOUNT_LABEL
@@ -64,24 +69,39 @@ import org.totschnig.myexpenses.provider.getLongOrNull
 import org.totschnig.myexpenses.provider.getString
 import org.totschnig.myexpenses.provider.getStringOrNull
 import org.totschnig.myexpenses.provider.requireLong
+import org.totschnig.myexpenses.ui.DisplayParty
 import org.totschnig.myexpenses.util.enumValueOrDefault
 import org.totschnig.myexpenses.util.epoch2ZonedDateTime
 import java.time.ZonedDateTime
 
+const val RIGHT_ARROW = '▶'
+const val LEFT_ARROW = '◀'
+const val BI_ARROW = '⇄'
+
+/**
+ * @return if amount is negative, we transfer money into the transfer account, so we
+ * return the in direction char (RIGHT_ARROW), otherwise LEFT_ARROW
+ */
+fun getIndicatorPrefixForLabel(amount: Long) = getIndicatorCharForLabel(amount < 0).toString() + " "
+
+/**
+ * @param direction true is in, false is out
+ * @return RIGHT_ARROW for in, LEFT_ARROW for out
+ */
+fun getIndicatorCharForLabel(direction: Boolean) = if (direction) RIGHT_ARROW else LEFT_ARROW
 
 data class Transaction(
-    override val id: Long,
+    val id: Long,
     val accountId: Long,
-    override val amountRaw: Long,
     val amount: Money,
     val date: ZonedDateTime,
     val valueDate: Long,
-    override val comment: String?,
+    val comment: String?,
     val catId: Long?,
-    val payee: String,
+    val party: DisplayParty?,
     val methodLabel: String?,
-    override val categoryPath: String?,
-    override val transferAccount: String?,
+    val categoryPath: String?,
+    val transferAccount: String?,
     val transferPeer: Long?,
     val transferAmount: Money?,
     val transferPeerIsPart: Boolean,
@@ -90,28 +110,30 @@ data class Transaction(
     val equivalentAmount: Money?,
     val crStatus: CrStatus,
     val referenceNumber: String?,
-    val originTemplate: Template?,
+    val originTemplate: String?,
     val isSealed: Boolean,
     val accountLabel: String,
     val accountType: AccountType?,
-    override val debtLabel: String?,
-    override val tagList: List<Tag>,
-    override val icon: String? = null,
+    val debtLabel: String?,
+    val tags: List<Tag>,
+    val icon: String? = null,
     val iban: String? = null,
     val status: Int = STATUS_NONE,
-    val type: Byte = FLAG_NEUTRAL
-) : SplitPartRVAdapter.ITransaction {
+    val type: Byte = FLAG_NEUTRAL,
+) {
     val isSameCurrency: Boolean
         get() = transferAmount?.let { amount.currencyUnit == it.currencyUnit } != false
     val isSplit
         get() = SPLIT_CATID == catId
     val isArchive
         get() = status == STATUS_ARCHIVE
+    val isTransfer
+        get() = transferAccount != null
 
     companion object {
         fun projection(
             context: Context,
-            prefHandler: PrefHandler
+            prefHandler: PrefHandler,
         ) = arrayOf(
             KEY_ROWID,
             KEY_DATE,
@@ -121,7 +143,9 @@ data class Transaction(
             KEY_CATID,
             KEY_PATH,
             TRANSFER_ACCOUNT_LABEL,
+            KEY_PAYEEID,
             KEY_PAYEE_NAME,
+            KEY_SHORT_NAME,
             KEY_TRANSFER_PEER,
             KEY_TRANSFER_ACCOUNT,
             TRANSFER_CURRENCY,
@@ -154,15 +178,14 @@ data class Transaction(
             "${effectiveTypeExpression(typeWithFallBack(prefHandler))} AS $KEY_TYPE"
         )
 
+        @SuppressLint("MissingPermission")
         fun Cursor.readTransaction(
-            context: Context,
+            repository: Repository,
             currencyContext: CurrencyContext,
             homeCurrency: CurrencyUnit,
-            accountType: AccountType? = null
+            accountType: AccountType? = null,
         ): Transaction {
             val currencyUnit = currencyContext[getString(KEY_CURRENCY)]
-            val amountRaw = getLong(KEY_AMOUNT)
-            val money = Money(currencyUnit, amountRaw)
             val transferAccountId = getLongOrNull(KEY_TRANSFER_ACCOUNT)
             val date: Long = getLong(KEY_DATE)
             val transferPeer = getLongOrNull(KEY_TRANSFER_PEER)
@@ -171,13 +194,12 @@ data class Transaction(
             return Transaction(
                 id = id,
                 accountId = getLong(KEY_ACCOUNTID),
-                amountRaw = amountRaw,
-                amount = money,
+                amount = Money(currencyUnit, this.getLong(KEY_AMOUNT)),
                 date = epoch2ZonedDateTime(date),
                 valueDate = getLongOrNull(KEY_VALUE_DATE) ?: date,
                 comment = getStringOrNull(KEY_COMMENT),
                 catId = getLongOrNull(KEY_CATID),
-                payee = getString(KEY_PAYEE_NAME),
+                party = DisplayParty.fromCursor(this),
                 methodLabel = getStringOrNull(KEY_METHOD_LABEL),
                 categoryPath = getStringOrNull(KEY_PATH, allowEmpty = true),
                 transferAccount = getStringOrNull(KEY_TRANSFER_ACCOUNT_LABEL),
@@ -197,8 +219,11 @@ data class Transaction(
                     CrStatus.UNRECONCILED
                 ),
                 referenceNumber = getStringOrNull(KEY_REFERENCE_NUMBER),
-                originTemplate = getLongOrNull(KEY_TEMPLATEID)?.let {
-                    Template.getInstanceFromDb(context.contentResolver, it)
+                originTemplate = getLongOrNull(KEY_TEMPLATEID)?.let { templateId ->
+                    repository.loadTemplate(templateId)?.takeIf { it.data.planId != 0L }?.let {
+                        it.plan?.let { prettyTimeInfo(repository.context, it.rRule, it.dtStart) }
+                         ?: repository.context.getString(R.string.plan_event_deleted)
+                    }
                 },
                 isSealed = getInt(KEY_SEALED) > 0,
                 accountLabel = getString(KEY_ACCOUNT_LABEL),
@@ -206,7 +231,7 @@ data class Transaction(
                 transferPeerIsPart = getBoolean(KEY_TRANSFER_PEER_IS_PART),
                 transferPeerIsArchived = getBoolean(KEY_TRANSFER_PEER_IS_ARCHIVED),
                 debtLabel = getStringOrNull(KEY_DEBT_LABEL),
-                tagList = context.contentResolver.loadTagsForTransaction(id),
+                tags = repository.loadTagsForTransaction(id),
                 icon = getStringOrNull(KEY_ICON),
                 iban = getStringOrNull(KEY_IBAN),
                 status = getInt(KEY_STATUS),

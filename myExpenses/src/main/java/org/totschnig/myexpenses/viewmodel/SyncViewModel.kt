@@ -1,6 +1,10 @@
 package org.totschnig.myexpenses.viewmodel
 
-import android.accounts.AccountManager.*
+import android.accounts.AccountManager.KEY_ACCOUNT_NAME
+import android.accounts.AccountManager.KEY_AUTHTOKEN
+import android.accounts.AccountManager.KEY_PASSWORD
+import android.accounts.AccountManager.KEY_USERDATA
+import android.accounts.AccountManager.get
 import android.accounts.AuthenticatorException
 import android.accounts.OperationCanceledException
 import android.app.Application
@@ -14,14 +18,16 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import kotlinx.parcelize.Parcelize
 import org.totschnig.myexpenses.MyApplication
-import org.totschnig.myexpenses.db2.addAccountType
 import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.findAccountByUuid
-import org.totschnig.myexpenses.db2.findAccountType
+import org.totschnig.myexpenses.db2.requireAccountTypeForSync
 import org.totschnig.myexpenses.db2.storeExchangeRate
-import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model2.Account
-import org.totschnig.myexpenses.provider.DatabaseConstants.*
+import org.totschnig.myexpenses.provider.KEY_LABEL
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SEALED
+import org.totschnig.myexpenses.provider.KEY_SYNC_ACCOUNT_NAME
+import org.totschnig.myexpenses.provider.KEY_UUID
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.filter.Operation
 import org.totschnig.myexpenses.provider.useAndMapToList
@@ -58,7 +64,7 @@ open class SyncViewModel(application: Application) : ContentResolvingAndroidView
         liveData(context = coroutineContext()) {
             try {
                 configureLocalAccountForSync(accountName, uuid)
-            } catch (e: SQLiteConstraintException) {
+            } catch (_: SQLiteConstraintException) {
                 emit(Result.failure(AccountSealedException()))
             }
             resetRemote(accountName, uuid)
@@ -73,10 +79,7 @@ open class SyncViewModel(application: Application) : ContentResolvingAndroidView
     }
 
     protected fun doSave(accountIn: Account) {
-        val accountType = repository.findAccountType(accountIn.type.name) ?:
-            AccountType.initialAccountTypes.firstOrNull { it.nameForSyncLegacy == accountIn.type.name }?.let {
-                repository.findAccountType(it.name)
-            } ?:  repository.addAccountType(accountIn.type)
+        val accountType = repository.requireAccountTypeForSync(accountIn.type.name)
 
         val account = repository.createAccount(
             accountIn.copy(type = accountType)
@@ -243,7 +246,7 @@ open class SyncViewModel(application: Application) : ContentResolvingAndroidView
                 val syncAccounts = if (shouldQueryRemoteAccounts)
                     syncBackendProvider.remoteAccountList
                         .mapNotNull { it.getOrNull() }
-                        .filter { remoteAccount -> !localAccounts.any { it.isSynced && it.uuid == remoteAccount.uuid() } } else emptyList()
+                        .filter { remoteAccount -> !localAccounts.any { it.isSynced && it.uuid == remoteAccount.uuid } } else emptyList()
                 val backups =
                     if (shouldReturnBackups) syncBackendProvider.storedBackups else emptyList()
                 SyncAccountData(
@@ -283,12 +286,11 @@ open class SyncViewModel(application: Application) : ContentResolvingAndroidView
                     syncBackendProvider.remoteAccountList
                         .asSequence()
                         .mapNotNull { it.getOrNull() }
-                        .filter { accountMetaData -> accountUuids.contains(accountMetaData.uuid()) }
+                        .filter { accountMetaData -> accountUuids.contains(accountMetaData.uuid) }
                         .map { accountMetaData ->
                             accountMetaData.toAccount(
                                 currencyContext.homeCurrencyString,
-                                accountName,
-                                repository
+                                accountName
                             )
                         }
                         .forEach {
@@ -314,7 +316,6 @@ open class SyncViewModel(application: Application) : ContentResolvingAndroidView
             )
         }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP_MR1)
     fun removeBackend(accountName: String) =
         get(getApplication()).removeAccountExplicitly(getAccount(accountName))
 

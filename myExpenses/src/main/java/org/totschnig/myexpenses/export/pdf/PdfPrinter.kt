@@ -35,15 +35,15 @@ import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.myApplication
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.printLayout
 import org.totschnig.myexpenses.preference.printLayoutColumnWidths
-import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.asSequence
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.util.AppDirHelper.timeStampedFile
@@ -67,10 +67,12 @@ import org.totschnig.myexpenses.viewmodel.Payee
 import org.totschnig.myexpenses.viewmodel.PrintLayoutConfigurationViewModel.Companion.asColumns
 import org.totschnig.myexpenses.viewmodel.ReferenceNumber
 import org.totschnig.myexpenses.viewmodel.Tags
+import org.totschnig.myexpenses.viewmodel.data.BI_ARROW
 import org.totschnig.myexpenses.viewmodel.data.DateInfo
 import org.totschnig.myexpenses.viewmodel.data.FullAccount
 import org.totschnig.myexpenses.viewmodel.data.HeaderData
 import org.totschnig.myexpenses.viewmodel.data.Transaction2
+import org.totschnig.myexpenses.viewmodel.data.getIndicatorPrefixForLabel
 import org.totschnig.myexpenses.viewmodel.data.mergeTransfers
 import timber.log.Timber
 import java.io.IOException
@@ -160,8 +162,8 @@ object PdfPrinter {
             "application/pdf", "pdf"
         ) ?: throw createFileFailure(context, destDir, fileName)
         val document = getDocument(context, prefHandler)
-        val sortBy = if (DatabaseConstants.KEY_AMOUNT == account.sortBy) {
-            "abs(" + DatabaseConstants.KEY_AMOUNT + ")"
+        val sortBy = if (KEY_AMOUNT == account.sortBy) {
+            "abs($KEY_AMOUNT)"
         } else {
             account.sortBy
         }
@@ -494,7 +496,7 @@ object PdfPrinter {
                     })
                 header2Table.addCell(
                     helper.printToCell(
-                        Transfer.BI_ARROW + " " + currencyFormatter.formatMoney(sumTransfer),
+                        "$BI_ARROW ${currencyFormatter.formatMoney(sumTransfer)}",
                         FontType.TRANSFER
                     ).apply {
                         horizontalAlignment = Element.ALIGN_CENTER
@@ -644,7 +646,7 @@ object PdfPrinter {
                     )
 
                     Notes -> listOf(comment)
-                    Payee -> listOf(payee)
+                    Payee -> listOf(party?.displayName)
                     Tags -> listOf(tagList.joinToString { it.second })
 
                     ReferenceNumber -> listOf(referenceNumber)
@@ -657,7 +659,7 @@ object PdfPrinter {
                             if (isNotEmpty()) {
                                 append(" ")
                             }
-                            append(Transfer.getIndicatorPrefixForLabel(displayAmount.amountMinor) + transferAccountLabel)
+                            append(getIndicatorPrefixForLabel(displayAmount.amountMinor) + transferAccountLabel)
                         }
                     })
                 }
@@ -665,19 +667,6 @@ object PdfPrinter {
                     .filter { it.isNotEmpty() }
             }
 
-            fun fontType(field: Field, isSplitPart: Boolean) = when (field) {
-                is Amount, OriginalAmount -> {
-                    if (account.id >= 0 || !transaction.isSameCurrency)
-                        (colorSource.transformType(transaction.type)
-                            ?: when (transaction.displayAmount.amountMinor.sign) {
-                                1 -> FLAG_INCOME
-                                -1 -> FLAG_EXPENSE
-                                else -> FLAG_NEUTRAL
-                            }).asFontType(isSplitPart) else FontType.NORMAL
-                }
-
-                else -> if (isSplitPart) FontType.SMALL else FontType.NORMAL
-            }
 
             fun Transaction2.print(paddingTop: Float = 5f, paddingBottom: Float = 5f, isSplitPart: Boolean = false) {
                 columns.forEachIndexed { index, fields ->
@@ -685,9 +674,21 @@ object PdfPrinter {
                     val border = (if (index == columns.lastIndex) 0 else Rectangle.RIGHT) +
                             if (isSplitPart) 0 else Rectangle.TOP
                     val rows: List<Pair<FontType, String>> = finalFields.flatMap { field ->
-                        print(field).map {
-                            fontType(field, isSplitPart) to it
+                        val fontType = when (field) {
+                            is Amount, OriginalAmount -> {
+                                if (account.id >= 0 || !isSameCurrency)
+                                    (colorSource.transformType(type)
+                                        ?: when (displayAmount.amountMinor.sign) {
+                                            1 -> FLAG_INCOME
+                                            -1 -> FLAG_EXPENSE
+                                            else -> FLAG_NEUTRAL
+                                        }).asFontType(isSplitPart) else FontType.NORMAL
+                            }
+
+                            else -> if (isSplitPart) FontType.SMALL else FontType.NORMAL
                         }
+
+                        print(field).map { fontType to it }
                     }
                     val cell =
                         helper.printToNestedCell(*rows.mapIndexed { index, (fontType, text) ->
@@ -718,7 +719,7 @@ object PdfPrinter {
 
             transaction.print()
 
-            if (DatabaseConstants.SPLIT_CATID == transaction.catId) {
+            if (SPLIT_CATID == transaction.catId) {
                 splitCursor(transaction.id).use { it ->
                     val list = it.asSequence.map {
                         Transaction2.fromCursor(

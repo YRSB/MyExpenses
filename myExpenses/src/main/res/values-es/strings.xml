@@ -874,7 +874,7 @@
     <string name="pref_csv_export_split_categories_summary">Utilizar columnas separadas para cada nivel de jerarquía de categoría</string>
     <string name="pref_csv_export_split_amount_summary">Utilizar columnas separadas para ingresos y gastos</string>
     <string name="pref_csv_export_split_date_time_summary">Utilizar columnas separadas para fecha y hora</string>
-    <string name="webui_warning_move_transaction">La transacción será trasladada a la cuenta {cuenta}.</string>
+    <string name="webui_warning_move_transaction">La transacción será trasladada a la cuenta {account}.</string>
     <string name="icons_for_categories">Iconos por categorías</string>
     <string name="content_description_attachment">Archivo adjunto</string>
     <string name="redesign">Rediseño</string>
@@ -1049,4 +1049,16 @@
     <string name="aggregate_invisible">Incluir cuentas invisibles en las cuentas agregadas y el balance general</string>
     <string name="select_accounts_for_flag">Seleccionar cuentas para el indicador %s</string>
     <string name="supports_reconciliation">Apoya la reconciliación</string>
+    <string name="remap_payee_null">El pagador/beneficiario se eliminará de todas las transacciones seleccionadas.</string>
+    <string name="menu_cleanup">Limpiar</string>
+    <plurals name="warning_cleanup_parties">
+        <item quantity="one">%d parte no utilizada será eliminada.</item>
+        <item quantity="many">%d partes no utilizadas serán eliminadas.</item>
+        <item quantity="other">%d partes no utilizadas serán eliminadas.</item>
+    </plurals>
+    <string name="show_invisible">Cuentas ocultas</string>
+    <string name="show_zero">Cuentas de saldo cero</string>
+    <string name="content_description_clear_party">Borrar parte seleccionada</string>
+    <string name="content_description_browse_device_files">Explorar archivos en este dispositivo</string>
+    <string name="content_description_select_recent_file">Selecciona entre archivos recientes</string>
 </resources>

@@ -49,6 +49,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
+import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.ViewCompat
@@ -82,6 +83,7 @@ import eltos.simpledialogfragment.form.Hint
 import eltos.simpledialogfragment.form.SimpleFormDialog
 import eltos.simpledialogfragment.form.Spinner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.totschnig.myexpenses.MyApplication
@@ -90,6 +92,11 @@ import org.totschnig.myexpenses.activity.ContribInfoDialogActivity.Companion.get
 import org.totschnig.myexpenses.activity.ExpenseEdit.Companion.KEY_OCR_RESULT
 import org.totschnig.myexpenses.databinding.ActivityWithFragmentBinding
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_COMMAND_NEGATIVE
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_COMMAND_POSITIVE
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_MESSAGE
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_POSITIVE_BUTTON_LABEL
+import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.Companion.KEY_TAG_POSITIVE_BUNDLE
 import org.totschnig.myexpenses.dialog.ConfirmationDialogFragment.ConfirmationDialogListener
 import org.totschnig.myexpenses.dialog.DialogUtils
 import org.totschnig.myexpenses.dialog.DialogUtils.PasswordDialogUnlockedCallback
@@ -115,8 +122,13 @@ import org.totschnig.myexpenses.myApplication
 import org.totschnig.myexpenses.preference.PrefHandler
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_URI
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_PATH
+import org.totschnig.myexpenses.provider.KEY_PAYEE_NAME
+import org.totschnig.myexpenses.provider.KEY_SYNC_ACCOUNT_NAME
+import org.totschnig.myexpenses.provider.KEY_URI
 import org.totschnig.myexpenses.provider.filter.FilterPersistence
 import org.totschnig.myexpenses.service.PlanExecutor.Companion.enqueueSelf
 import org.totschnig.myexpenses.sync.GenericAccountService
@@ -128,7 +140,6 @@ import org.totschnig.myexpenses.util.NotificationBuilderWrapper
 import org.totschnig.myexpenses.util.PermissionHelper
 import org.totschnig.myexpenses.util.PermissionHelper.PermissionGroup
 import org.totschnig.myexpenses.util.PictureDirHelper
-import org.totschnig.myexpenses.util.TextUtils.concatResStrings
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.ads.AdHandlerFactory
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
@@ -137,7 +148,6 @@ import org.totschnig.myexpenses.util.distrib.DistributionHelper.getVersionInfo
 import org.totschnig.myexpenses.util.distrib.DistributionHelper.marketSelfUri
 import org.totschnig.myexpenses.util.getLocale
 import org.totschnig.myexpenses.util.licence.LicenceHandler
-import org.totschnig.myexpenses.util.localizedQuote
 import org.totschnig.myexpenses.util.safeMessage
 import org.totschnig.myexpenses.util.tracking.Tracker
 import org.totschnig.myexpenses.util.ui.UiUtils
@@ -155,9 +165,6 @@ import java.time.LocalTime
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.sign
-import androidx.core.net.toUri
-import kotlinx.coroutines.flow.StateFlow
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PATH
 
 abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.MessageDialogListener,
     ConfirmationDialogListener, EasyPermissions.PermissionCallbacks, AmountInput.Host, ContribIFace,
@@ -243,7 +250,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         val intent = Intent(this, CalculatorInput::class.java).apply {
             forwardDataEntryFromWidget(this)
             if (amount != null) {
-                putExtra(DatabaseConstants.KEY_AMOUNT, amount.toString())
+                putExtra(KEY_AMOUNT, amount.toString())
             }
             putExtra(CalculatorInput.EXTRA_KEY_INPUT_ID, id)
             putExtra(KEY_COLOR, color)
@@ -604,7 +611,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
 
             CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE -> {
                 val result = CropImage.getActivityResult(data)
-                if (resultCode == RESULT_OK) {
+                if (resultCode == RESULT_OK && result != null) {
                     baseViewModel.cleanupOrigFile(result)
                     onCropResultOK(result)
                 } else {
@@ -653,7 +660,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
             DIALOG_INACTIVE_BACKEND -> {
                 if (which == OnDialogResultListener.BUTTON_POSITIVE) {
                     GenericAccountService.activateSync(
-                        extras.getString(DatabaseConstants.KEY_SYNC_ACCOUNT_NAME)!!,
+                        extras.getString(KEY_SYNC_ACCOUNT_NAME)!!,
                         prefHandler
                     )
                 }
@@ -664,9 +671,9 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 startEditFromOcrResult(
                     BundleCompat.getParcelable(extras, KEY_OCR_RESULT, OcrResult::class.java)!!
                         .selectCandidates(
-                            extras.getInt(DatabaseConstants.KEY_AMOUNT),
-                            extras.getInt(DatabaseConstants.KEY_DATE),
-                            extras.getInt(DatabaseConstants.KEY_PAYEE_NAME)
+                            extras.getInt(KEY_AMOUNT),
+                            extras.getInt(KEY_DATE),
+                            extras.getInt(KEY_PAYEE_NAME)
                         ),
                     BundleCompat.getParcelable(extras, KEY_URI, Uri::class.java)!!
                 )
@@ -723,19 +730,15 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
 
     open fun showDeviceLockScreenWarning() {
         showSnackBar(
-            getString(R.string.warning_device_lock_screen_not_set_up_1) + " " +
-                    getString(
-                        R.string.warning_device_lock_screen_not_set_up_2,
-                        localizedQuote(
-                            concatResStrings(
-                                this,
-                                " -> ",
-                                R.string.settings_label,
-                                R.string.security_settings_title,
-                                R.string.screen_lock
-                            )
-                        )
-                    )
+            getString(R.string.warning_device_lock_screen_not_set_up_1),
+            snackBarAction = SnackbarAction(getString(R.string.settings_label)) {
+                val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
+                try {
+                    startActivity(intent)
+                } catch (_: ActivityNotFoundException) {
+                    Toast.makeText(this, "Could not open Security Settings", Toast.LENGTH_SHORT).show()
+                }
+            }
         )
     }
 
@@ -799,10 +802,10 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
 
     @CallSuper
     override fun onPositive(args: Bundle, checked: Boolean) {
-        val command = args.getInt(ConfirmationDialogFragment.KEY_COMMAND_POSITIVE)
+        val command = args.getInt(KEY_COMMAND_POSITIVE)
         dispatchCommand(
             command,
-            args.getBundle(ConfirmationDialogFragment.KEY_TAG_POSITIVE_BUNDLE)
+            args.getBundle(KEY_TAG_POSITIVE_BUNDLE)
         )
     }
 
@@ -834,22 +837,16 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                 } else {
 
                     val intent = Intent().apply {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            val channelId = if (
-                                NotificationManagerCompat.from(this@BaseActivity)
-                                    .areNotificationsEnabled()
-                            ) NotificationBuilderWrapper.CHANNEL_ID_PLANNER else null
-                            action = when (channelId) {
-                                null -> Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                                else -> Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS
-                            }
-                            channelId?.let { putExtra(Settings.EXTRA_CHANNEL_ID, it) }
-                            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                        } else {
-                            action = "android.settings.APP_NOTIFICATION_SETTINGS"
-                            putExtra("app_package", packageName)
-                            putExtra("app_uid", applicationInfo.uid)
+                        val channelId = if (
+                            NotificationManagerCompat.from(this@BaseActivity)
+                                .areNotificationsEnabled()
+                        ) NotificationBuilderWrapper.CHANNEL_ID_PLANNER else null
+                        action = when (channelId) {
+                            null -> Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                            else -> Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS
                         }
+                        channelId?.let { putExtra(Settings.EXTRA_CHANNEL_ID, it) }
+                        putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                     }
                     startActivity(intent)
                 }
@@ -1132,10 +1129,10 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         } catch (_: ActivityNotFoundException) {
             showSnackBar(
                 MimeTypeMap.getSingleton()
-                .getExtensionFromMimeType(mimeType)
-                ?.uppercase(Locale.getDefault())
-                ?.let { getString(R.string.no_app_handling_mime_type_available, it) }
-                ?: "No activity found for opening $uri"
+                    .getExtensionFromMimeType(mimeType)
+                    ?.uppercase(Locale.getDefault())
+                    ?.let { getString(R.string.no_app_handling_mime_type_available, it) }
+                    ?: "No activity found for opening $uri"
             )
         }
     }
@@ -1284,7 +1281,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                     Bundle().apply {
                         putString(ConfirmationDialogFragment.KEY_PREFKEY, prefKey)
                         putCharSequence(
-                            ConfirmationDialogFragment.KEY_MESSAGE,
+                            KEY_MESSAGE,
                             TextUtils.concat(
                                 Utils.getTextWithAppName(
                                     this@BaseActivity,
@@ -1298,11 +1295,11 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                             )
                         )
                         putInt(
-                            ConfirmationDialogFragment.KEY_COMMAND_POSITIVE,
+                            KEY_COMMAND_POSITIVE,
                             R.id.NOTIFICATION_SETTINGS_COMMAND
                         )
                         putInt(
-                            ConfirmationDialogFragment.KEY_POSITIVE_BUTTON_LABEL,
+                            KEY_POSITIVE_BUTTON_LABEL,
                             R.string.menu_reconfigure
                         )
                     }
@@ -1313,13 +1310,9 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
 
     private fun areNotificationsEnabled(channelId: String) =
         if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                val channel = manager.getNotificationChannel(channelId)
-                channel?.importance != NotificationManager.IMPORTANCE_NONE
-            } else {
-                true
-            }
+            val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val channel = manager.getNotificationChannel(channelId)
+            channel?.importance != NotificationManager.IMPORTANCE_NONE
         } else false
 
     fun requestCalendarPermission() {
@@ -1482,13 +1475,17 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
     }
 
     open fun startBanking() {
-        startActivity(Intent(this, bankingFeature.bankingActivityClass))
+        bankingFeature.bankingActivityClass?.let {
+            startActivity(Intent(this, bankingFeature.bankingActivityClass))
+        } ?: run {
+            showSnackBar("BankingFeature not installed")
+        }
     }
 
     fun requestSync(accountName: String, uuid: String? = null) {
         if (!GenericAccountService.requestSync(accountName, uuid = uuid)) {
             val bundle = Bundle(1)
-            bundle.putString(DatabaseConstants.KEY_SYNC_ACCOUNT_NAME, accountName)
+            bundle.putString(KEY_SYNC_ACCOUNT_NAME, accountName)
             SimpleDialog.build()
                 .msg(getString(R.string.warning_backend_deactivated))
                 .pos(getString(R.string.button_activate_again))
@@ -1545,7 +1542,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                                 "${getString(R.string.amount)}: ${it.amountCandidates[0]}"
                             )
 
-                            else -> Spinner.plain(DatabaseConstants.KEY_AMOUNT)
+                            else -> Spinner.plain(KEY_AMOUNT)
                                 .placeholder(R.string.amount)
                                 .items(*it.amountCandidates.toTypedArray())
                                 .preset(0)
@@ -1556,7 +1553,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                                 "${getString(R.string.date)}: ${it.dateCandidates[0]}"
                             )
 
-                            else -> Spinner.plain(DatabaseConstants.KEY_DATE)
+                            else -> Spinner.plain(KEY_DATE)
                                 .placeholder(R.string.date)
                                 .items(
                                     *it.dateCandidates.map(this::displayDateCandidate)
@@ -1570,7 +1567,7 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
                                 "${getString(R.string.payee)}: ${it.payeeCandidates[0]}"
                             )
 
-                            else -> Spinner.plain(DatabaseConstants.KEY_PAYEE_NAME)
+                            else -> Spinner.plain(KEY_PAYEE_NAME)
                                 .placeholder(R.string.payee)
                                 .items(*it.payeeCandidates.map(Payee::name).toTypedArray())
                                 .preset(0)
@@ -1734,38 +1731,60 @@ abstract class BaseActivity : AppCompatActivity(), MessageDialogFragment.Message
         }
     }
 
-    suspend fun StateFlow<Result<Pair<Uri, String>>?>.collectPrintResult(): Nothing  = collect { result ->
-        result?.let {
-            dismissSnackBar()
-            result.onSuccess { (uri, name) ->
-                recordUsage(ContribFeature.PRINT)
-                showMessage(
-                    getString(R.string.export_sdcard_success, name),
-                    MessageDialogFragment.Button(
-                        R.string.menu_open,
-                        R.id.OPEN_PDF_COMMAND,
-                        uri.toString(),
-                        true
-                    ),
-                    MessageDialogFragment.nullButton(R.string.button_label_close),
-                    MessageDialogFragment.Button(
-                        R.string.share,
-                        R.id.SHARE_PDF_COMMAND,
-                        uri.toString(),
-                        true
-                    ),
-                    false
-                )
-            }.onFailure {
-                report(it)
-                showSnackBar(it.safeMessage)
+    suspend fun StateFlow<Result<Pair<Uri, String>>?>.collectPrintResult(): Nothing =
+        collect { result ->
+            result?.let {
+                dismissSnackBar()
+                result.onSuccess { (uri, name) ->
+                    recordUsage(ContribFeature.PRINT)
+                    showMessage(
+                        getString(R.string.export_sdcard_success, name),
+                        MessageDialogFragment.Button(
+                            R.string.menu_open,
+                            R.id.OPEN_PDF_COMMAND,
+                            uri.toString(),
+                            true
+                        ),
+                        MessageDialogFragment.nullButton(R.string.button_label_close),
+                        MessageDialogFragment.Button(
+                            R.string.share,
+                            R.id.SHARE_PDF_COMMAND,
+                            uri.toString(),
+                            true
+                        ),
+                        false
+                    )
+                }.onFailure {
+                    report(it)
+                    showSnackBar(it.safeMessage)
+                }
+                onPdfResultProcessed()
             }
-            onPdfResultProcessed()
         }
-    }
 
     open fun onPdfResultProcessed() {
 
+    }
+
+    fun showConfirmationDialog(
+        tag: String,
+        message: String,
+        @IdRes commandPositive: Int,
+        tagPositive: Bundle? = null,
+        @StringRes commandPositiveLabel: Int = 0,
+        @IdRes commandNegative: Int? = R.id.CANCEL_CALLBACK_COMMAND,
+        prepareBundle: Bundle.() -> Unit = { },
+    ) {
+        ConfirmationDialogFragment
+            .newInstance(Bundle().apply {
+                putString(KEY_MESSAGE, message)
+                putInt(KEY_COMMAND_POSITIVE, commandPositive)
+                putInt(KEY_POSITIVE_BUTTON_LABEL, commandPositiveLabel)
+                tagPositive?.let { putBundle(KEY_TAG_POSITIVE_BUNDLE, it) }
+                commandNegative?.let { putInt(KEY_COMMAND_NEGATIVE, it) }
+                prepareBundle()
+            })
+            .show(supportFragmentManager, tag)
     }
 
 

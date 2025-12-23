@@ -1,21 +1,16 @@
 package org.totschnig.myexpenses.io
 
-import okhttp3.internal.toImmutableList
 import org.totschnig.myexpenses.model.AccountType
-import org.totschnig.myexpenses.model.CrStatus.Companion.fromQifName
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
-import org.totschnig.myexpenses.model.SplitTransaction
-import org.totschnig.myexpenses.model.Transaction
-import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.model2.Account
 import java.math.BigDecimal
 import java.util.Date
 
 data class ImportAccount(
     val type: String? = PREDEFINED_NAME_CASH,
-    val memo: String  = "",
+    val memo: String = "",
     val desc: String = "",
     val openingBalance: BigDecimal = BigDecimal.ZERO,
     val transactions: List<ImportTransaction> = mutableListOf()
@@ -45,8 +40,12 @@ data class ImportAccount(
 
         fun memo(memo: String) = apply { this.memo = memo }
         fun desc(desc: String) = apply { this.desc = desc }
-        fun openingBalance(openingBalance: BigDecimal) = apply { this.openingBalance = openingBalance }
-        fun addTransaction(transaction: ImportTransaction.Builder) = apply { transactions.add(transaction) }
+        fun openingBalance(openingBalance: BigDecimal) =
+            apply { this.openingBalance = openingBalance }
+
+        fun addTransaction(transaction: ImportTransaction.Builder) =
+            apply { transactions.add(transaction) }
+
         fun build() = ImportAccount(
             type = type,
             memo = memo ?: "",
@@ -71,7 +70,7 @@ data class ImportTransaction(
     val status: String?,
     val number: String?,
     val method: String?,
-    val tags : List<String>?,
+    val tags: List<String>?,
     val splits: List<ImportTransaction>?
 ) {
     class Builder {
@@ -111,42 +110,25 @@ data class ImportTransaction(
 
         fun build(): ImportTransaction? = amount?.let {
             ImportTransaction(
-                date,
-                valueDate,
-                it,
-                payee,
-                memo,
-                category,
-                categoryClass,
-                toAccount,
-                toAmount,
-                status,
-                number,
-                method,
-                if (tags.isEmpty()) null else tags.toImmutableList(),
-                if (splits.isEmpty()) null else splits.mapNotNull { split -> split.build() }
+                date = date,
+                valueDAte = valueDate,
+                amount = it,
+                payee = payee,
+                memo = memo,
+                category = category,
+                categoryClass = categoryClass,
+                toAccount = toAccount,
+                toAmount = toAmount,
+                status = status,
+                number = number,
+                method = method,
+                tags = if (tags.isEmpty()) null else tags,
+                splits = if (splits.isEmpty()) null else splits.mapNotNull { split -> split.build() }
             )
         }
     }
 
     val isSplit get() = splits != null
-
-    fun toTransaction(a: Account, currencyUnit: CurrencyUnit): Transaction {
-        val t: Transaction
-        val m = Money(currencyUnit, amount)
-        t = if (isSplit) {
-            SplitTransaction(a.id, m)
-        } else if (isTransfer) {
-            Transfer(a.id, m)
-        } else {
-            Transaction(a.id, m)
-        }
-        t.setDate(date)
-        t.comment = memo
-        t.crStatus = fromQifName(status)
-        t.referenceNumber = number
-        return t
-    }
 
     val isTransfer get() = !isSplit && toAccount != null
 }

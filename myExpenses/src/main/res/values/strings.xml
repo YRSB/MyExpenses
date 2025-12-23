@@ -722,6 +722,7 @@
     <string name="dialog_title_confirm_remap">Change mapping (%s) ?</string>
     <string name="remap_category">All selected transactions will be mapped to category %s.</string>
     <string name="remap_payee">All selected transactions will be mapped to payer/payee %s.</string>
+    <string name="remap_payee_null">Payer/payee will be removed from all selected transactions.</string>
     <string name="remap_method">All selected transactions will be mapped to method %s.</string>
     <string name="remap_account">All selected transactions will be mapped to account %s.</string>
     <string name="remapping_result">The selected transactions were remapped.</string>
@@ -1107,4 +1108,17 @@
     <string name="supports_reconciliation">Supports Reconciliation</string>
     <string name="aggregate_invisible">Include invisible accounts into aggregate accounts and balance sheet</string>
     <string name="select_accounts_for_flag">Select accounts for flag %s</string>
+    <string name="menu_cleanup">Clean up</string>
+    <plurals name="warning_cleanup_parties">
+        <item quantity="one">%d unused party will be deleted.</item>
+        <item quantity="other">%d unused parties will be deleted.</item>
+    </plurals>
+    <!-- Label of a menu entry on the Balance Sheet Screen, which toggles visibility of accounts which are flagged as invisible -->
+    <string name="show_invisible">Hidden accounts</string>
+    <!-- Label of a menu entry on the Balance Sheet Screen, which toggles visibility of accounts where current balance is zero -->
+    <string name="show_zero">Zero balance accounts</string>
+    <!-- Description for button that allows to clear the selected party (payer /payee) from the currently edited transaction -->
+    <string name="content_description_clear_party">Clear selected party</string>
+    <string name="content_description_browse_device_files">Browse files on this device</string>
+    <string name="content_description_select_recent_file">Select from recent files</string>
 </resources>

@@ -3,9 +3,6 @@ package org.totschnig.myexpenses.provider
 import android.net.Uri
 import org.totschnig.myexpenses.model.SortDirection
 import org.totschnig.myexpenses.model2.AccountInfoWithGrouping
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
 import org.totschnig.myexpenses.provider.TransactionProvider.EXTENDED_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_SEARCH
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_SHORTEN_COMMENT
@@ -54,7 +51,7 @@ abstract class DataBaseAccount : AccountInfoWithGrouping {
         fun isAggregate(id: Long) = id < 0
 
         fun uriBuilderForTransactionList(
-            id: Long,
+            accountId: Long,
             currency: String?,
             shortenComment: Boolean = false,
             extended: Boolean = true
@@ -62,20 +59,17 @@ abstract class DataBaseAccount : AccountInfoWithGrouping {
             val uriBuilder =
                 uriBuilderForTransactionList(shortenComment, extended)
             return when {
-                !isAggregate(id) -> uriBuilder.apply {
-                    appendQueryParameter(KEY_ACCOUNTID, id.toString())
+                !isAggregate(accountId) -> uriBuilder.apply {
+                    appendQueryParameter(KEY_ACCOUNTID, accountId.toString())
                 }
 
-                isHomeAggregate(id) -> uriBuilder
+                isHomeAggregate(accountId) -> uriBuilder
 
                 else -> uriBuilder.apply {
                     appendQueryParameter(KEY_CURRENCY, currency)
                 }
             }
         }
-
-        fun uriForTransactionList(shortenComment: Boolean, extended: Boolean = true): Uri =
-            uriBuilderForTransactionList(shortenComment, extended).build()
 
         fun uriBuilderForTransactionList(
             shortenComment: Boolean,

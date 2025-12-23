@@ -26,6 +26,7 @@ import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.TooltipCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -53,8 +54,8 @@ import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model2.Account
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_UUID
 import org.totschnig.myexpenses.sync.GenericAccountService.Companion.getAccountNames
 import org.totschnig.myexpenses.ui.AmountInput
 import org.totschnig.myexpenses.ui.ExchangeRateEdit
@@ -99,10 +100,7 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
     var syncAccountName: String? = null
 
     @State
-    var _currencyUnit: CurrencyUnit? = null
-
-    val currencyUnit: CurrencyUnit
-        get() = if (dataLoaded) _currencyUnit!! else throw IllegalStateException()
+    lateinit var currencyUnit: CurrencyUnit
 
     @State
     var accountType = 0L
@@ -182,8 +180,9 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
             DialogUtils.showSyncUnlinkConfirmationDialog(this, syncAccountName, uuid)
         }
         with(binding.SyncHelp) {
-            contentDescription =
-                getString(R.string.synchronization) + ": " + getString(R.string.menu_help)
+            val helpText = getString(R.string.synchronization) + ": " + getString(R.string.menu_help)
+            contentDescription = helpText
+            TooltipCompat.setTooltipText(this, helpText)
             setOnClickListener {
                 showHelp(getString(R.string.form_synchronization_help_text_add))
             }
@@ -264,7 +263,7 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
         binding.Label.setText(account.label)
         binding.Description.setText(account.description)
         syncAccountName = account.syncAccountName
-        _currencyUnit = currencyContext[account.currency]
+        currencyUnit = currencyContext[account.currency]
         accountType = account.type.id
         color = account.color
         excludeFromTotals = account.excludeFromTotals
@@ -373,7 +372,7 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
             R.id.Currency -> {
                 try {
                     (currencySpinner.selectedItem as? Currency)?.code?.let {
-                        _currencyUnit = currencyContext[it]
+                        currencyUnit = currencyContext[it]
                         configureForCurrency(currencyUnit)
                     }
                 } catch (_: IllegalArgumentException) {
@@ -388,8 +387,9 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
                 }
             }
             R.id.AccountType -> {
-                @Suppress("UNCHECKED_CAST")
-                accountType = (accountTypeSpinner.selectedItem as SpinnerItem.Item<AccountType>).data.id
+                if (id > 0L) {
+                    accountType = id
+                }
             }
         }
     }
@@ -414,8 +414,8 @@ class AccountEdit : AmountActivity<AccountEditViewModel>(), ExchangeRateEdit.Hos
         lifecycleScope.launch {
             with(menu.findItem(R.id.DYNAMIC_EXCHANGE_RATE_COMMAND)) {
                 if (viewModel.dynamicExchangeRatesPerAccount.first()) {
-                    _currencyUnit?.let {
-                        val isFX = it.code != homeCurrency.code
+                    if (::currencyUnit.isInitialized) {
+                        val isFX = currencyUnit.code != homeCurrency.code
                         this.setEnabledAndVisible(isFX)
                         isChecked = isFX && dynamicExchangeRates
                     }

@@ -1,7 +1,6 @@
 package org.totschnig.myexpenses.viewmodel
 
 import android.app.Application
-import android.content.ContentProviderOperation
 import android.content.ContentUris
 import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
@@ -14,10 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.content.contentValuesOf
 import androidx.core.database.getLongOrNull
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -58,89 +55,83 @@ import org.totschnig.myexpenses.compose.addToSelection
 import org.totschnig.myexpenses.compose.filter.TYPE_COMPLEX
 import org.totschnig.myexpenses.compose.toggle
 import org.totschnig.myexpenses.compose.unselect
+import org.totschnig.myexpenses.db2.RepositoryTransaction
 import org.totschnig.myexpenses.db2.addAttachments
 import org.totschnig.myexpenses.db2.calculateSplitSummary
+import org.totschnig.myexpenses.db2.createTransaction
+import org.totschnig.myexpenses.db2.entities.Transaction
+import org.totschnig.myexpenses.db2.groupToSplitTransaction
 import org.totschnig.myexpenses.db2.loadAccount
 import org.totschnig.myexpenses.db2.loadAttachments
 import org.totschnig.myexpenses.db2.loadBanks
 import org.totschnig.myexpenses.db2.loadTagsForTransaction
+import org.totschnig.myexpenses.db2.loadTransaction
 import org.totschnig.myexpenses.db2.saveTagsForTransaction
+import org.totschnig.myexpenses.db2.setAccountProperty
 import org.totschnig.myexpenses.db2.setGrouping
 import org.totschnig.myexpenses.db2.tagMapFlow
 import org.totschnig.myexpenses.db2.unarchive
+import org.totschnig.myexpenses.db2.undeleteTransaction
 import org.totschnig.myexpenses.export.pdf.BalanceSheetPdfGenerator
 import org.totschnig.myexpenses.export.pdf.PdfPrinter
 import org.totschnig.myexpenses.model.AccountGrouping
 import org.totschnig.myexpenses.model.ContribFeature
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.Grouping
+import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.SortDirection
-import org.totschnig.myexpenses.model.SplitTransaction
-import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Bank
 import org.totschnig.myexpenses.preference.ColorSource
 import org.totschnig.myexpenses.preference.PrefKey
+import org.totschnig.myexpenses.preference.PreferenceAccessor
 import org.totschnig.myexpenses.preference.enumValueOrDefault
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
+import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.balanceUri
 import org.totschnig.myexpenses.provider.DataBaseAccount
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.GROUPING_AGGREGATE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.SORT_BY_AGGREGATE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.SORT_DIRECTION_AGGREGATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGETID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BUDGET_ROLLOVER_PREVIOUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CATID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CR_STATUS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DYNAMIC
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EQUIVALENT_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_EXCLUDE_FROM_TOTALS
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_FLAG
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ONE_TIME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PARENTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PAYEEID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SEALED
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_SECOND_GROUP
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TAGLIST
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSFER_PEER
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_UUID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VISIBLE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_YEAR
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_EXTENDED
-import org.totschnig.myexpenses.provider.TransactionProvider
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_BUDGET
+import org.totschnig.myexpenses.provider.KEY_BUDGETID
+import org.totschnig.myexpenses.provider.KEY_BUDGET_ROLLOVER_PREVIOUS
+import org.totschnig.myexpenses.provider.KEY_CATID
+import org.totschnig.myexpenses.provider.KEY_CR_STATUS
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_DYNAMIC
+import org.totschnig.myexpenses.provider.KEY_EXCLUDE_FROM_TOTALS
+import org.totschnig.myexpenses.provider.KEY_FLAG
+import org.totschnig.myexpenses.provider.KEY_ONE_TIME
+import org.totschnig.myexpenses.provider.KEY_PARENTID
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_SEALED
+import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
+import org.totschnig.myexpenses.provider.KEY_TAGLIST
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
+import org.totschnig.myexpenses.provider.KEY_TRANSFER_PEER
+import org.totschnig.myexpenses.provider.KEY_UUID
+import org.totschnig.myexpenses.provider.KEY_VISIBLE
+import org.totschnig.myexpenses.provider.KEY_YEAR
 import org.totschnig.myexpenses.provider.TransactionProvider.ACCOUNTS_URI
-import org.totschnig.myexpenses.provider.TransactionProvider.AUTHORITY
 import org.totschnig.myexpenses.provider.TransactionProvider.DUAL_URI
-import org.totschnig.myexpenses.provider.TransactionProvider.EXTENDED_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.KEY_REPLACE
 import org.totschnig.myexpenses.provider.TransactionProvider.METHOD_SAVE_TRANSACTION_TAGS
-import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_DISTINCT
-import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_GROUP_BY
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_MAPPED_OBJECTS
 import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_MERGE_CURRENCY_AGGREGATES
-import org.totschnig.myexpenses.provider.TransactionProvider.QUERY_PARAMETER_TRANSACTION_ID_LIST
 import org.totschnig.myexpenses.provider.TransactionProvider.SORT_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.TRANSACTIONS_URI
+import org.totschnig.myexpenses.provider.TransactionProvider.UNSPLIT_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_LINK_TRANSFER
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_TOGGLE_CRSTATUS
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_TRANSFORM_TO_TRANSFER
 import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_UNLINK_TRANSFER
-import org.totschnig.myexpenses.provider.TransactionProvider.URI_SEGMENT_UNSPLIT
 import org.totschnig.myexpenses.provider.appendBooleanQueryParameter
 import org.totschnig.myexpenses.provider.asSequence
 import org.totschnig.myexpenses.provider.filter.CrStatusCriterion
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.provider.filter.FilterPersistence
-import org.totschnig.myexpenses.provider.filter.Operation
-import org.totschnig.myexpenses.provider.getLong
-import org.totschnig.myexpenses.provider.getLongOrNull
-import org.totschnig.myexpenses.provider.getString
+import org.totschnig.myexpenses.provider.filter.NULL_ITEM_ID
 import org.totschnig.myexpenses.provider.mapToListCatching
 import org.totschnig.myexpenses.provider.mapToListWithExtra
 import org.totschnig.myexpenses.provider.triggerAccountListRefresh
@@ -162,7 +153,6 @@ import org.totschnig.myexpenses.viewmodel.data.PageAccount
 import org.totschnig.myexpenses.viewmodel.data.Tag
 import org.totschnig.myexpenses.viewmodel.data.Transaction2
 import java.time.LocalDate
-import java.util.Locale
 
 enum class ScrollToCurrentDate { Never, AppLaunch, AccountOpen }
 
@@ -173,10 +163,6 @@ open class MyExpensesViewModel(
     val savedStateHandle: SavedStateHandle,
 ) : PrintViewModel(application) {
 
-    private val showStatusHandlePrefKey = booleanPreferencesKey("showStatusHandle")
-    private val showEquivalentWorthPrefKey = booleanPreferencesKey("showEquivalentWorth")
-    private val preferredSearchTypePrefKey = intPreferencesKey("preferredSearchType")
-
     var showBalanceSheet: Boolean
         get() {
             val get = savedStateHandle.get<Boolean>("showBalanceSheet")
@@ -186,30 +172,33 @@ open class MyExpensesViewModel(
             savedStateHandle["showBalanceSheet"] = value
         }
 
-    fun showStatusHandle() =
-        dataStore.data.map { preferences ->
-            preferences[showStatusHandlePrefKey] != false
-        }
-
-    fun showEquivalentWorth() =
-        dataStore.data.map { preferences ->
-            preferences[showEquivalentWorthPrefKey] == true
-        }
-
-    fun persistShowStatusHandle(showStatus: Boolean) {
-        viewModelScope.launch {
-            dataStore.edit { preference ->
-                preference[showStatusHandlePrefKey] = showStatus
-            }
-        }
+    val showStatusHandle by lazy {
+        PreferenceAccessor(dataStore, booleanPreferencesKey("showStatusHandle"), defaultValue = true)
     }
 
-    fun persistShowEquivalentWorth(showEquivalentWort: Boolean) {
-        viewModelScope.launch {
-            dataStore.edit { preference ->
-                preference[showEquivalentWorthPrefKey] = showEquivalentWort
-            }
-        }
+    val showEquivalentWorth by lazy {
+        PreferenceAccessor(dataStore,
+            booleanPreferencesKey("showEquivalentWorth"), defaultValue = false)
+    }
+
+    val preferredSearchType by lazy {
+        PreferenceAccessor(dataStore,
+            intPreferencesKey("preferredSearchType"), defaultValue = TYPE_COMPLEX)
+    }
+
+    val balanceSheetShowChart by lazy {
+        PreferenceAccessor(dataStore,
+            booleanPreferencesKey("balanceSheetShowChart"), defaultValue = false)
+    }
+
+    val balanceSheetShowHidden by lazy {
+        PreferenceAccessor(dataStore,
+            booleanPreferencesKey("balanceSheetShowHidden"), defaultValue = true)
+    }
+
+    val balanceSheetShowZero by lazy {
+        PreferenceAccessor(dataStore,
+            booleanPreferencesKey("balanceSheetShowZero"), defaultValue = true)
     }
 
     val listState = LazyListState(0, 0)
@@ -319,19 +308,6 @@ open class MyExpensesViewModel(
         }
     }
 
-    fun preferredSearchType() =
-        dataStore.data.map { preferences ->
-            preferences[preferredSearchTypePrefKey] ?: TYPE_COMPLEX
-        }
-
-    fun persistPreferredSearchType(searchType: Int) {
-        viewModelScope.launch {
-            dataStore.edit { preference ->
-                preference[preferredSearchTypePrefKey] = searchType
-            }
-        }
-    }
-
     private val pageSize = 150
 
     val items: Map<PageAccount, Flow<PagingData<Transaction2>>> = lazyMap {
@@ -431,28 +407,29 @@ open class MyExpensesViewModel(
         )
 
     @OptIn(SavedStateHandleSaveableApi::class)
-    var balanceDate = savedStateHandle.getLiveData<LocalDate>(KEY_BALANCE_DATE, LocalDate.now()).asFlow()
+    var balanceDate =
+        savedStateHandle.getLiveData<LocalDate>(KEY_BALANCE_DATE, LocalDate.now()).asFlow()
 
     fun setBalanceDate(date: LocalDate) {
         savedStateHandle[KEY_BALANCE_DATE] = date
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val accountsForBalanceSheet: Flow<Pair<LocalDate, List<BalanceAccount>>> = balanceDate.flatMapLatest { date ->
-        contentResolver.observeQuery(
-            TransactionProvider.balanceUri(if (date == LocalDate.now()) "now" else date.toString()),
-            selection = "$KEY_EXCLUDE_FROM_TOTALS = 0"
-        )
-            .mapToList { BalanceAccount.fromCursor(it, currencyContext) }
-            .map {
-                date to it
-            }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, LocalDate.now() to emptyList())
+    val accountsForBalanceSheet: Flow<Pair<LocalDate, List<BalanceAccount>>> =
+        balanceDate.flatMapLatest { date ->
+            contentResolver.observeQuery(
+                balanceUri(if (date == LocalDate.now()) "now" else date.toString(), true),
+                selection = "$KEY_EXCLUDE_FROM_TOTALS = 0"
+            )
+                .mapToList { BalanceAccount.fromCursor(it, currencyContext) }
+                .map {
+                    date to it
+                }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, LocalDate.now() to emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val debtSum: Flow<Long> = balanceDate.flatMapLatest { date ->
         loadDebts(
-            null,
             date = date,
             showSealed = true,
             showZero = false,
@@ -616,14 +593,7 @@ open class MyExpensesViewModel(
             CrashHandler.report(IllegalStateException("setBooleanProperty for $column called on aggregate account"))
         } else {
             viewModelScope.launch(context = coroutineContext()) {
-                contentResolver.update(
-                    ContentUris.withAppendedId(ACCOUNTS_URI, accountId),
-                    contentValuesOf(
-                        column to value
-                    ),
-                    null,
-                    null
-                )
+                repository.setAccountProperty(accountId, column, value)
             }
         }
     }
@@ -634,7 +604,7 @@ open class MyExpensesViewModel(
                 val args = ContentValues()
                 args.put(KEY_CR_STATUS, CrStatus.RECONCILED.name)
                 contentResolver.update(
-                    Transaction.CONTENT_URI,
+                    TRANSACTIONS_URI,
                     args,
                     "$KEY_ACCOUNTID = ? AND $KEY_PARENTID is null AND $KEY_CR_STATUS = '${CrStatus.CLEARED.name}'",
                     arrayOf(accountId.toString())
@@ -655,7 +625,7 @@ open class MyExpensesViewModel(
         liveData(context = coroutineContext()) {
             emit(itemIds.count {
                 try {
-                    Transaction.undelete(contentResolver, it) > 0
+                    repository.undeleteTransaction(it) > 0
                 } catch (e: SQLiteConstraintException) {
                     CrashHandler.reportWithDbSchema(contentResolver, e)
                     false
@@ -667,54 +637,33 @@ open class MyExpensesViewModel(
     val cloneAndRemapProgress: LiveData<Pair<Int, Int>>
         get() = cloneAndRemapProgressInternal
 
+    private fun RepositoryTransaction.clone(): RepositoryTransaction {
+        fun Transaction.clone(uuid: String) = copy(id = 0, uuid = uuid)
+        val uuid = generateUuid()
+        return copy(
+            data = data.clone(uuid),
+            transferPeer = transferPeer?.clone(uuid),
+            splitParts = splitParts?.map {
+                it.clone()
+            }
+        )
+    }
+
     fun cloneAndRemap(transactionIds: List<Long>, column: String, value: Long) {
         viewModelScope.launch(coroutineDispatcher) {
             var successCount = 0
             var failureCount = 0
             for (id in transactionIds) {
-                val transaction = Transaction.getInstanceFromDb(
-                    contentResolver,
-                    id,
-                    currencyContext.homeCurrencyUnit
-                )
-                transaction.prepareForEdit(contentResolver, true, false)
-                val ops = transaction.buildSaveOperations(contentResolver, true)
-                val newUpdate =
-                    ContentProviderOperation.newUpdate(TRANSACTIONS_URI).withValue(column, value)
-                if (transaction.isSplit) {
-                    var selection = "$KEY_ROWID = ${transaction.id}"
-                    if (column == KEY_ACCOUNTID) {
-                        selection += " OR $KEY_PARENTID = ${transaction.id}"
-                    }
-                    newUpdate.withSelection(selection, null)
-                } else {
-                    var selection = "$KEY_ROWID = ?"
-                    val updateTransferPeer = column == KEY_CATID || column == KEY_DATE
-                    if (updateTransferPeer) {
-                        selection += " OR $KEY_TRANSFER_PEER = ?"
-                    }
-                    newUpdate.withSelection(
-                        selection,
-                        arrayOfNulls(if (updateTransferPeer) 2 else 1)
-                    )//replaced by back reference
-                        .withSelectionBackReference(0, 0)
-                    if (updateTransferPeer) {
-                        newUpdate.withSelectionBackReference(1, 0)
-                    }
-                }
-                ops.add(newUpdate.build())
-                val results = contentResolver.applyBatch(
-                    AUTHORITY,
-                    ops
-                )
-                if (results.size == ops.size
-                ) {
-                    transaction.updateFromResult(results)
-                    contentResolver.saveTagsForTransaction(
-                        contentResolver.loadTagsForTransaction(id).map { it.id }.toLongArray(),
-                        transaction.id
+                val transaction = repository.loadTransaction(id).clone()
+                val clone = repository.createTransaction(transaction)
+                val update = remapDo(listOf(clone.id), column, value)
+
+                if (update > 0) {
+                    repository.saveTagsForTransaction(
+                        repository.loadTagsForTransaction(id).map { it.id }.toLongArray(),
+                        clone.id
                     )
-                    repository.addAttachments(transaction.id, repository.loadAttachments(id))
+                    repository.addAttachments(clone.id, repository.loadAttachments(id))
                     successCount++
                 } else {
                     failureCount++
@@ -725,24 +674,28 @@ open class MyExpensesViewModel(
     }
 
     fun remap(transactionIds: List<Long>, column: String, value: Long): LiveData<Int> =
-        liveData(context = viewModelScope.coroutineContext + Dispatchers.IO) {
+        liveData(context = coroutineDispatcher) {
             emit(run {
-                val list = transactionIds.joinToString()
-                var selection = "$KEY_ROWID IN ($list)"
-                if (column == KEY_ACCOUNTID) {
-                    selection += " OR $KEY_PARENTID IN ($list)"
-                }
-                if (column == KEY_CATID || column == KEY_DATE) {
-                    selection += " OR $KEY_TRANSFER_PEER IN ($list)"
-                }
-                contentResolver.update(
-                    TRANSACTIONS_URI,
-                    ContentValues().apply { put(column, value) },
-                    selection,
-                    null
-                )
+                remapDo(transactionIds, column, value)
             })
         }
+
+    private fun remapDo(transactionIds: List<Long>, column: String, value: Long): Int {
+        val list = transactionIds.joinToString()
+        var selection = "$KEY_ROWID IN ($list)"
+        if (column == KEY_ACCOUNTID) {
+            selection += " OR $KEY_PARENTID IN ($list)"
+        }
+        if (column == KEY_CATID || column == KEY_DATE) {
+            selection += " OR $KEY_TRANSFER_PEER IN ($list)"
+        }
+        return contentResolver.update(
+            TRANSACTIONS_URI,
+            ContentValues().apply { put(column, value.takeIf { it != NULL_ITEM_ID }) },
+            selection,
+            null
+        )
+    }
 
     fun tag(transactionIds: List<Long>, tagList: ArrayList<Tag>, replace: Boolean) {
         val tagIds = tagList.map { tag -> tag.id }
@@ -772,93 +725,7 @@ open class MyExpensesViewModel(
     }
 
     fun split(ids: LongArray) = liveData(context = coroutineContext()) {
-        val count = ids.size
-        val projection = arrayOf(
-            KEY_ACCOUNTID,
-            KEY_CURRENCY,
-            KEY_PAYEEID,
-            KEY_CR_STATUS,
-            "avg($KEY_DATE) AS $KEY_DATE",
-            "sum($KEY_AMOUNT) AS $KEY_AMOUNT",
-            "sum($KEY_EQUIVALENT_AMOUNT) AS $KEY_EQUIVALENT_AMOUNT"
-        )
-
-        val groupBy = String.format(
-            Locale.ROOT,
-            "%s, %s, %s, %s",
-            "$VIEW_EXTENDED.$KEY_ACCOUNTID",
-            "$VIEW_EXTENDED.$KEY_CURRENCY",
-            KEY_PAYEEID,
-            KEY_CR_STATUS
-        )
-        contentResolver.query(
-            EXTENDED_URI.buildUpon()
-                .appendQueryParameter(QUERY_PARAMETER_TRANSACTION_ID_LIST, ids.joinToString())
-                .appendQueryParameter(QUERY_PARAMETER_GROUP_BY, groupBy)
-                .appendQueryParameter(QUERY_PARAMETER_DISTINCT, "1")
-                .build(),
-            projection, null, null, null
-        )?.use { cursor ->
-            emit(
-                when (cursor.count) {
-                1 -> {
-                    cursor.moveToFirst()
-                    val accountId = cursor.getLong(KEY_ACCOUNTID)
-                    val currencyUnit = currencyContext[cursor.getString(KEY_CURRENCY)]
-                    val amount = Money(
-                        currencyUnit,
-                        cursor.getLong(KEY_AMOUNT)
-                    )
-                    val equivalentAmount = Money(
-                        currencyContext.homeCurrencyUnit,
-                        cursor.getLong(KEY_EQUIVALENT_AMOUNT)
-                    )
-                    val payeeId = cursor.getLongOrNull(KEY_PAYEEID)
-                    val date = cursor.getLong(KEY_DATE)
-                    val crStatus =
-                        enumValueOrDefault(
-                            cursor.getString(KEY_CR_STATUS),
-                            CrStatus.UNRECONCILED
-                        )
-                    val parent = SplitTransaction.getNewInstance(
-                        contentResolver,
-                        accountId,
-                        currencyUnit,
-                        false
-                    ).also {
-                        it.amount = amount
-                        it.date = date
-                        it.payeeId = payeeId
-                        it.crStatus = crStatus
-                        it.equivalentAmount = equivalentAmount
-                    }
-                    val operations = parent.buildSaveOperations(contentResolver, false)
-                    val where = KEY_ROWID + " " + Operation.IN.getOp(count)
-                    val selectionArgs = ids.map { it.toString() }.toTypedArray()
-                    operations.add(
-                        ContentProviderOperation.newUpdate(TRANSACTIONS_URI)
-                            .withValues(ContentValues().apply {
-                                put(KEY_CR_STATUS, CrStatus.UNRECONCILED.name)
-                                put(KEY_DATE, parent.date)
-                                putNull(KEY_PAYEEID)
-                            })
-                            .withValueBackReference(KEY_PARENTID, 0)
-                            .withSelection(where, selectionArgs)
-                            .withExpectedCount(count)
-                            .build()
-                    )
-                    contentResolver.applyBatch(AUTHORITY, operations)
-                    Result.success(true)
-                }
-
-                0 -> Result.failure(IllegalStateException().also {
-                    CrashHandler.report(it)
-                })
-
-                else -> Result.success(false)
-            }
-            )
-        }
+        emit(repository.groupToSplitTransaction(ids))
     }
 
     fun revokeSplit(id: Long) = liveData(context = coroutineContext()) {
@@ -866,11 +733,11 @@ open class MyExpensesViewModel(
             put(KEY_ROWID, id)
         }
         if (contentResolver.update(
-                TRANSACTIONS_URI.buildUpon().appendPath(URI_SEGMENT_UNSPLIT).build(),
+                UNSPLIT_URI,
                 values,
                 null,
                 null
-            ) == 1
+            ) > 0
         ) {
             emit(ResultUnit)
         } else {

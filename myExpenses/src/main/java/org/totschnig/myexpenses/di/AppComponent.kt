@@ -10,10 +10,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
 import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.activity.BaseActivity
-import org.totschnig.myexpenses.activity.BaseMyExpenses
 import org.totschnig.myexpenses.activity.CsvImportActivity
 import org.totschnig.myexpenses.activity.EditActivity
 import org.totschnig.myexpenses.activity.ExpenseEdit
+import org.totschnig.myexpenses.activity.MyExpenses
 import org.totschnig.myexpenses.activity.PreferenceActivity
 import org.totschnig.myexpenses.activity.ProtectedFragmentActivity
 import org.totschnig.myexpenses.db2.Repository
@@ -61,6 +61,7 @@ import org.totschnig.myexpenses.service.PlanExecutor
 import org.totschnig.myexpenses.service.PlanNotificationClickHandler
 import org.totschnig.myexpenses.sync.SyncAdapter
 import org.totschnig.myexpenses.task.GrisbiImportTask
+import org.totschnig.myexpenses.util.ExchangeRateHandler
 import org.totschnig.myexpenses.util.ICurrencyFormatter
 import org.totschnig.myexpenses.util.ads.BaseAdHandler
 import org.totschnig.myexpenses.util.config.Configurator
@@ -172,11 +173,13 @@ interface AppComponent {
 
     fun configurator(): Configurator
 
+    fun exchangeRateHandler(): ExchangeRateHandler
+
     fun inject(application: MyApplication)
 
     fun inject(expenseEdit: ExpenseEdit)
 
-    fun inject(myExpenses: BaseMyExpenses)
+    fun inject(myExpenses: MyExpenses)
 
     fun inject(preferenceActivity: PreferenceActivity)
 

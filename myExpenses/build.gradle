@@ -164,7 +164,7 @@ dependencies {
     api(libs.androidx.datastore.preferences)
     coreLibraryDesugaring libs.android.desugar
     implementation project(':transactionscontract')
-    implementation libs.phrase
+    api libs.phrase
     implementation platform(libs.androidx.compose.bom)
     implementation libs.compose.ui
     implementation libs.compose.animation.graphics
@@ -183,18 +183,7 @@ dependencies {
     implementation libs.dagger
     implementation libs.android.state
     kapt libs.android.state.processor
-    implementation libs.gson
-
-    api libs.auto.value.annotations
-    kapt libs.auto.value
-
-    kapt libs.auto.value.gson
-    api libs.auto.value.gson.runtime
-
-    kapt libs.auto.value.cursor
-    implementation libs.auto.value.cursor.annotations
-
-    kapt libs.auto.value.parcel
+    api libs.gson
 
     implementation project(':PlayLicensingOrig')
     implementation libs.itextpdf
@@ -226,6 +215,8 @@ dependencies {
     implementation libs.androidx.viewpager2
 
     api libs.material
+
+    api libs.androidx.documentfile
 
     implementation libs.androidx.gridlayout
     api project(':preferences')
@@ -369,4 +360,10 @@ tasks.register('echoPublishTag') {
 
 configurations.configureEach {
     exclude group: 'com.google.j2objc', module: 'j2objc-annotations'
+}
+
+tasks.register("r8Version") {
+    doLast {
+        println(com.android.tools.r8.Version.getVersionString())
+    }
 }

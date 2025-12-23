@@ -12,9 +12,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -44,7 +46,9 @@ import org.totschnig.myexpenses.db2.FinTsAttribute
 import org.totschnig.myexpenses.db2.accountInformation
 import org.totschnig.myexpenses.db2.createAccount
 import org.totschnig.myexpenses.db2.createBank
+import org.totschnig.myexpenses.db2.createTransaction
 import org.totschnig.myexpenses.db2.deleteBank
+import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.importedAccounts
 import org.totschnig.myexpenses.db2.loadBank
@@ -55,28 +59,28 @@ import org.totschnig.myexpenses.db2.updateAccount
 import org.totschnig.myexpenses.feature.BankingFeature
 import org.totschnig.myexpenses.model.AccountType
 import org.totschnig.myexpenses.model.ContribFeature
-import org.totschnig.myexpenses.model.Transaction
 import org.totschnig.myexpenses.model2.Bank
-import org.totschnig.myexpenses.provider.DatabaseConstants
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_AMOUNT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ATTRIBUTE_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ATTRIBUTE_NAME
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_BANK_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_DATE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_TRANSACTIONID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VALUE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_VERSION
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_ATTRIBUTES
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_TRANSACTION_ATTRIBUTES
-import org.totschnig.myexpenses.provider.DatabaseConstants.VIEW_COMMITTED
+import org.totschnig.myexpenses.provider.KEY_ACCOUNT_TYPE_LABEL
+import org.totschnig.myexpenses.provider.KEY_AMOUNT
+import org.totschnig.myexpenses.provider.KEY_ATTRIBUTE_ID
+import org.totschnig.myexpenses.provider.KEY_ATTRIBUTE_NAME
+import org.totschnig.myexpenses.provider.KEY_BANK_ID
+import org.totschnig.myexpenses.provider.KEY_DATE
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.KEY_TRANSACTIONID
+import org.totschnig.myexpenses.provider.KEY_VALUE
+import org.totschnig.myexpenses.provider.KEY_VERSION
+import org.totschnig.myexpenses.provider.TABLE_ATTRIBUTES
+import org.totschnig.myexpenses.provider.TABLE_TRANSACTION_ATTRIBUTES
 import org.totschnig.myexpenses.provider.TransactionProvider
+import org.totschnig.myexpenses.provider.VIEW_COMMITTED
 import org.totschnig.myexpenses.provider.useAndMapToList
 import org.totschnig.myexpenses.util.ResultUnit
 import org.totschnig.myexpenses.util.Utils
 import org.totschnig.myexpenses.util.config.Configurator
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.crypt.PassphraseRepository
+import org.totschnig.myexpenses.util.enumValueOrDefault
 import org.totschnig.myexpenses.util.safeMessage
 import org.totschnig.myexpenses.util.tracking.Tracker
 import org.totschnig.myexpenses.viewmodel.ContentResolvingAndroidViewModel
@@ -108,11 +112,17 @@ data class SecMech(val id: String, val name: String) {
     }
 }
 
+fun AccountInformation.gv(default: GV) =
+    enumValueOrDefault<GV>(geschaeftsVorfall, default)
+
 class BankingViewModel(application: Application) : ContentResolvingAndroidViewModel(application) {
     @Inject
     lateinit var tracker: Tracker
+
     @Inject
     lateinit var configurator: Configurator
+
+    var importedAccountsJob: Job? = null
 
     init {
         System.setProperty(
@@ -216,7 +226,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
     val errorState: StateFlow<String?> = _errorState
 
     private val converter: HbciConverter
-        get() = HbciConverter(repository, currencyContext["EUR"])
+        get() = HbciConverter(repository)
 
     sealed class WorkState {
 
@@ -228,10 +238,11 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
         data class AccountsLoaded(
             val bank: Bank,
+            val supportedGvs: List<GV>,
             /*
-                Konto to Boolean that indicates if the account has already been imported
+                Konto to AccountInformation which is non null, if account has already been imported
              */
-            val accounts: List<Pair<Konto, Boolean>>
+            val accounts: List<Pair<Konto, AccountInformation?>>,
         ) : WorkState()
 
         abstract class Done : WorkState()
@@ -243,11 +254,11 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
     private fun logTree() = Timber.tag(BankingFeature.TAG)
 
-    private fun log(msg: String) {
-        logTree().i(msg)
+    private fun log(msg: String, vararg args: Any?) {
+        logTree().i(msg, *args)
     }
 
-    private fun log(exception: Exception) {
+    private fun log(exception: Throwable) {
         logTree().w(exception)
     }
 
@@ -255,7 +266,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
         _errorState.value = msg
     }
 
-    private fun error(exception: Exception, bankingCredentials: BankingCredentials) {
+    private fun error(exception: Throwable, bankingCredentials: BankingCredentials) {
         logEvent(Tracker.EVENT_FINTS_ERROR, bankingCredentials)
         log(exception)
         error(Utils.getCause(exception).safeMessage)
@@ -294,16 +305,21 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
         }
 
     @WorkerThread
-    private fun doHBCI(
+    private fun <T> doHBCI(
         bankingCredentials: BankingCredentials,
-        work: (BankInfo, HBCIPassport, HBCIHandler) -> Unit,
+        work: (BankInfo, HBCIPassport, HBCIHandler) -> T,
         forceNewFile: Boolean = false,
-        onError: (Exception) -> Unit
-    ) {
+    ): Result<T> {
         val info = initHBCI(bankingCredentials) ?: run {
             HBCIUtils.doneThread()
-            onError(Exception(getString(R.string.blz_not_found, bankingCredentials.blz)))
-            return
+            return Result.failure(
+                Exception(
+                    getString(
+                        R.string.blz_not_found,
+                        bankingCredentials.blz
+                    )
+                )
+            )
         }
 
         val passportFile = passportFile(info.blz, bankingCredentials.user).also {
@@ -317,12 +333,11 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
         } catch (e: Exception) {
             log(e)
             HBCIUtils.doneThread()
-            onError(
+            return Result.failure(
                 if (Utils.getCause(e) is StreamCorruptedException) {
                     Exception(getString(R.string.wrong_pin))
                 } else e
             )
-            return
         }
 
         val handle = try {
@@ -334,14 +349,14 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
             }
             passport.close()
             HBCIUtils.doneThread()
-            onError(e)
-            return
+            return Result.failure(e)
         }
+
         try {
-            work(info, passport, handle)
+            return Result.success(work(info, passport, handle))
         } catch (e: Exception) {
             report(e)
-            onError(e)
+            return Result.failure(e)
         } finally {
             handle.close()
             passport.close()
@@ -367,49 +382,65 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
             return
         }
         _workState.value = WorkState.Loading()
-        viewModelScope.launch(context = coroutineContext()) {
+        importedAccountsJob = viewModelScope.launch(context = coroutineContext()) {
             doHBCI(
                 bankingCredentials,
                 forceNewFile = bankingCredentials.isNew,
                 work = { info, passport, _ ->
-                    val bank = if (bankingCredentials.isNew) {
-                        logEvent(Tracker.EVENT_FINTS_BANK_ADDED, bankingCredentials)
-                        repository.createBank(
-                            Bank(
-                                blz = info.blz,
-                                bic = info.bic,
-                                bankName = info.name,
-                                userId = bankingCredentials.user
-                            )
-                        )
-                    } else bankingCredentials.bank!!
 
-                    val importedAccounts = bankingCredentials.bank?.let {
-                        repository.importedAccounts(it.id)
-                    }
-
-                    val accounts = passport.accounts
-                        ?.map { konto ->
-                            konto.also {
+                    Triple(
+                        info,
+                        passport.accounts.apply {
+                            forEach {
                                 if (it.bic == null) {
                                     it.bic = info.bic
                                 }
-                            } to (importedAccounts?.any {
-                                it.iban == konto.iban || (it.number == konto.number && it.subnumber == konto.subnumber)
-                            } == true)
-                        }
-                    if (accounts.isNullOrEmpty()) {
-                        error("Keine Konten ermittelbar")
-                        _workState.value = WorkState.Abort
-                    } else {
-                        _workState.value = WorkState.AccountsLoaded(bank, accounts)
-                    }
-                },
-                onError = {
-                    error(it, bankingCredentials)
-                    _workState.value = WorkState.Initial
+                            }
+                        },
+                        passport.supportedGvs()
+                    )
                 }
-            )
+            ).onSuccess { (info, accounts, supportedGvs) ->
+
+                val bank = if (bankingCredentials.isNew) {
+                    logEvent(Tracker.EVENT_FINTS_BANK_ADDED, bankingCredentials)
+                    repository.createBank(
+                        Bank(
+                            blz = info.blz,
+                            bic = info.bic,
+                            bankName = info.name,
+                            userId = bankingCredentials.user
+                        )
+                    )
+                } else bankingCredentials.bank!!
+
+                if (accounts.isNullOrEmpty()) {
+                    error("Keine Konten ermittelbar")
+                    _workState.value = WorkState.Abort
+                } else {
+                    accounts.forEach {
+                        log("Konto: %s", it.toString())
+                    }
+                    if (bankingCredentials.isNew) {
+                        _workState.value =
+                            WorkState.AccountsLoaded(bank, supportedGvs, accounts.map { it to null })
+                    } else {
+                        repository.importedAccounts(bankingCredentials.bank!!.id)
+                            .collect { accountInfoList ->
+                                _workState.value = WorkState.AccountsLoaded(
+                                    bank, supportedGvs,
+                                    accounts.map { konto ->
+                                        konto to accountInfoList.find {
+                                            it.iban == konto.iban || (it.number == konto.number && it.subnumber == konto.subnumber)
+                                        }
+                                    })
+                            }
+                    }
+                }
+            }.onFailure {
+                error(it, bankingCredentials)
+                _workState.value = WorkState.Initial
+            }
         }
     }
 
@@ -426,21 +457,18 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
             _workState.value = WorkState.Loading()
 
             val accounts: List<AccountInformation>? = account?.let { (accountId, accountTypeId) ->
-                listOfNotNull(repository.accountInformation(accountId, accountTypeId).let {
+                listOfNotNull(repository.accountInformation(accountId, accountTypeId).first().let {
                     when {
-                        it == null -> {
-                            report(Exception("Error while retrieving Information for account"))
-                            null
-                        }
                         it.lastSynced == null -> {
                             report(Exception("Error while retrieving Information for account (lastSynced)"))
                             null
                         }
+
                         else -> it
                     }
                 })
             } ?: credentials.bank?.let {
-                repository.importedAccounts(it.id)
+                repository.importedAccounts(it.id).first()
             }
 
             if (accounts.isNullOrEmpty()) {
@@ -451,8 +479,9 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
             doHBCI(
                 credentials,
-                work = { _, _, handle ->
-                    val jobs: Map<AccountInformation, HBCIJob> = accounts.associateWith { accountInformation ->
+                work = { _, passport, handle ->
+
+                    val jobs = accounts.associateWith { accountInformation ->
                         val konto = Konto(
                             "DE",
                             accountInformation.blz ?: credentials.blz,
@@ -463,14 +492,20 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                             it.iban = accountInformation.iban
                             it.bic = accountInformation.bic ?: credentials.bank?.bic
                         }
-
-
-                        handle.newJob("KUmsAll").apply {
-                            setParam("my", konto)
-                            log("Setting my param to $konto")
-                            setStartParam(accountInformation.lastSynced!!)
-                            addToQueue()
+                        val supportedGvs = passport.supportedGvs()
+                        if (supportedGvs.isEmpty()) {
+                            error("Bank unterstützt weder HKCAZ noch HKKAZ")
+                            _workState.value = WorkState.Abort
+                            return@doHBCI
                         }
+                        val gv = accountInformation.gv(supportedGvs.first())
+                        handle.newJob(gv.jobName)
+                            .apply {
+                                setParam("my", konto)
+                                log("Setting my param to $konto")
+                                setStartParam(accountInformation.lastSynced!!)
+                                addToQueue()
+                            }
                     }
 
                     val status: HBCIExecStatus = handle.execute()
@@ -492,9 +527,17 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                         for (umsLine in result.flatData) {
                             with(converter) {
                                 val (transaction, attributes: Map<out Attribute, String>) =
-                                    umsLine.toTransaction(currencyContext, accountInformation.accountId, 1) //TODO
-                                if (!isDuplicate(transaction, attributes[FinTsAttribute.CHECKSUM]!!)) {
-                                    val id = ContentUris.parseId(transaction.save(contentResolver)!!)
+                                    umsLine.toTransaction(
+                                        currencyContext,
+                                        accountInformation.accountId,
+                                        1
+                                    )
+                                if (!isDuplicate(
+                                        transaction,
+                                        attributes[FinTsAttribute.CHECKSUM]!!
+                                    )
+                                ) {
+                                    val id = repository.createTransaction(transaction).id
                                     repository.saveTransactionAttributes(id, attributes)
 
                                     importCount++
@@ -519,12 +562,11 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                     if (credentials.bank?.asWellKnown == null) {
                         CrashHandler.report(Exception("Unknown bank: ${credentials.blz}"))
                     }
-                },
-                onError = {
-                    error(it, credentials)
-                    _workState.value = WorkState.Abort
                 }
-            )
+            ).onFailure {
+                error(it, credentials)
+                _workState.value = WorkState.Abort
+            }
         }
     }
 
@@ -544,7 +586,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
             "(select $KEY_VALUE from $TABLE_TRANSACTION_ATTRIBUTES left join $TABLE_ATTRIBUTES on $KEY_ATTRIBUTE_ID = $TABLE_ATTRIBUTES.$KEY_ROWID WHERE $KEY_ATTRIBUTE_NAME = ? and $KEY_TRANSACTIONID = $VIEW_COMMITTED.$KEY_ROWID) = ? ",
             arrayOf(FinTsAttribute.CHECKSUM.name, checkSum), null
         )?.useAndMapToList {
-            it.getLong(0) == transaction.amount.amountMinor && it.getLong(1) == transaction.date
+            it.getLong(0) == transaction.amount && it.getLong(1) == transaction.date
         }?.any { it } == true
     }
 
@@ -555,21 +597,29 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
         )
     }
 
+    private fun HBCIPassport.supportedGvs() =
+        GV.entries.filter { bpd.supports(it) }
+
+    private fun Properties.supports(gv: GV) = stringPropertyNames().any {
+        it.matches(Regex("""Params[^.]*\.${gv.bpdName}[^.]*\.SegHead\.version"""))
+    }
+
     fun importAccounts(
         bankingCredentials: BankingCredentials,
         bank: Bank,
-        accounts: List<Pair<Konto, Long>>,
-        startDate: LocalDate?
+        accounts: List<Pair<Konto, AccountImportConfig>>,
+        startDate: LocalDate?,
     ) {
         if (_workState.value is WorkState.Loading) {
             log("Double click")
             return
         }
+        importedAccountsJob?.cancel()
         _workState.value = WorkState.Loading()
         clearError()
         var successCount = 0
         viewModelScope.launch(context = coroutineContext()) {
-            accounts.forEach { (konto, targetAccount) ->
+            accounts.forEach { (konto, targetAccountConfig) ->
                 doHBCI(
                     bankingCredentials,
                     work = { _, _, handle ->
@@ -580,7 +630,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                                 konto.iban
                             )
                         )
-                        val umsatzJob: HBCIJob = handle.newJob("KUmsAll")
+                        val umsatzJob = handle.newJob(targetAccountConfig.gv.jobName)
                         val kontoParam = konto.also {
                             if (it.bic == null) {
                                 it.bic = bankingCredentials.bank?.bic
@@ -612,41 +662,47 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                             return@doHBCI
                         }
 
-                        val (accountId, accountType) = targetAccount.takeIf { it != 0L }?.also {
-                            repository.updateAccount(it) {
-                                put(KEY_BANK_ID, bank.id)
+                        val (accountId, accountType) = targetAccountConfig.takeIf { it.targetAccountId != 0L }
+                            ?.also {
+                                repository.updateAccount(it.targetAccountId) {
+                                    put(KEY_BANK_ID, bank.id)
+                                }
                             }
-                        }?.let { id -> id to this@BankingViewModel.accounts.value.first { it.id == id }.type!! }
+                            ?.let { config -> config.targetAccountId to this@BankingViewModel.accounts.value.first { it.id == config.targetAccountId }.type!! }
                             ?: run {
-                            val accountType = repository.findAccountType(AccountType.BANK.name)!!
-                            repository.createAccount(
-                                konto.toAccount(
-                                    bank,
-                                    result.dataPerDay.firstOrNull()?.start?.value?.longValue ?: 0L
-                                ).copy(type = accountType)
-                            ).id to accountType
-                        }
+                                val accountType =
+                                    repository.findAccountType(AccountType.BANK.name)!!
+                                repository.createAccount(
+                                    konto.toAccount(
+                                        bank,
+                                        result.dataPerDay.firstOrNull()?.start?.value?.longValue
+                                            ?: 0L
+                                    ).copy(type = accountType)
+                                ).id to accountType
+                            }
 
-                        repository.saveAccountAttributes(accountId, konto.asAttributes)
+                        repository.saveAccountAttributes(
+                            accountId,
+                            konto.getAsAttributes(targetAccountConfig.gv)
+                        )
 
                         for (umsLine in result.flatData) {
                             with(converter) {
                                 val (transaction, transactionAttributes: Map<out Attribute, String>) = umsLine.toTransaction(
                                     currencyContext, accountId, accountType.id
                                 )
-                                val id = ContentUris.parseId(transaction.save(contentResolver)!!)
+                                val id = repository.createTransaction(transaction).id
                                 repository.saveTransactionAttributes(id, transactionAttributes)
                             }
                         }
                         setAccountLastSynced(accountId)
                         logEvent(Tracker.EVENT_FINTS_ACCOUNT_IMPORTED, bankingCredentials)
                         successCount++
-                    },
-                    onError = {
-                        error(it, bankingCredentials)
-                        _workState.value = WorkState.Abort
                     }
-                )
+                ).onFailure {
+                    error(it, bankingCredentials)
+                    _workState.value = WorkState.Abort
+                }
             }
             licenceHandler.recordUsage(ContribFeature.BANKING)
             _workState.value = WorkState.Success(
@@ -656,9 +712,20 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
     }
 
     fun deleteBank(bank: Bank) {
-        passportFile(bank.blz, bank.userId).delete()
-        passphraseFile(bank.blz, bank.userId).delete()
-        repository.deleteBank(bank.id)
+        viewModelScope.launch(context = coroutineContext()) {
+            passportFile(bank.blz, bank.userId).delete()
+            passphraseFile(bank.blz, bank.userId).delete()
+            repository.deleteBank(bank.id)
+        }
+    }
+
+    fun updateGv(accountId: Long, gv: GV) {
+        viewModelScope.launch(context = coroutineContext()) {
+            repository.saveAccountAttributes(
+                accountId,
+                mapOf(BankingAttribute.GESCHAEFTS_VORFALL to gv.name)
+            )
+        }
     }
 
     fun reset() {
@@ -708,7 +775,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
             reason: Int,
             msg: String,
             datatype: Int,
-            retData: StringBuffer
+            retData: StringBuffer,
         ) {
             log("callback:$reason")
             when (reason) {
@@ -763,7 +830,8 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
                 NEED_PT_SECMECH -> {
                     val options = SecMech.parse(retData.toString())
-                    retData.replace(0, retData.length,
+                    retData.replace(
+                        0, retData.length,
                         if (options.size == 1) {
                             options[0].id
                         } else selectedSecMech.takeIf { pref -> options.any { it.id == pref } }
@@ -794,7 +862,8 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
                 NEED_PT_TANMEDIA -> {
                     val options = retData.toString().split("|")
-                    retData.replace(0, retData.length,
+                    retData.replace(
+                        0, retData.length,
                         if (options.size == 1) {
                             options[0]
                         } else selectedTanMedium.takeIf { options.contains(it) } ?: runBlocking {
@@ -850,13 +919,16 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
                             null, null
                         )
                         cont.resume(ResultUnit)
-                    },
-                    onError = {
-                        cont.resume(Result.failure(it))
                     }
-                )
+                ).onFailure {
+                    cont.resume(Result.failure(it))
+                }
             }
         }
+
+    fun onSetupDialogDismissed() {
+        importedAccountsJob?.cancel()
+    }
 
     val banks: StateFlow<List<Bank>> by lazy {
         repository.loadBanks().stateIn(
@@ -868,7 +940,7 @@ class BankingViewModel(application: Application) : ContentResolvingAndroidViewMo
 
     val accounts by lazy {
         accountsMinimal(
-            query = "${DatabaseConstants.KEY_ACCOUNT_TYPE_LABEL} != '${AccountType.CASH.name}' AND $KEY_BANK_ID IS NULL",
+            query = "$KEY_ACCOUNT_TYPE_LABEL != '${AccountType.CASH.name}' AND $KEY_BANK_ID IS NULL",
             withAggregates = false
         ).stateIn(
             viewModelScope,

@@ -5,13 +5,15 @@ import androidx.documentfile.provider.DocumentFile
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.model.CurrencyContext
 import org.totschnig.myexpenses.model.ExportFormat
-import org.totschnig.myexpenses.model.SplitTransaction
 import org.totschnig.myexpenses.model.TransactionDTO
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.provider.BaseTransactionProvider
-import org.totschnig.myexpenses.provider.DatabaseConstants
+import org.totschnig.myexpenses.provider.KEY_LEVEL
 import org.totschnig.myexpenses.provider.filter.Criterion
 import java.time.format.DateTimeFormatter
+
+const val CSV_INDICATOR = "*"
+const val CSV_PART_INDICATOR = "-"
 
 /**
  * @param account          Account to print
@@ -41,7 +43,7 @@ class CsvExporter(
     private val withEquivalentAmountHeader: Boolean = false,
     override val withEquivalentAmount: Boolean = false,
     override val categoryPathSeparator: String = " > ",
-    private val withCurrencyColumn: Boolean = false
+    private val withCurrencyColumn: Boolean = false,
 ) :
     AbstractExporter(
         account, currencyContext, filter, notYetExportedP, dateFormat,
@@ -54,11 +56,11 @@ class CsvExporter(
     override fun export(
         context: Context,
         outputStream: Lazy<Result<DocumentFile>>,
-        append: Boolean
+        append: Boolean,
     ): Result<DocumentFile> {
         numberOfCategoryColumns = context.contentResolver.query(
             BaseTransactionProvider.CATEGORY_TREE_URI,
-            arrayOf("max(${DatabaseConstants.KEY_LEVEL})"),
+            arrayOf("max($KEY_LEVEL)"),
             null, null, null
         )?.use {
             it.moveToFirst()
@@ -187,7 +189,7 @@ class CsvExporter(
             if (withAccountColumn) {
                 appendQ(account.label).append(delimiter)
             }
-            val splitIndicator = if (splits != null) SplitTransaction.CSV_INDICATOR else ""
+            val splitIndicator = if (splits != null) CSV_INDICATOR else ""
             appendQ(splitIndicator)
             append(delimiter)
             handleDateTime(this)
@@ -234,12 +236,16 @@ class CsvExporter(
                 if (withAccountColumn) {
                     appendQ("").append(delimiter)
                 }
-                appendQ(SplitTransaction.CSV_PART_INDICATOR)
+                appendQ(CSV_PART_INDICATOR)
                 append(delimiter)
                 it.handleDateTime(this@apply)
                 appendQ(payee)
                 append(delimiter)
                 it.handleAmount(this@apply)
+                if (withCurrencyColumn) {
+                    appendQ(currency)
+                    append(delimiter)
+                }
                 it.handleLabel(this@apply)
                 appendQ(it.comment)
                 append(delimiter)
@@ -252,6 +258,24 @@ class CsvExporter(
                 appendQ("")
                 append(delimiter)
                 handleList(it.tagList)
+                if (withOriginalAmount) {
+                    append(delimiter)
+                    if (it.originalCurrency != null) {
+                        appendQ(
+                            nfFormats.getValue(currencyContext[it.originalCurrency]).format(it.originalAmount)
+                        )
+                    }
+                    append(delimiter)
+                    if (it.originalCurrency != null) {
+                        appendQ(it.originalCurrency)
+                    }
+                }
+                if (withEquivalentAmountHeader) {
+                    append(delimiter)
+                    it.equivalentAmount?.let {
+                        appendQ(nfFormats.getValue(currencyContext.homeCurrencyUnit).format(it))
+                    }
+                }
             }
         }.toString()
 }

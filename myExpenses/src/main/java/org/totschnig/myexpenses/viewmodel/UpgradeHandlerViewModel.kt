@@ -27,18 +27,18 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.BaseActivity
 import org.totschnig.myexpenses.activity.BudgetWidgetConfigure
 import org.totschnig.myexpenses.compose.FutureCriterion
+import org.totschnig.myexpenses.db2.entities.Template
 import org.totschnig.myexpenses.db2.getGrouping
 import org.totschnig.myexpenses.db2.preDefinedName
+import org.totschnig.myexpenses.db2.updatePlan
 import org.totschnig.myexpenses.dialog.MenuItem
 import org.totschnig.myexpenses.dialog.name
 import org.totschnig.myexpenses.fragment.preferences.PreferenceUiFragment.Companion.compactItemRendererTitle
 import org.totschnig.myexpenses.model.AccountGrouping
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyEnum
-import org.totschnig.myexpenses.model.Plan
 import org.totschnig.myexpenses.model.PreDefinedPaymentMethod
 import org.totschnig.myexpenses.model.Sort
-import org.totschnig.myexpenses.model.Template
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.preference.enableAutoFill
 import org.totschnig.myexpenses.preference.enumValueOrDefault
@@ -46,17 +46,17 @@ import org.totschnig.myexpenses.provider.BaseTransactionProvider
 import org.totschnig.myexpenses.provider.BaseTransactionProvider.Companion.ACCOUNTS_MINIMAL_URI_WITH_AGGREGATES
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.AGGREGATE_HOME_CURRENCY_CODE
 import org.totschnig.myexpenses.provider.DataBaseAccount.Companion.HOME_AGGREGATE_ID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ACCOUNTID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CODE
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_GROUPING
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ICON
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_IS_DEFAULT
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_PLANID
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_ROWID
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_BUDGETS
-import org.totschnig.myexpenses.provider.DatabaseConstants.TABLE_CURRENCIES
 import org.totschnig.myexpenses.provider.INVALID_CALENDAR_ID
+import org.totschnig.myexpenses.provider.KEY_ACCOUNTID
+import org.totschnig.myexpenses.provider.KEY_CODE
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_GROUPING
+import org.totschnig.myexpenses.provider.KEY_ICON
+import org.totschnig.myexpenses.provider.KEY_IS_DEFAULT
+import org.totschnig.myexpenses.provider.KEY_PLANID
+import org.totschnig.myexpenses.provider.KEY_ROWID
+import org.totschnig.myexpenses.provider.TABLE_BUDGETS
+import org.totschnig.myexpenses.provider.TABLE_CURRENCIES
 import org.totschnig.myexpenses.provider.TransactionProvider.BUDGETS_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.DUAL_URI
 import org.totschnig.myexpenses.provider.TransactionProvider.KEY_RESULT
@@ -78,10 +78,12 @@ import org.totschnig.myexpenses.service.PlanExecutor
 import org.totschnig.myexpenses.sync.GenericAccountService
 import org.totschnig.myexpenses.ui.DiscoveryHelper
 import org.totschnig.myexpenses.ui.IDiscoveryHelper
+import org.totschnig.myexpenses.util.ICurrencyFormatter
 import org.totschnig.myexpenses.util.crashreporting.CrashHandler
 import org.totschnig.myexpenses.util.safeMessage
 import org.totschnig.myexpenses.util.tracking.Tracker
 import org.totschnig.myexpenses.util.validateDateFormat
+import org.totschnig.myexpenses.viewmodel.data.mapper.TransactionMapper
 import org.totschnig.myexpenses.widget.BudgetWidget
 import timber.log.Timber
 import java.io.File
@@ -100,6 +102,9 @@ class UpgradeHandlerViewModel(application: Application) :
 
     @Inject
     lateinit var tracker: Tracker
+
+    @Inject
+    lateinit var currencyFormatter: ICurrencyFormatter
 
     private var upgradeInfoShowIndex: Int = -1
     private val upgradeInfoList: MutableList<String> = mutableListOf()
@@ -275,12 +280,17 @@ class UpgradeHandlerViewModel(application: Application) :
                     try {
                         contentResolver.query(
                             TEMPLATES_URI, null, "$KEY_PLANID is not null", null, null
-                        )?.useAndMapToList { Template(it) }?.forEach {
-                            Plan.updateDescription(
-                                it.planId,
-                                it.compileDescription(getApplication()),
-                                contentResolver
-                            )
+                        )?.useAndMapToList {
+                            Template.fromCursor(it)
+                        }?.forEach {
+                            it.planId?.let { planId ->
+                                repository.updatePlan(
+                                    planId,
+                                    title = null,
+                                    description = TransactionMapper.map(it, currencyContext)
+                                        .compileDescription(localizedContext, currencyFormatter),
+                                )
+                            }
                         }
                     } catch (e: SecurityException) {
                         //permission missing

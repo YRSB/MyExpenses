@@ -17,18 +17,18 @@ import org.totschnig.myexpenses.contract.TransactionsContract
 import org.totschnig.myexpenses.databinding.DateEditBinding
 import org.totschnig.myexpenses.databinding.MethodRowBinding
 import org.totschnig.myexpenses.databinding.OneExpenseBinding
+import org.totschnig.myexpenses.db2.entities.Recurrence
 import org.totschnig.myexpenses.dialog.addAllAccounts
 import org.totschnig.myexpenses.model.AccountFlag
-import org.totschnig.myexpenses.model.ITransfer
 import org.totschnig.myexpenses.model.Money
-import org.totschnig.myexpenses.model.Plan
-import org.totschnig.myexpenses.model.Transfer
 import org.totschnig.myexpenses.model.isNullOr0
 import org.totschnig.myexpenses.ui.AmountInput
 import org.totschnig.myexpenses.ui.ExchangeRateEdit
 import org.totschnig.myexpenses.ui.MyTextWatcher
 import org.totschnig.myexpenses.ui.SpinnerHelper
 import org.totschnig.myexpenses.viewmodel.data.Account
+import org.totschnig.myexpenses.viewmodel.data.TransactionEditData
+import org.totschnig.myexpenses.viewmodel.data.TransferEditData
 import java.math.BigDecimal
 
 class TransferDelegate(
@@ -37,7 +37,7 @@ class TransferDelegate(
     methodRowBinding: MethodRowBinding,
     isTemplate: Boolean
 ) :
-    TransactionDelegate<ITransfer>(
+    TransactionDelegate(
         viewBinding,
         dateEditBinding,
         methodRowBinding,
@@ -52,7 +52,7 @@ class TransferDelegate(
     private lateinit var transferAccountsAdapter:  GroupedSpinnerAdapter<AccountFlag, Account>
 
     @State
-    var mTransferAccountId: Long? = null
+    var transferAccountId: Long? = null
 
     @State
     var transferPeer: Long? = null
@@ -79,18 +79,18 @@ class TransferDelegate(
 
 
     override fun bind(
-        transaction: ITransfer?,
+        transaction: TransactionEditData?,
         withTypeSpinner: Boolean,
         savedInstanceState: Bundle?,
-        recurrence: Plan.Recurrence?,
+        recurrence: Recurrence?,
         withAutoFill: Boolean
     ) {
-        if (transaction != null) {
-            mTransferAccountId = transaction.transferAccountId
-            transferPeer = transaction.transferPeer
-            passedInTransferAmount = transaction.transferAmount?.amountMinor
-            passedInTransferAccountId = transaction.transferAccountId
-            transaction.transferAmount?.let {
+        transaction?.transferEditData?.let { data ->
+            transferAccountId = data.transferAccountId.takeIf { it != 0L }
+            transferPeer = data.transferPeer
+            passedInTransferAmount = data.transferAmount?.amountMinor
+            passedInTransferAccountId = transferAccountId
+            data.transferAmount?.let {
                 viewBinding.TransferAmount.setFractionDigits(it.currencyUnit.fractionDigits)
             }
         }
@@ -113,13 +113,13 @@ class TransferDelegate(
         configureCategoryVisibility()
     }
 
-    override fun populateFields(transaction: ITransfer, withAutoFill: Boolean) {
+    override fun populateFields(transaction: TransactionEditData, withAutoFill: Boolean) {
         super.populateFields(transaction, withAutoFill)
-        transaction.transferAmount?.let {
+        transaction.transferEditData?.transferAmount?.let {
             viewBinding.TransferAmount.setAmount(it.amountMajor.abs())
             if (!isTemplate) {
                 isProcessingLinkedAmountInputs = true
-                updateExchangeRates()
+                updateExchangeRates(false)
                 isProcessingLinkedAmountInputs = false
             }
         }
@@ -130,7 +130,7 @@ class TransferDelegate(
         super.onItemSelected(parent, view, position, id)
         when (parent.id) {
             R.id.TransferAccount -> {
-                mTransferAccountId = transferAccountSpinner.selectedItemId
+                transferAccountId = transferAccountSpinner.selectedItemId
                 configureTransferInput()
             }
         }
@@ -232,7 +232,7 @@ class TransferDelegate(
                         viewBinding.ERR.ExchangeRate.getRate(!isMain)
                     )
                 } else {
-                    updateExchangeRates()
+                    updateExchangeRates(true)
                 }
             }
             isProcessingLinkedAmountInputs = false
@@ -247,21 +247,20 @@ class TransferDelegate(
         )
     }
 
-    private fun updateExchangeRates() {
+    private fun updateExchangeRates(fromUser: Boolean) {
         val amount = viewBinding.Amount.getAmount(showToUser = false)
         val transferAmount =
             viewBinding.TransferAmount.getAmount(showToUser = false)
-        viewBinding.ERR.ExchangeRate.calculateAndSetRate(amount, transferAmount)
+        viewBinding.ERR.ExchangeRate.calculateAndSetRate(amount, transferAmount, fromUser)
     }
 
     override fun buildTransaction(
         forSave: Boolean,
         account: Account
-    ): ITransfer? {
-        val currentAccount = currentAccount()!!
+    ): TransactionEditData? {
         val transferAccount = transferAccount()!!
-        val amount = validateAmountInput(forSave, currentAccount.currency).getOrNull()
-        val isSame = currentAccount.currency == transferAccount.currency
+        val amount = validateAmountInput(forSave, account.currency).getOrNull()
+        val isSame = account.currency == transferAccount.currency
         val transferAmount = if (isSame && amount != null) {
             amount.negate()
         } else {
@@ -275,45 +274,58 @@ class TransferDelegate(
         return if (isTemplate) {
             if (amount == null && transferAmount == null) {
                 null
-            } else buildTemplate(account).apply {
+            } else {
                 if (!amount.isNullOr0() || transferAmount.isNullOr0()) {
-                    this.amount = amount ?: Money(currentAccount.currency, 0)
-                    setTransferAccountId(transferAccount.id)
+                    buildTemplate(account, transferAccount).copy(
+                        amount = amount ?: Money(account.currency, 0),
+                    )
                 } else if (!isSame && transferAmount != null) {
-                    this.accountId = transferAccount.id
-                    setTransferAccountId(currentAccount.id)
-                    this.amount = transferAmount
-                    viewBinding.Amount.setError(null)
-                }
+                    buildTemplate(transferAccount, account).copy(
+                        amount = transferAmount
+                    )
+                    //viewBinding.Amount.setError(null)
+                } else buildTemplate(account, transferAccount)
             }
         } else {
             if (amount == null || transferAmount == null) {
                 null
-            } else Transfer(account.id, transferAccount.id, parentId).apply {
-                transferPeer = this@TransferDelegate.transferPeer
-                setAmountAndTransferAmount(amount, transferAmount)
-            }
+            } else TransactionEditData(
+                accountId = account.id,
+                amount = amount,
+                categoryId = catId,
+                categoryPath = label,
+                uuid = uuid,
+                transferEditData = TransferEditData(
+                    transferPeer = transferPeer,
+                    transferAccountId = transferAccount.id,
+                    transferAmount = transferAmount
+                )
+            )
         }
     }
 
     override fun updateAccount(account: Account, isInitialSetup: Boolean) {
         super.updateAccount(account, isInitialSetup)
         setTransferAccountFilterMap()
-        if (accountId == mTransferAccountId) {
-            mTransferAccountId = null
+        if (accountId == transferAccountId) {
+            transferAccountId = null
         }
-        mTransferAccountId?.also {
+        transferAccountId?.also {
             transferAccountSpinner.setSelection(transferAccountsAdapter.getPosition(it))
         } ?: run {
-            mTransferAccountId = transferAccountSpinner.selectedItemId
+            transferAccountsAdapter.getFirstSelectable()?.let {
+                transferAccountSpinner.setSelection(it.index)
+                transferAccountId = it.value.itemId
+            }
         }
         configureTransferInput()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        val transferAccountId = transferAccountSpinner.selectedItemId
-        if (transferAccountId != AdapterView.INVALID_ROW_ID) {
-            mTransferAccountId = transferAccountId
+        transferAccountSpinner.selectedItemId.takeIf {
+            it != AdapterView.INVALID_ROW_ID
+        }?.also {
+            transferAccountId = it
         }
         super.onSaveInstanceState(outState)
     }

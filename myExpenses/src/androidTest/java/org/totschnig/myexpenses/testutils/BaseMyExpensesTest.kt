@@ -2,7 +2,18 @@ package org.totschnig.myexpenses.testutils
 
 import android.content.Intent
 import androidx.annotation.IdRes
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.isNotDisplayed
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.IdlingRegistry
@@ -15,7 +26,7 @@ import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.TestMyExpenses
 import org.totschnig.myexpenses.compose.TEST_TAG_DIALOG
 import org.totschnig.myexpenses.compose.TEST_TAG_PAGER
-import org.totschnig.myexpenses.provider.DatabaseConstants
+import org.totschnig.myexpenses.provider.KEY_ROWID
 
 abstract class BaseMyExpensesTest : BaseComposeTest<TestMyExpenses>() {
     private val countingResource = CountingIdlingResource("CheckSealed")
@@ -24,7 +35,7 @@ abstract class BaseMyExpensesTest : BaseComposeTest<TestMyExpenses>() {
     fun launch(id: Long? = null) {
         testScenario = ActivityScenario.launch(
             Intent(targetContext, TestMyExpenses::class.java).apply {
-                putExtra(DatabaseConstants.KEY_ROWID, id)
+                putExtra(KEY_ROWID, id)
             })
         testScenario.onActivity { activity ->
             activity?.let {
@@ -72,6 +83,7 @@ abstract class BaseMyExpensesTest : BaseComposeTest<TestMyExpenses>() {
     fun clearFilters() {
         onView(withId(R.id.SEARCH_COMMAND)).perform(ViewActions.click())
         composeTestRule.onNodeWithContentDescription(getString(R.string.clear_all_filters)).performClick()
+        composeTestRule.onNodeWithText(getString(android.R.string.ok)).performClick()
         composeTestRule.onNodeWithContentDescription(getString(R.string.apply)).performClick()
         waitForDialogClosed()
     }

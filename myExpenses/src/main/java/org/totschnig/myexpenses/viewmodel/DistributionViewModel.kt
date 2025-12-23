@@ -22,9 +22,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.totschnig.myexpenses.model.Grouping
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_COLOR
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_CURRENCY
-import org.totschnig.myexpenses.provider.DatabaseConstants.KEY_LABEL
+import org.totschnig.myexpenses.provider.KEY_COLOR
+import org.totschnig.myexpenses.provider.KEY_CURRENCY
+import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.TransactionProvider
 import org.totschnig.myexpenses.provider.filter.Criterion
 import org.totschnig.myexpenses.util.enumValueOrDefault
@@ -74,14 +74,15 @@ class DistributionViewModel(application: Application, savedStateHandle: SavedSta
                 ContentUris.withAppendedId(base, accountId),
                 projection, null, null, null
             )?.use {
-                it.moveToFirst()
-                _accountInfo.tryEmit(object : DistributionAccountInfo {
-                    val label = it.getString(0)
-                    override val accountId = accountId
-                    override fun label(context: Context) = label
-                    override val currency = it.getString(1)
-                    override val color = if (isAggregate) -1 else it.getInt(2)
-                })
+                if (it.moveToFirst()) {
+                    _accountInfo.tryEmit(object : DistributionAccountInfo {
+                        val label = it.getString(0)
+                        override val accountId = accountId
+                        override fun label(context: Context) = label
+                        override val currency = it.getString(1)
+                        override val color = if (isAggregate) -1 else it.getInt(2)
+                    })
+                }
             }
         }
         viewModelScope.launch {
