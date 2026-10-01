@@ -44,12 +44,13 @@ workflow 每次运行结束都会执行 `apksigner verify --print-certs`，签�
 
 ## 产物
 
-* `myExpenses-<versionName>-<tag>.apk` —— universal APK，包含全部 dynamic feature 模块，可直接安装
-* `mapping-<tag>.txt` —— R8 mapping，用于反混淆崩溃栈
-* 两者同时作为 workflow artifact 和 Release 资产保存，Release 已存在时用 `--clobber` 覆盖
+* `myExpenses-<versionName>-<tag>.apk` —— universal APK，包含全部 dynamic feature 模块，可直接安装；
+  **它是 Release 上的唯一资产**，Release 已存在时用 `--clobber` 覆盖。
+* `mapping-<tag>.txt` —— R8 mapping（约 170 MB），用于反混淆崩溃栈，只作为 workflow artifact 保存 30 天，
+  不上传到 Release。
 
-Release 说明会自动带上 tag、版本号、版本码、commit、签名状态，
-以及 `metadata/en-US/changelogs/<versionCode>.txt` 里的更新日志。
+Release 说明只有标题、一张版本信息表（tag / 版本 / variant / commit / 是否签名）和
+`metadata/en-US/changelogs/<versionCode>.txt` 里的更新日志。
 
 ## 说明
 

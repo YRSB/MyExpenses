@@ -254,11 +254,9 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Tag | \`${TAG}\` |"
-            echo "| Version name | ${VN} |"
-            echo "| Version code | ${VC} |"
+            echo "| Version | ${VN} (${VC}) |"
             echo "| Variant | ${FLAVOR}${BUILD_TYPE} (universal APK) |"
             echo "| Commit | \`${GITHUB_SHA}\` |"
-            echo "| Built by | [${GITHUB_ACTOR}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}) |"
             if [ "${{ steps.signing.outputs.sign }}" = "true" ]; then
               echo "| Signed | yes |"
             else
@@ -272,12 +270,6 @@ jobs:
             else
               echo "_No changelog found for version code ${VC}._"
             fi
-            echo
-            echo "### Install"
-            echo
-            echo '```bash'
-            echo "gh release download ${TAG} --repo ${GITHUB_REPOSITORY}"
-            echo '```'
           } > "$NOTES"
 
           echo "notes_path=$NOTES" >> "$GITHUB_OUTPUT"
@@ -307,10 +299,8 @@ jobs:
           PRERELEASE_FLAG=""
           if [ "${{ inputs.prerelease }}" = "true" ]; then PRERELEASE_FLAG="--prerelease"; fi
 
+          # the APK is the only release asset; the R8 mapping stays a workflow artifact
           ASSETS=("$APK")
-          if [ -n "${{ steps.collect.outputs.mapping_path }}" ]; then
-            ASSETS+=("${{ steps.collect.outputs.mapping_path }}")
-          fi
 
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG exists, uploading assets"
