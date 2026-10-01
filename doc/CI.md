@@ -55,5 +55,17 @@ Release 说明会自动带上 tag、版本号、版本码、commit、签名状�
 
 * 只构建 `extern` flavor：`intern` 需要 `settings.gradle` 里当前被注释掉的 `:mlkit*` 模块，
   只有依赖 Google ML Kit 时才需要。
-* `compileSdk 37` / build-tools 由 AGP 在接受 SDK license 后自动下载，无需在 workflow 里写死版本号。
 * `fetch-depth: 1` 即可，因为 `build.gradle` 只用 `git show --no-patch` 打 `BUILD_DATE` 时间戳。
+* 没有使用 `android-actions/setup-android`：它会尝试安装已被下线的 `tools` 包并直接失败；
+  GitHub runner 已预装 SDK 与 cmdline-tools，workflow 只需找到 `sdkmanager`、接受 license，
+  `compileSdk 37` 与 build-tools 交给 AGP 自动下载。
+
+## 排错
+
+| 现象 | 原因 / 处理 |
+|---|---|
+| `Warning: Failed to find package 'tools'` | `android-actions/setup-android` 的问题，已改用 runner 自带 SDK |
+| `sdkmanager: command not found` | runner 不把 `cmdline-tools/*/bin` 加进 PATH，workflow 里显式查找；日志会打印实际使用的路径 |
+| 找不到 `packageExternReleaseUniversalApk` | AGP 版本变了，workflow 会自动回退到 `assembleExternRelease`，并从 `outputs/apk` 里挑体积最大的那个（universal APK 最大） |
+| 找不到 `platforms;android-37` | 只影响预装速度，AGP 会自己下载；日志里是 `::notice::` 而不是失败 |
+| Release 里出现未签名 APK | `KEYSTORE_BASE64` 没配好，检查 Secrets 里四个 key 是否都在（`gh secret list`） |
