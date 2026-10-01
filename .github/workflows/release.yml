@@ -61,7 +61,7 @@ jobs:
           TAG="${{ inputs.tag }}"
           if [ -z "$TAG" ]; then TAG="${GITHUB_REF_NAME}"; fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Building tag '$TAG' from ${GITHUB_SHA}"
+          echo "Building tag '$TAG' from $(git rev-parse HEAD)"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -256,7 +256,7 @@ jobs:
             echo "| Tag | \`${TAG}\` |"
             echo "| Version | ${VN} (${VC}) |"
             echo "| Variant | ${FLAVOR}${BUILD_TYPE} (universal APK) |"
-            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Commit | \`$(git rev-parse HEAD)\` |"
             if [ "${{ steps.signing.outputs.sign }}" = "true" ]; then
               echo "| Signed | yes |"
             else
