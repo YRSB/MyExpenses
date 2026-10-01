@@ -154,9 +154,11 @@ jobs:
           echo "version_code=$VC" >> "$GITHUB_OUTPUT"
           echo "version_name=$VN" >> "$GITHUB_OUTPUT"
 
-          mapfile -t APKS < <(find myExpenses/build/outputs/apk -type f -name '*.apk' | sort)
+          # AGP 9 writes the universal APK to outputs/apk_from_bundle, older versions to outputs/apk
+          mapfile -t APKS < <(find myExpenses/build/outputs/apk myExpenses/build/outputs/apk_from_bundle \
+            -type f -name '*.apk' 2>/dev/null | sort)
           if [ "${#APKS[@]}" -eq 0 ]; then
-            echo "::error::no APK produced under myExpenses/build/outputs/apk"
+            echo "::error::no APK produced under myExpenses/build/outputs"
             find myExpenses/build/outputs -maxdepth 3 -type d || true
             exit 1
           fi
