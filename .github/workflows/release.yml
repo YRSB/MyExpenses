@@ -1,0 +1,318 @@
+name: Release
+
+run-name: Release ${{ inputs.tag || github.ref_name }}
+
+on:
+  push:
+    tags:
+      - 'r*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. r883). Leave empty to build the selected ref.'
+        required: false
+        type: string
+      sync_version_code:
+        description: 'Overwrite versionCode in build.gradle with the number taken from the tag'
+        required: false
+        default: true
+        type: boolean
+      publish:
+        description: 'Create/update the GitHub Release (set to false for a build-only dry run)'
+        required: false
+        default: true
+        type: boolean
+      prerelease:
+        description: 'Mark the GitHub Release as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FLAVOR: extern
+  BUILD_TYPE: Release
+
+jobs:
+  release:
+    name: Build and publish ${{ inputs.tag || github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          # build.gradle stamps BUILD_DATE via `git show --no-patch`, which works on a shallow clone
+          fetch-depth: 1
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then TAG="${GITHUB_REF_NAME}"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Building tag '$TAG' from ${GITHUB_SHA}"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses and install platform tools
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools"
+          # The platform / build-tools for compileSdk are auto-installed by AGP once licenses are accepted.
+
+      - name: Sync versionCode with tag
+        # null (push event) or explicit true -> sync; only an explicit false disables it
+        if: ${{ inputs.sync_version_code == null || inputs.sync_version_code }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          if [[ "$TAG" =~ ^[rRvV]?([0-9]+)$ ]]; then
+            VC="${BASH_REMATCH[1]}"
+            if grep -qE '^[[:space:]]*versionCode[[:space:]]*=' build.gradle; then
+              sed -i -E "s/^([[:space:]]*)versionCode[[:space:]]*=[[:space:]]*[0-9]+/\1versionCode = ${VC}/" build.gradle
+              echo "versionCode set to ${VC} (from tag ${TAG})"
+              git --no-pager diff -- build.gradle
+            else
+              echo "::warning::no versionCode assignment found in build.gradle"
+            fi
+          else
+            echo "::notice::tag '$TAG' does not carry a version code, keeping versionCode from build.gradle"
+          fi
+
+      - name: Detect universal APK task
+        id: detect
+        continue-on-error: true
+        run: ./gradlew -q :myExpenses:help --task ":myExpenses:package${FLAVOR^}${BUILD_TYPE}UniversalApk"
+
+      - name: Build universal APK
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.detect.outcome }}" = "success" ]; then
+            TASK=":myExpenses:package${FLAVOR^}${BUILD_TYPE}UniversalApk"
+          else
+            echo "::notice::package${FLAVOR^}${BUILD_TYPE}UniversalApk is not available, falling back to assemble${FLAVOR^}${BUILD_TYPE}"
+            TASK=":myExpenses:assemble${FLAVOR^}${BUILD_TYPE}"
+          fi
+          echo "Gradle task: $TASK"
+          ./gradlew "$TASK" \
+            --build-cache \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
+
+      - name: Collect artifacts
+        id: collect
+        run: |
+          set -euo pipefail
+          OUT_DIR="$RUNNER_TEMP/myexpenses-release"
+          mkdir -p "$OUT_DIR"
+
+          VC=$(grep -oE "^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*[0-9]+" build.gradle | grep -oE "[0-9]+$" | head -n1)
+          VN=$(grep -oE "^[[:space:]]*versionName[[:space:]]*=[[:space:]]*'[^']+'" build.gradle | sed -E "s/.*'([^']+)'/\1/" | head -n1)
+          VC="${VC:-0}"; VN="${VN:-unknown}"
+          TAG="${{ steps.tag.outputs.tag }}"
+
+          echo "version_code=$VC" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VN" >> "$GITHUB_OUTPUT"
+
+          mapfile -t APKS < <(find myExpenses/build/outputs/apk -type f -name '*.apk' | sort)
+          if [ "${#APKS[@]}" -eq 0 ]; then
+            echo "::error::no APK produced under myExpenses/build/outputs/apk"
+            find myExpenses/build/outputs -maxdepth 3 -type d || true
+            exit 1
+          fi
+          echo "Found APKs:"; printf '  %s\n' "${APKS[@]}"
+
+          # Prefer the universal APK (base + all dynamic features in one installable file)
+          APK=""
+          for candidate in "${APKS[@]}"; do
+            case "$(basename "$candidate")" in *universal*) APK="$candidate"; break;; esac
+          done
+          if [ -z "$APK" ]; then
+            # Fall back to the largest one (the universal APK is by far the biggest)
+            APK=$(ls -S "${APKS[@]}" 2>/dev/null | head -n1 || true)
+            [ -n "$APK" ] || { echo "::error::could not pick an APK"; exit 1; }
+          fi
+
+          DEST="$OUT_DIR/myExpenses-${VN}-${TAG}.apk"
+          cp "$APK" "$DEST"
+          echo "apk_path=$DEST" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$(basename "$DEST")" >> "$GITHUB_OUTPUT"
+          echo "Picked: $APK -> $DEST"
+
+          MAPPING=$(find myExpenses/build/outputs/mapping -type f -name 'mapping.txt' | head -n1 || true)
+          if [ -n "$MAPPING" ]; then
+            cp "$MAPPING" "$OUT_DIR/mapping-${TAG}.txt"
+            echo "mapping_path=$OUT_DIR/mapping-${TAG}.txt" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect signing secrets
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::KEYSTORE_BASE64 is not set, the APK will be uploaded unsigned and cannot be installed"
+          fi
+
+      - name: Sign APK
+        if: steps.signing.outputs.sign == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${KEY_ALIAS:?KEY_ALIAS is required when KEYSTORE_BASE64 is set}"
+          KS_PASS="${KEYSTORE_PASSWORD:-}"
+          KEY_PASS="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+
+          BUILD_TOOLS=$(ls -1d "${ANDROID_SDK_ROOT:-$ANDROID_HOME}"/build-tools/* | sort -V | tail -n1)
+          echo "Using $BUILD_TOOLS"
+
+          mkdir -p "$RUNNER_TEMP/keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/keystore/release.jks"
+
+          SRC="${{ steps.collect.outputs.apk_path }}"
+          ALIGNED="$RUNNER_TEMP/aligned.apk"
+          SIGNED="$RUNNER_TEMP/signed.apk"
+
+          "$BUILD_TOOLS/zipalign" -p -f 4 "$SRC" "$ALIGNED"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$RUNNER_TEMP/keystore/release.jks" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KS_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --out "$SIGNED" \
+            "$ALIGNED"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$SIGNED"
+
+          # keep the same asset name
+          rm -f "$SRC"
+          mv "$SIGNED" "$SRC"
+          chmod 644 "$SRC"
+
+      - name: Write release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          VC="${{ steps.collect.outputs.version_code }}"
+          VN="${{ steps.collect.outputs.version_name }}"
+          NOTES="$RUNNER_TEMP/notes.md"
+          CHANGELOG="metadata/en-US/changelogs/${VC}.txt"
+
+          {
+            echo "## My Expenses ${VN} (\`${TAG}\`)"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Tag | \`${TAG}\` |"
+            echo "| Version name | ${VN} |"
+            echo "| Version code | ${VC} |"
+            echo "| Variant | ${FLAVOR}${BUILD_TYPE} (universal APK) |"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Built by | [${GITHUB_ACTOR}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}) |"
+            if [ "${{ steps.signing.outputs.sign }}" = "true" ]; then
+              echo "| Signed | yes |"
+            else
+              echo "| Signed | **no** (unsigned build) |"
+            fi
+            echo
+            echo "### Changelog"
+            echo
+            if [ -f "$CHANGELOG" ]; then
+              cat "$CHANGELOG"
+            else
+              echo "_No changelog found for version code ${VC}._"
+            fi
+            echo
+            echo "### Install"
+            echo
+            echo '```bash'
+            echo "gh release download ${TAG} --repo ${GITHUB_REPOSITORY}"
+            echo '```'
+          } > "$NOTES"
+
+          echo "notes_path=$NOTES" >> "$GITHUB_OUTPUT"
+          echo "--- notes ---"; cat "$NOTES"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: myexpenses-${{ steps.tag.outputs.tag }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            ${{ steps.collect.outputs.apk_path }}
+            ${{ steps.collect.outputs.mapping_path }}
+
+      - name: Create or update GitHub Release
+        if: ${{ inputs.publish == null || inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          NOTES="${{ steps.notes.outputs.notes_path }}"
+          APK="${{ steps.collect.outputs.apk_path }}"
+          NAME="My Expenses ${{ steps.collect.outputs.version_name }} ($TAG)"
+
+          PRERELEASE_FLAG=""
+          if [ "${{ inputs.prerelease }}" = "true" ]; then PRERELEASE_FLAG="--prerelease"; fi
+
+          ASSETS=("$APK")
+          if [ -n "${{ steps.collect.outputs.mapping_path }}" ]; then
+            ASSETS+=("${{ steps.collect.outputs.mapping_path }}")
+          fi
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG exists, uploading assets"
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+            gh release edit "$TAG" --title "$NAME" --notes-file "$NOTES" $PRERELEASE_FLAG
+          else
+            echo "Creating release $TAG"
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --verify-tag \
+              --title "$NAME" \
+              --notes-file "$NOTES" \
+              $PRERELEASE_FLAG
+          fi
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ steps.tag.outputs.tag }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            myExpenses/build/reports/**
+            myExpenses/build/outputs/logs/**
+            *.log
