@@ -222,7 +222,9 @@ fun TransactionScreen(
                     }
                     val context = LocalContext.current
                     TopAppBar(
-                        windowInsets = windowInsets,
+                        windowInsets = windowInsets.only(
+                            WindowInsetsSides.Horizontal + WindowInsetsSides.Top
+                        ),
                         scrollBehavior = scrollBehavior,
                         modifier = Modifier.height(height),
                         navigationIcon = {
