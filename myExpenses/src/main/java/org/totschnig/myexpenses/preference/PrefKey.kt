@@ -188,7 +188,6 @@ enum class PrefKey(internal val resId: Int, internal val _key: String?) {
     UNMAPPED_TRANSACTION_AS_TRANSFER(R.string.pref_unmapped_transaction_as_transfer_key),
     DEFAULT_TRANSFER_CATEGORY(R.string.pref_default_transfer_category_key),
     PROTECTION_ALLOW_SCREENSHOT(R.string.pref_protection_allow_screenshot_key),
-    CUSTOMIZE_MAIN_MENU(R.string.pref_customize_main_menu_key),
     CUSTOMIZE_MENU_V2(R.string.pref_customize_menu_v2_key),
     REMOVE_LOCAL_CALENDAR(R.string.pref_remove_local_calendar_key),
     TIME_PICKER_INPUT_MODE("timePickerInputMode"),
@@ -228,8 +227,7 @@ enum class PrefKey(internal val resId: Int, internal val _key: String?) {
     CONTENT_BASED_COLORS(R.string.pref_content_based_colors_key),
     DEFAULT_ACTION(R.string.pref_default_action_key),
     PREMIUM_NUDGE_DISMISSED("premium_nudge_dismissed"),
-    LAST_TRADE_FEE_CATEGORIES("last_trade_fee_categories"),
-    SUNSET_V1_DISMISSED("sunset_v1_dismissed")
+    LAST_TRADE_FEE_CATEGORIES("last_trade_fee_categories")
     ;
 
     @Deprecated("")

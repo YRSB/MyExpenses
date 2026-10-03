@@ -27,9 +27,6 @@
     <string name="whats_new_401">A lista de transações agora mostra mais detalhes para transações divididas.</string>
     <string name="whats_new_402">Os tipos de conta podem ser personalizados</string>
     <string name="whats_new_403">Os sinalizadores de conta estendem a personalização da visibilidade e prioridade da conta.</string>
-    <string name="migration_v2_opt_out_warning">Gostaríamos muito de saber o que não está funcionando para que possamos aprimorar a versão 2.</string>
-    <string name="migration_v2_feedback_title">O que não está funcionando na V2?</string>
-    <string name="migration_v2_confirm_opt_out">Volte para a V1</string>
     <string name="whats_new_407">Ordenação natural para etiquetas, categorias, contas, parceiros.</string>
     <string name="whats_new_411_1">Transferências divididas</string>
     <string name="whats_new_411_2">Transferências de ativos entre portfólios</string>

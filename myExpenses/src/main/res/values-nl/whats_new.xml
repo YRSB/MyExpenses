@@ -27,8 +27,5 @@
     <string name="whats_new_401">De transactielijst toont nu meer details voor gesplitste transacties.</string>
     <string name="whats_new_402">Accounttypes kunnen worden aangepast</string>
     <string name="whats_new_403">Met accountvlaggen kun je de zichtbaarheid en prioriteit van je account aanpassen.</string>
-    <string name="migration_v2_opt_out_warning">We horen graag wat er niet goed werkt, zodat we versie 2 kunnen verbeteren.</string>
-    <string name="migration_v2_feedback_title">Wat werkt er niet in V2?</string>
-    <string name="migration_v2_confirm_opt_out">Ga terug naar V1</string>
     <string name="whats_new_407">Natuurlijk sorteren voor tags, categorieën, rekeningen en partijen.</string>
 </resources>

@@ -32,7 +32,6 @@ import org.totschnig.myexpenses.db2.getGrouping
 import org.totschnig.myexpenses.db2.preDefinedName
 import org.totschnig.myexpenses.db2.updatePlan
 import org.totschnig.myexpenses.dialog.MenuItem
-import org.totschnig.myexpenses.dialog.name
 import org.totschnig.myexpenses.model.AccountGrouping
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyEnum
@@ -607,12 +606,6 @@ class UpgradeHandlerViewModel(application: Application) :
                         // if for any reason (app is killed before upgrade coroutine is finished),
                         // upgrade is run twice, we would run into ClassCastException the second time
                         CrashHandler.report(e)
-                    }
-                }
-
-                if (fromVersion < 754) {
-                    prefHandler.getOrderedStringSet(PrefKey.CUSTOMIZE_MAIN_MENU)?.let {
-                        prefHandler.putOrderedStringSet(PrefKey.CUSTOMIZE_MAIN_MENU,it + MenuItem.Archive.name)
                     }
                 }
 

@@ -13,8 +13,5 @@
     <string name="whats_new_401">Seznam transakcí nyní zobrazuje více podrobností o rozdělených transakcích.</string>
     <string name="whats_new_402">Typy účtů lze přizpůsobit</string>
     <string name="whats_new_403">Příznaky účtu rozšiřují přizpůsobení viditelnosti a priority účtu.</string>
-    <string name="migration_v2_opt_out_warning">Rádi bychom věděli, co nefunguje, abychom mohli vylepšit V2.</string>
-    <string name="migration_v2_feedback_title">Co nefunguje ve V2?</string>
-    <string name="migration_v2_confirm_opt_out">Vrať se do V1</string>
     <string name="whats_new_407">Přirozené řazení pro štítky, kategorie, účty a oddíly.</string>
 </resources>

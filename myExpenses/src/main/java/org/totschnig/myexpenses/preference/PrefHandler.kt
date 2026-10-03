@@ -10,7 +10,6 @@ import kotlinx.serialization.json.Json
 import org.totschnig.myexpenses.BuildConfig
 import org.totschnig.myexpenses.R
 import org.totschnig.myexpenses.activity.MyExpensesV2
-import org.totschnig.myexpenses.activity.Version
 import org.totschnig.myexpenses.db2.FLAG_NEUTRAL
 import org.totschnig.myexpenses.db2.FLAG_TRANSFER
 import org.totschnig.myexpenses.db2.entities.Transaction
@@ -163,19 +162,6 @@ interface PrefHandler {
             }
         }
 
-    fun getCustomMenuV1() =
-        getOrderedStringSet(MenuItem.MenuContext.V1.prefKey)
-            ?.let { stored ->
-                stored.mapNotNull {
-                    try {
-                        MenuItem.valueOf(it)
-                    } catch (_: IllegalArgumentException) {
-                        null
-                    }
-                }
-            }
-            ?: MenuItem.getDefaultConfiguration(MenuItem.MenuContext.V1)
-
     val shouldDebug: Boolean
         get() = getBoolean(PrefKey.DEBUG_LOGGING, BuildConfig.DEBUG)
 
@@ -188,12 +174,6 @@ interface PrefHandler {
             } else {
                 putString(PrefKey.AUTO_BACKUP_CLOUD, value)
             }
-        }
-
-    var mainScreenLegacy: Boolean
-        get() = enumValueOrDefault(PrefKey.UI_MAIN_SCREEN_VERSION, Version.V2) == Version.V1
-        set(value) {
-            putString(PrefKey.UI_MAIN_SCREEN_VERSION, if (value) Version.V1.name else Version.V2.name)
         }
 
     fun createShowDetailsIntent(

@@ -9,10 +9,6 @@ import org.totschnig.myexpenses.MyApplication
 import org.totschnig.myexpenses.preference.PrefKey
 import kotlin.system.exitProcess
 
-enum class Version {
-    V1, V2
-}
-
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

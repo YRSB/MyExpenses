@@ -27,9 +27,6 @@
     <string name="whats_new_401">تعرض قائمة المعاملات الآن المزيد من التفاصيل للمعاملات المجزأة.</string>
     <string name="whats_new_402">يمكن تخصيص أنواع الحسابات</string>
     <string name="whats_new_403">تتيح علامات الحساب إمكانية تخصيص مستوى رؤية الحساب وأولويته.</string>
-    <string name="migration_v2_opt_out_warning">نود معرفة المشاكل التي تواجهنا لنتمكن من تحسين الإصدار الثاني (V2).</string>
-    <string name="migration_v2_feedback_title">ما الذي لا يعمل في الإصدار الثاني (V2)؟</string>
-    <string name="migration_v2_confirm_opt_out">الرجوع إلى الإصدار الأول (V1)</string>
     <string name="whats_new_407">فرز طبيعي للعلامات، التصنيفات، الحسابات والأطراف.</string>
     <string name="whats_new_411_1">الانتقالات المنقسمة</string>
     <string name="whats_new_411_2">تحويلات الأصول بين المحافظ</string>

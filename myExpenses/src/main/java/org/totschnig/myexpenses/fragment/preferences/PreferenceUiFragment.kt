@@ -229,12 +229,6 @@ class PreferenceUiFragment : BasePreferenceFragment() {
             true
         }
 
-        matches(preference, PrefKey.CUSTOMIZE_MAIN_MENU) -> {
-            CustomizeMenuDialogFragment.newInstance()
-                .show(childFragmentManager, "CUSTOMIZE_MENU")
-            true
-        }
-
         matches(preference, PrefKey.CUSTOMIZE_MENU_V2) -> {
             val options =
                 listOf(MenuItem.MenuContext.V2Navigation, MenuItem.MenuContext.V2Transactions)

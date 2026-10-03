@@ -645,7 +645,7 @@ open class MyExpensesV2ViewModel(
         menuAccessor(MenuItem.MenuContext.V2Transactions)
     }
 
-    private fun menuAccessor(menuContext: MenuItem.MenuContext.V2) =
+    private fun menuAccessor(menuContext: MenuItem.MenuContext) =
         PreferenceAccessor(
             dataStore,
             menuContext.prefKey,
@@ -854,14 +854,14 @@ open class MyExpensesV2ViewModel(
 
         // Part C: Additional Costs / Fees / Taxes (Expenses)
         val validCosts = intent.additionalCosts.filter { it.amount.amountMinor != 0L }
-        for (costLeg in validCosts) {
+        for ((amount, category) in validCosts) {
             parts.add(
                 TransactionEditData(
                     accountId = currentAccount.id,
-                    amount = -costLeg.amount,
+                    amount = -amount,
                     isSplitPart = true,
                     uuid = generateUuid(),
-                    categoryId = costLeg.category?.id
+                    categoryId = category?.id
                 )
             )
         }

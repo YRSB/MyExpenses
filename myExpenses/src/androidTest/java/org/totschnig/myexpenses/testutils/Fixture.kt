@@ -17,22 +17,28 @@ import org.totschnig.myexpenses.db2.createSplitTransaction
 import org.totschnig.myexpenses.db2.createTemplate
 import org.totschnig.myexpenses.db2.deletePlan
 import org.totschnig.myexpenses.db2.entities.Recurrence
+import androidx.lifecycle.SavedStateHandle
+import kotlinx.coroutines.runBlocking
 import org.totschnig.myexpenses.db2.entities.Template
 import org.totschnig.myexpenses.db2.entities.Transaction
 import org.totschnig.myexpenses.db2.findAccountType
 import org.totschnig.myexpenses.db2.findCategory
+import org.totschnig.myexpenses.db2.insertCurrency
 import org.totschnig.myexpenses.db2.insertTransaction
 import org.totschnig.myexpenses.db2.insertTransfer
 import org.totschnig.myexpenses.db2.requireParty
 import org.totschnig.myexpenses.db2.saveTagsForTransaction
 import org.totschnig.myexpenses.db2.setGrouping
 import org.totschnig.myexpenses.db2.storeExchangeRate
+import org.totschnig.myexpenses.model.AccountType
+import org.totschnig.myexpenses.model.CommodityType
 import org.totschnig.myexpenses.model.CrStatus
 import org.totschnig.myexpenses.model.CurrencyUnit
 import org.totschnig.myexpenses.model.Grouping
+import org.totschnig.myexpenses.model.Money
 import org.totschnig.myexpenses.model.PREDEFINED_NAME_BANK
 import org.totschnig.myexpenses.model.PREDEFINED_NAME_CASH
-import org.totschnig.myexpenses.model.PREDEFINED_NAME_CCARD
+import org.totschnig.myexpenses.model.PREDEFINED_NAME_INVESTMENT
 import org.totschnig.myexpenses.model.generateUuid
 import org.totschnig.myexpenses.model2.Account
 import org.totschnig.myexpenses.myApplication
@@ -43,11 +49,19 @@ import org.totschnig.myexpenses.provider.KEY_LABEL
 import org.totschnig.myexpenses.provider.KEY_ONE_TIME
 import org.totschnig.myexpenses.provider.KEY_SECOND_GROUP
 import org.totschnig.myexpenses.provider.KEY_YEAR
+import org.totschnig.myexpenses.provider.PORTFOLIO_CONTAINER
 import org.totschnig.myexpenses.provider.PlannerUtils
 import org.totschnig.myexpenses.provider.SPLIT_CATID
 import org.totschnig.myexpenses.provider.TransactionProvider
+import org.totschnig.myexpenses.viewmodel.MyExpensesV2ViewModel
 import org.totschnig.myexpenses.viewmodel.data.Budget
+import org.totschnig.myexpenses.viewmodel.data.FullAccount
+import org.totschnig.myexpenses.viewmodel.data.FundingSource
+import org.totschnig.myexpenses.viewmodel.data.TradeIntent
+import org.totschnig.myexpenses.viewmodel.data.TradeType
 import timber.log.Timber
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -74,7 +88,8 @@ class Fixture(inst: Instrumentation) {
         private set
     lateinit var account3: Account
         private set
-    private lateinit var account4: Account
+    lateinit var portfolioAccount: Account
+        private set
     private var budgetId: Long = 0L
     private var planId: Long = 0L
 
@@ -130,7 +145,6 @@ class Fixture(inst: Instrumentation) {
         }
         val accountTypeCash = repository.findAccountType(PREDEFINED_NAME_CASH)!!
         val accountTypeBank = repository.findAccountType(PREDEFINED_NAME_BANK)!!
-        val accountTypeCard = repository.findAccountType(PREDEFINED_NAME_CCARD)!!
         account1 = Account(
             label = appContext.getString(R.string.testData_account1Label),
             currency = defaultCurrency.code,
@@ -166,12 +180,114 @@ class Fixture(inst: Instrumentation) {
             grouping = Grouping.DAY,
             syncAccountName = syncAccount3
         ).createIn(repository)
-        account4 = Account(
-            label = appContext.getString(R.string.testData_account3Description),
-            currency = foreignCurrency.code,
-            type = accountTypeCard,
-            color = testContext.resources.getColor(RT.color.material_cyan)
+
+        // Setup Portfolio Account with Gold, Bitcoin, and MSCI World ETF holdings
+        val gold = CurrencyUnit("XAU", "XAU", 2, "Gold", CommodityType.COMMODITY)
+        val btc = CurrencyUnit("BTC", "₿", 8, "Bitcoin", CommodityType.CRYPTO)
+        val msci = CurrencyUnit("IWDA", "IWDA", 2, "iShares Core MSCI World ETF", CommodityType.SECURITY)
+
+        runBlocking {
+            repository.insertCurrency(gold.code, gold.symbol, gold.description, gold.fractionDigits, gold.commodityType)
+            repository.insertCurrency(btc.code, btc.symbol, btc.description, btc.fractionDigits, btc.commodityType)
+            repository.insertCurrency(msci.code, msci.symbol, msci.description, msci.fractionDigits, msci.commodityType)
+        }
+
+        val accountTypeInvestment = repository.findAccountType(PREDEFINED_NAME_INVESTMENT)!!
+        portfolioAccount = Account(
+            label = appContext.getString(R.string.Sub_2_1),
+            currency = defaultCurrency.code,
+            type = accountTypeInvestment,
+            color = testContext.resources.getColor(RT.color.material_amber),
+            portfolioRole = PORTFOLIO_CONTAINER
         ).createIn(repository)
+
+        val portfolioFullAccount = FullAccount(
+            id = portfolioAccount.id,
+            label = portfolioAccount.label,
+            currencyUnit = defaultCurrency,
+            type = AccountType.INVESTMENT,
+            portfolioRole = PORTFOLIO_CONTAINER
+        )
+
+        val viewModel = MyExpensesV2ViewModel(appContext, SavedStateHandle())
+        appContext.appComponent.inject(viewModel)
+
+        val currencyFactor = BigDecimal(when (defaultCurrency.code) {
+            "JPY" -> 170.0
+            "KRW" -> 1600.0
+            "VND" -> 30000.0
+            "HUF" -> 400.0
+            "CZK" -> 25.0
+            "INR" -> 100.0
+            else -> 1.0
+        })
+
+        val goldPrice = BigDecimal("2450.00").multiply(currencyFactor).setScale(2, RoundingMode.HALF_UP)
+        val btcPrice = BigDecimal("62000.00").multiply(currencyFactor).setScale(2, RoundingMode.HALF_UP)
+        val msciPrice = BigDecimal("92.40").multiply(currencyFactor).setScale(2, RoundingMode.HALF_UP)
+
+        val goldQuantity = BigDecimal("5.00")
+        val btcQuantity = BigDecimal("0.85")
+        val msciQuantity = BigDecimal("350.00")
+
+        val goldPrincipal = goldQuantity.multiply(goldPrice)
+        val btcPrincipal = btcQuantity.multiply(btcPrice)
+        val msciPrincipal = msciQuantity.multiply(msciPrice)
+
+        val initialDeposit = BigDecimal("110000.00").multiply(currencyFactor).setScale(2, RoundingMode.HALF_UP)
+
+        val now = LocalDateTime.now()
+
+        val portfolioIntents = listOf(
+            TradeIntent(
+                targetAsset = defaultCurrency,
+                type = TradeType.CashMovement.DEPOSIT,
+                date = now.minusDays(30),
+                quantity = Money.buildWithMajor(defaultCurrency, initialDeposit).getOrThrow(),
+                price = BigDecimal.ONE,
+                principal = Money.buildWithMajor(defaultCurrency, initialDeposit).getOrThrow(),
+                fundingSource = FundingSource.EXTERNAL,
+                peerAccountId = null,
+                comment = "Initial Cash Deposit"
+            ),
+            TradeIntent(
+                targetAsset = gold,
+                type = TradeType.AssetTrade.BUY,
+                date = now.minusDays(20),
+                quantity = Money.buildWithMajor(gold, goldQuantity).getOrThrow(),
+                price = goldPrice,
+                principal = Money.buildWithMajor(defaultCurrency, goldPrincipal).getOrThrow(),
+                fundingSource = FundingSource.PORTFOLIO,
+                peerAccountId = null,
+                comment = "Gold"
+            ),
+            TradeIntent(
+                targetAsset = btc,
+                type = TradeType.AssetTrade.BUY,
+                date = now.minusDays(15),
+                quantity = Money.buildWithMajor(btc, btcQuantity).getOrThrow(),
+                price = btcPrice,
+                principal = Money.buildWithMajor(defaultCurrency, btcPrincipal).getOrThrow(),
+                fundingSource = FundingSource.PORTFOLIO,
+                peerAccountId = null,
+                comment = "Bitcoin"
+            ),
+            TradeIntent(
+                targetAsset = msci,
+                type = TradeType.AssetTrade.BUY,
+                date = now.minusDays(10),
+                quantity = Money.buildWithMajor(msci, msciQuantity).getOrThrow(),
+                price = msciPrice,
+                principal = Money.buildWithMajor(defaultCurrency, msciPrincipal).getOrThrow(),
+                fundingSource = FundingSource.PORTFOLIO,
+                peerAccountId = null,
+                comment = "MSCI World ETF"
+            )
+        )
+
+        runBlocking {
+            viewModel.saveTrades(portfolioFullAccount, portfolioIntents)
+        }
 
         val johnDoe = appContext.getString(R.string.testData_templatePayee)
 
@@ -297,11 +413,13 @@ class Fixture(inst: Instrumentation) {
             ), listOf(
                 Transaction(
                     accountId = account1.id,
+                    categoryId = mainCat2,
                     amount = -4523L,
                     uuid = generateUuid()
                 ),
                 Transaction(
                     accountId = account1.id,
+                    categoryId = mainCat6,
                     amount = -4444L,
                     uuid = generateUuid()
                 )
@@ -316,7 +434,7 @@ class Fixture(inst: Instrumentation) {
         ).isNotEqualTo(INVALID_CALENDAR_ID)
 
         //createPlanner sets up a new plan, mPlannerCalendarId is only set in onSharedPreferenceChanged
-        //if it is has not been called yet, when we save our plan, saving fails.
+        //if it has not been called yet, when we save our plan, saving fails.
         try {
             Thread.sleep(1000)
         } catch (e: InterruptedException) {
