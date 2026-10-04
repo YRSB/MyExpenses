@@ -591,4 +591,8 @@
     <plurals name="warning_delete_tag">
         <item quantity="other">%1$s etiketa %2$d transakziorekin lotuta dago. Ezabatu egin behar da?</item>
     </plurals>
+    <string name="pref_tag_style_title">Etiketa-estiloa</string>
+    <string name="pref_tag_style_outline">Ertz koloreztatua</string>
+    <string name="pref_tag_style_filled">Guztiz koloreztatua</string>
+    <string name="trade_additional_costs">Kostu gehigarriak</string>
 </resources>

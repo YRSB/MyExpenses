@@ -949,4 +949,8 @@
     <string name="asset_quantity_at_price">%1$s @ %2$s</string>
     <string name="contrib_feature_portfolio_tracking">Pelacakan portofolio</string>
     <string name="premium_nudge_portfolio_message">Anda dapat mengelola satu portofolio secara gratis. Tingkatkan untuk mengelola beberapa portofolio dan membuka fitur lanjutan (%1$s).</string>
+    <string name="pref_tag_style_title">Gaya tag</string>
+    <string name="pref_tag_style_outline">Bingkai berwarna</string>
+    <string name="pref_tag_style_filled">Berwarna penuh</string>
+    <string name="trade_additional_costs">Biaya tambahan</string>
 </resources>

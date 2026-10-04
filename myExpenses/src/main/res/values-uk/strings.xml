@@ -1080,4 +1080,7 @@
     <string name="premium_nudge_portfolio_message">Ви можете керувати одним портфелем безкоштовно. Оновіться, щоб керувати кількома портфелями та отримати доступ до розширених можливостей відстеження (%1$s).</string>
     <string name="help_floating_action_button">Плаваюча кнопка дії</string>
     <string name="pref_tag_style_title">Стиль тегу</string>
+    <string name="pref_tag_style_outline">Кольорова рамка</string>
+    <string name="pref_tag_style_filled">Повністю кольоровий</string>
+    <string name="trade_additional_costs">Додаткові витрати</string>
 </resources>

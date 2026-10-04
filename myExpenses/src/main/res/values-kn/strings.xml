@@ -837,4 +837,8 @@
     <string name="pref_account_list_display_configuration_title">ಖಾತೆ ಪಟ್ಟಿ</string>
     <string name="menu_templates">ಟೆಂಪ್ಲೇಟ್ ಗಳು</string>
     <string name="important_upgrade_information_heading">ಪ್ರಮುಖ ಮಾಹಿತಿ</string>
+    <string name="pref_tag_style_title">ಟ್ಯಾಗ್ ಶೈಲಿ</string>
+    <string name="pref_tag_style_outline">ಬಣ್ಣದ ಗಡಿ</string>
+    <string name="pref_tag_style_filled">ಪೂರ್ಣ ಬಣ್ಣದ</string>
+    <string name="trade_additional_costs">ಹೆಚ್ಚುವರಿ ವೆಚ್ಚಗಳು</string>
 </resources>

@@ -1092,4 +1092,8 @@
     <string name="important_upgrade_information_heading">Informações importantes</string>
     <string name="single_pane_view">Painel único</string>
     <string name="split_pane_view">Visualização dividida</string>
+    <string name="pref_tag_style_title">Estilo da etiqueta</string>
+    <string name="pref_tag_style_outline">Borda colorida</string>
+    <string name="pref_tag_style_filled">Totalmente colorido</string>
+    <string name="trade_additional_costs">Custos adicionais</string>
 </resources>

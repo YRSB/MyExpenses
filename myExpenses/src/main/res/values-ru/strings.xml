@@ -1086,4 +1086,8 @@
     <string name="rounding">Округление</string>
     <string name="trade_transfer">Перевод</string>
     <string name="important_upgrade_information_heading">Важная информация</string>
+    <string name="pref_tag_style_title">Стиль тега</string>
+    <string name="pref_tag_style_outline">Цветная рамка</string>
+    <string name="pref_tag_style_filled">Полностью цветной</string>
+    <string name="trade_additional_costs">Дополнительные расходы</string>
 </resources>

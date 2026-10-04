@@ -884,4 +884,8 @@
     <string name="asset_quantity_at_price">%1$s với giá %2$s</string>
     <string name="rounding">Làm tròn</string>
     <string name="important_upgrade_information_heading">Thông tin quan trọng</string>
+    <string name="pref_tag_style_title">Kiểu thẻ</string>
+    <string name="pref_tag_style_outline">Viền màu</string>
+    <string name="pref_tag_style_filled">Tô màu toàn bộ</string>
+    <string name="trade_additional_costs">Chi phí bổ sung</string>
 </resources>

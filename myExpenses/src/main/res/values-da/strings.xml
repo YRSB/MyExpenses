@@ -923,4 +923,7 @@
     <string name="rounding">Afrunding</string>
     <string name="important_upgrade_information_heading">Vigtige oplysninger</string>
     <string name="pref_tag_style_title">Etiket-stil</string>
+    <string name="pref_tag_style_outline">Farvet kant</string>
+    <string name="pref_tag_style_filled">Helt farvet</string>
+    <string name="trade_additional_costs">Yderligere omkostninger</string>
 </resources>

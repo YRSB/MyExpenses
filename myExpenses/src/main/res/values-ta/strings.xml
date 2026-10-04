@@ -1033,4 +1033,8 @@
     <string name="content_description_select_recent_file">அண்மைக் கால கோப்புகளிலிருந்து தேர்ந்தெடுக்கவும்</string>
     <string name="menu_templates">வார்ப்புருக்கள்</string>
     <string name="important_upgrade_information_heading">முக்கிய தகவல்கள்</string>
+    <string name="pref_tag_style_title">குறிச்சொல் பாணி</string>
+    <string name="pref_tag_style_outline">வண்ண எல்லை</string>
+    <string name="pref_tag_style_filled">முழு வண்ணமயமான</string>
+    <string name="trade_additional_costs">கூடுதல் செலவுகள்</string>
 </resources>

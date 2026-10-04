@@ -880,4 +880,8 @@
     <string name="menu_templates">Templat</string>
     <string name="rounding">Pembulatan</string>
     <string name="important_upgrade_information_heading">Maklumat penting</string>
+    <string name="pref_tag_style_title">Gaya tag</string>
+    <string name="pref_tag_style_outline">Sempadan berwarna</string>
+    <string name="pref_tag_style_filled">Berwarna penuh</string>
+    <string name="trade_additional_costs">Kos tambahan</string>
 </resources>

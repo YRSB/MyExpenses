@@ -977,4 +977,7 @@
     <string name="rounding">עיגול</string>
     <string name="important_upgrade_information_heading">מידע חשוב</string>
     <string name="pref_tag_style_title">סגנון תג</string>
+    <string name="pref_tag_style_outline">מסגרת צבעונית</string>
+    <string name="pref_tag_style_filled">צבעוני מלא</string>
+    <string name="trade_additional_costs">עלויות נוספות</string>
 </resources>
