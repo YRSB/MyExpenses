@@ -1073,4 +1073,5 @@
     <string name="contrib_feature_portfolio_tracking">Portfóliókövetés</string>
     <string name="premium_nudge_portfolio_message">Egy portfóliót ingyen kezelhetsz. Válts prémiumra több portfólió kezeléséhez, és oldd fel a fejlett funkciókat (%1$s).</string>
     <string name="help_floating_action_button">Lebegő akciógomb</string>
+    <string name="pref_tag_style_title">Címke stílus</string>
 </resources>
