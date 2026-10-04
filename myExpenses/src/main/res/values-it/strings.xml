@@ -1087,4 +1087,5 @@
     <string name="important_upgrade_information_heading">Informazioni importanti</string>
     <string name="split_pane_view">Vista divisa</string>
     <string name="single_pane_view">Riquadro singolo</string>
+    <string name="pref_tag_style_title">Stile Tag</string>
 </resources>
