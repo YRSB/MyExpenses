@@ -1079,4 +1079,5 @@
     <string name="contrib_feature_portfolio_tracking">Відстеження портфеля</string>
     <string name="premium_nudge_portfolio_message">Ви можете керувати одним портфелем безкоштовно. Оновіться, щоб керувати кількома портфелями та отримати доступ до розширених можливостей відстеження (%1$s).</string>
     <string name="help_floating_action_button">Плаваюча кнопка дії</string>
+    <string name="pref_tag_style_title">Стиль тегу</string>
 </resources>
