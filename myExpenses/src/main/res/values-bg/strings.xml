@@ -1075,4 +1075,5 @@
     <string name="trade_transfer">Прeвод</string>
     <string name="important_upgrade_information_heading">Важна информация</string>
     <string name="help_floating_action_button">Плаващ бутон</string>
+    <string name="pref_tag_style_title">Стил на етикета</string>
 </resources>
