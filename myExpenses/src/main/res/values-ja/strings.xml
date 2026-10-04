@@ -739,4 +739,8 @@
     <string name="menu_templates">テンプレート</string>
     <string name="rounding">丸め</string>
     <string name="important_upgrade_information_heading">重要な情報</string>
+    <string name="pref_tag_style_title">タグのスタイル</string>
+    <string name="pref_tag_style_outline">カラー枠線</string>
+    <string name="pref_tag_style_filled">塗りつぶし</string>
+    <string name="trade_additional_costs">追加費用</string>
 </resources>

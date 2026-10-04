@@ -101,7 +101,7 @@ import com.google.android.material.R as RM
 import org.totschnig.myexpenses.test.R as RT
 
 abstract class BaseUiTest<A : ProtectedFragmentActivity> {
-    private var isLarge = false
+    var isLarge = false
 
     val testContext: Context
         get() = getInstrumentation().context

@@ -954,4 +954,8 @@
     <string name="number_too_large">Het getal is te groot</string>
     <string name="asset_quantity_at_price">%1$s à %2$s</string>
     <string name="rounding">Afronding</string>
+    <string name="pref_tag_style_title">Tag-stijl</string>
+    <string name="pref_tag_style_outline">Gekleurde rand</string>
+    <string name="pref_tag_style_filled">Volledig gekleurd</string>
+    <string name="trade_additional_costs">Aanvullende kosten</string>
 </resources>

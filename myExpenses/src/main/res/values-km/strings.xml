@@ -350,4 +350,8 @@
     <plurals name="warning_delete_tag">
         <item quantity="other">ស្លាក %1$s ត្រូវបានភ្ជាប់ទៅ %2$d ប្រតិបត្តិការ។ តើគួរលុបវាចោលឬទេ?</item>
     </plurals>
+    <string name="pref_tag_style_title">រចនាប័ទ្មស្លាក</string>
+    <string name="pref_tag_style_outline">ព្រំប្រទល់មានពណ៌</string>
+    <string name="pref_tag_style_filled">មានពណ៌ពេញ</string>
+    <string name="trade_additional_costs">ចំណាយបន្ថែម</string>
 </resources>

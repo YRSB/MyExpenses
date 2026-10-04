@@ -864,4 +864,8 @@
     <string name="pref_ui_start_screen_last_visited">上次访问的页面</string>
     <string name="rounding">舍入</string>
     <string name="important_upgrade_information_heading">重要资讯</string>
+    <string name="pref_tag_style_title">标签样式</string>
+    <string name="pref_tag_style_outline">彩色边框</string>
+    <string name="pref_tag_style_filled">全彩色</string>
+    <string name="trade_additional_costs">附加费用</string>
 </resources>

@@ -27,9 +27,6 @@
     <string name="whats_new_401">La lista de transacciones ahora muestra más detalles para las transacciones divididas.</string>
     <string name="whats_new_402">Los tipos de cuentas se pueden personalizar</string>
     <string name="whats_new_403">Los indicadores de cuenta amplían la personalización de la visibilidad y la prioridad de la cuenta.</string>
-    <string name="migration_v2_opt_out_warning">Nos encantaría saber qué no funciona para poder mejorar la V2.</string>
-    <string name="migration_v2_feedback_title">¿Qué no funciona en la V2?</string>
-    <string name="migration_v2_confirm_opt_out">Volver a la V1</string>
     <string name="whats_new_407">Ordenación natural para etiquetas, categorías, cuentas, grupos.</string>
     <string name="whats_new_411_1">Transferencias divididas</string>
     <string name="whats_new_411_2">Transferencias de activos entre carteras</string>

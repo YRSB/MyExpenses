@@ -27,7 +27,4 @@
     <string name="whats_new_401">交易清單現在顯示拆分交易的更多詳細資訊。</string>
     <string name="whats_new_402">帳戶類型可自訂</string>
     <string name="whats_new_403">帳戶標誌擴展了帳戶可見性和優先級的自定義。</string>
-    <string name="migration_v2_opt_out_warning">我們非常希望了解哪些功能有問題，以便改進 V2 版本。</string>
-    <string name="migration_v2_feedback_title">V2 有什麼問題？</string>
-    <string name="migration_v2_confirm_opt_out">回到V1</string>
 </resources>

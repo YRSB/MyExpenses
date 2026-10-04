@@ -867,4 +867,8 @@
     <string name="pref_account_list_display_configuration_title">รายการบัญชี</string>
     <string name="menu_templates">แม่แบบ</string>
     <string name="rounding">การปัดเศษ</string>
+    <string name="pref_tag_style_title">รูปแบบแท็ก</string>
+    <string name="pref_tag_style_outline">เส้นขอบมีสี</string>
+    <string name="pref_tag_style_filled">ลงสีเต็ม</string>
+    <string name="trade_additional_costs">ค่าใช้จ่ายเพิ่มเติม</string>
 </resources>

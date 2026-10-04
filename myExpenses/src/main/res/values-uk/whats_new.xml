@@ -31,14 +31,4 @@
     <string name="whats_new_411_1">Розділені перекази</string>
     <string name="whats_new_411_2">Перекази активів між портфелями</string>
     <string name="whats_new_411_3">Екран історії для зведених рахунків тепер показує зміну вартості іноземних валют</string>
-    <string name="migration_v2_opt_out_warning">Ми хотіли б знати, що саме не працює, аби покращити V2.</string>
-    <string name="migration_v2_feedback_title">Що не працює у V2?</string>
-    <string name="migration_v2_confirm_opt_out">Повернутися до V1</string>
-    <string name="sunset_v1_intro">Це остання версія з V1. Її буде видалено у версії 4.1.3.</string>
-    <string name="sunset_v1_message_1_intro">Допоможіть нам покращити V2:</string>
-    <string name="sunset_v1_message_2_intro">Ексклюзивні функції V2:</string>
-    <string name="sunset_v1_message_2_body">Спробуйте нові інструменти, доступні лише у V2, зокрема відстеження інвестиційних портфелів.</string>
-    <string name="sunset_v1_message_3_intro">Як залишитися на V1:</string>
-    <string name="sunset_v1_message_3_body">Щоб продовжувати використовувати V1, вимкніть автоматичне оновлення для {app_name} у {store}.</string>
-    <string name="switch_to_v2">Перейти на V2</string>
 </resources>

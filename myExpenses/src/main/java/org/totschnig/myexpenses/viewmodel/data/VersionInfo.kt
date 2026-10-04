@@ -2,6 +2,8 @@ package org.totschnig.myexpenses.viewmodel.data
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.icu.text.ListFormatter
+import android.os.Build
 import android.os.Parcelable
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
@@ -187,9 +189,20 @@ class VersionInfo(val code: Int, val name: String, val tickets: String? = null) 
                 // @formatter:on
             )
 
-            "413" -> arrayOf(
-                "${t(R.string.contrib_feature_portfolio_tracking)} : ${t(R.string.trade_additional_costs)}"
-            )
+            "413" -> {
+                val formatter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    ListFormatter.getInstance(
+                        Locale.getDefault(),
+                        ListFormatter.Type.OR,
+                        ListFormatter.Width.WIDE
+                    ) else ListFormatter.getInstance()
+                arrayOf(
+                    "${t(R.string.contrib_feature_portfolio_tracking)} : ${t(R.string.trade_additional_costs)}",
+                    t(R.string.pref_tag_style_title) + " : " + formatter.format(
+                        listOf(R.string.pref_tag_style_outline, R.string.pref_tag_style_filled).map { t(it) }
+                    )
+                )
+            }
 
             else -> {
                 //noinspection DiscouragedApi

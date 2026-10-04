@@ -2,6 +2,8 @@ package org.totschnig.myexpenses.testutils
 
 import android.os.Build
 import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
@@ -23,6 +25,8 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.totschnig.myexpenses.BuildConfig
 import org.totschnig.myexpenses.R
+import org.totschnig.myexpenses.compose.TEST_TAG_ACCOUNTS
+import org.totschnig.myexpenses.compose.TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
 import org.totschnig.myexpenses.dialog.MenuItem
 import org.totschnig.myexpenses.preference.PrefKey
 import org.totschnig.myexpenses.test.espresso.SettingsTest
@@ -58,15 +62,29 @@ abstract class TestMain(locale: String?) : BaseMyExpensesTest() {
         when (scenario) {
             "1" -> {
                 navigateToAccounts()
-                takeScreenshot("summarize")
-                navigateToTransactions()
-                takeScreenshot("group")
-                clickMenuItemOverflowCompose(MenuItem.Reset.testTag)
+                //Expand Portfolio
+                composeTestRule.onNode(
+                    hasText(getString(R.string.Sub_2_1)) and
+                            hasAnyAncestor(hasTestTag(TEST_TAG_ACCOUNTS))
+                ).performClick()
+                if (shouldTakeScreenShot) {
+                    Thread.sleep(1000)
+                }
+                takeScreenshot("2_summarize")
+                if (!isLarge) {
+                    navigateToTransactions()
+                    takeScreenshot("1_group")
+                }
+                clickMenuItemOverflowCompose(
+                    MenuItem.Reset.testTag,
+                    menuTestTag = TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
+                )
                 composeTestRule.waitForIdle()
                 try {
                     closeSoftKeyboard()
-                } catch (_: Exception) { }
-                takeScreenshot("export")
+                } catch (_: Exception) {
+                }
+                takeScreenshot("7_export")
                 pressBack()
                 clickContextItem(R.string.details)
                 if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
@@ -75,28 +93,38 @@ abstract class TestMain(locale: String?) : BaseMyExpensesTest() {
                 }
                 composeTestRule.onNodeWithText(getString(R.string.menu_edit)).performClick()
                 closeSoftKeyboard()
-                takeScreenshot("split")
+                takeScreenshot("6_split")
                 pressBack()
-                clickMenuItemOverflowCompose(MenuItem.Distribution.testTag)
-                takeScreenshot("distribution")
+                clickMenuItemOverflowCompose(
+                    MenuItem.Distribution.testTag,
+                    menuTestTag = TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
+                )
+                takeScreenshot("3_distribution")
                 pressBack()
-                clickMenuItemOverflowCompose(MenuItem.History.testTag)
+                clickMenuItemOverflowCompose(
+                    MenuItem.History.testTag,
+                    menuTestTag = TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
+                )
                 clickMenuItem(R.id.GROUPING_COMMAND)
                 onView(withText(R.string.grouping_month)).perform(click())
                 clickMenuItem(R.id.TOGGLE_INCLUDE_TRANSFERS_COMMAND)
-                takeScreenshot("history")
+                takeScreenshot("4_history")
                 pressBack()
                 selectNavigationItem(MenuItem.Budget.testTag)
                 listNode.onChildren()[0].performClick()
-                doWithRotation {
+                if (isLarge) {
+                    takeScreenshot("5_budget")
+                } else {
+                    doWithRotation {
+                        onIdle()
+                        //wait for sum to load IdlingResource is too cumbersome to set up, since
+                        //onActivity does not get us hold on BudgetActivity
+                        Thread.sleep(500)
+                        takeScreenshot("5_budget")
+                    }
                     onIdle()
-                    //wait for sum to load IdlingResource is too cumbersome to set up, since
-                    //onActivity does not get us hold on BudgetActivity
                     Thread.sleep(500)
-                    takeScreenshot("budget")
                 }
-                onIdle()
-                Thread.sleep(500)
                 pressBack()
                 pressBack()
                 selectNavigationItem(MenuItem.Settings.testTag)
@@ -107,17 +135,34 @@ abstract class TestMain(locale: String?) : BaseMyExpensesTest() {
                 onView(withText(containsString("Drive"))).perform(click())
                 onView(withText(containsString("Dropbox"))).perform(click())
                 onView(withText(containsString("WebDAV"))).perform(scrollTo(), click())
-                if(shouldTakeScreenShot) {
+                if (shouldTakeScreenShot) {
                     Thread.sleep(5000)
                 }
-                takeScreenshot("sync")
+                takeScreenshot("8_sync")
             }
 
             "2" -> {
                 //tablet screenshots
-                takeScreenshot("main")
-                clickMenuItem(R.id.DISTRIBUTION_COMMAND)
-                takeScreenshot("distribution")
+                //Expand Portfolio
+                composeTestRule.onNodeWithText(getString(R.string.Sub_2_1)).performClick()
+                if (shouldTakeScreenShot) {
+                    Thread.sleep(1000)
+                }
+                takeScreenshot("1_summarize")
+                clickMenuItemOverflowCompose(
+                    MenuItem.Distribution.testTag,
+                    menuTestTag = TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
+                )
+                takeScreenshot("3_distribution")
+                pressBack()
+                clickMenuItemOverflowCompose(
+                    MenuItem.History.testTag,
+                    menuTestTag = TEST_TAG_OVERFLOW_MENU_TRANSACTIONS
+                )
+                clickMenuItem(R.id.GROUPING_COMMAND)
+                onView(withText(R.string.grouping_month)).perform(click())
+                clickMenuItem(R.id.TOGGLE_INCLUDE_TRANSFERS_COMMAND)
+                takeScreenshot("4_history")
                 pressBack()
                 listNode.onChildren()
                     .filter(
@@ -132,7 +177,7 @@ abstract class TestMain(locale: String?) : BaseMyExpensesTest() {
                 pressBack() //close keyboard
                 onView(withPositionInParent(R.id.AttachmentGroup, 0))
                     .perform(click())
-                takeScreenshot("edit")
+                takeScreenshot("2_edit")
             }
 
             else -> {
